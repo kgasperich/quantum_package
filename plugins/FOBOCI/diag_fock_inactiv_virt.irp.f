@@ -1,7 +1,7 @@
 subroutine diag_inactive_virt_and_update_mos
  implicit none
  integer :: i,j,i_inact,j_inact,i_virt,j_virt
- double precision :: tmp(mo_tot_num_align,mo_tot_num)
+ double precision :: tmp(mo_tot_num,mo_tot_num)
  character*(64) :: label
  print*,'Diagonalizing the occ and virt Fock operator'
  tmp = 0.d0
@@ -29,7 +29,7 @@ subroutine diag_inactive_virt_and_update_mos
 
 
  label = "Canonical"
- call mo_as_eigvectors_of_mo_matrix(tmp,size(tmp,1),size(tmp,2),label,1)
+ call mo_as_eigvectors_of_mo_matrix(tmp,size(tmp,1),size(tmp,2),label,1,.false.)
  soft_touch mo_coef
 
 
@@ -38,7 +38,7 @@ end
 subroutine diag_inactive_virt_new_and_update_mos
  implicit none
  integer :: i,j,i_inact,j_inact,i_virt,j_virt,k,k_act
- double precision :: tmp(mo_tot_num_align,mo_tot_num),accu,get_mo_bielec_integral
+ double precision :: tmp(mo_tot_num,mo_tot_num),accu,get_mo_bielec_integral
  character*(64) :: label
  tmp = 0.d0
  do i = 1, mo_tot_num
@@ -76,7 +76,7 @@ subroutine diag_inactive_virt_new_and_update_mos
 
 
  label = "Canonical"
- call mo_as_eigvectors_of_mo_matrix(tmp,size(tmp,1),size(tmp,2),label,1)
+ call mo_as_eigvectors_of_mo_matrix(tmp,size(tmp,1),size(tmp,2),label,1,.false.)
  soft_touch mo_coef
 
 

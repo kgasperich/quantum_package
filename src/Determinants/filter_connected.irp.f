@@ -78,7 +78,7 @@ subroutine filter_not_connected(key1,key2,Nint,sze,idx)
     !DIR$ LOOP COUNT (1000)
     do i=1,sze
       degree_x2 = 0
-      !DEC$ LOOP COUNT MIN(4)
+      !DIR$ LOOP COUNT MIN(4)
       do j=1,Nint
         degree_x2 = degree_x2+ popcnt(xor( key1(j,1,i), key2(j,1))) +&
             popcnt(xor( key1(j,2,i), key2(j,2)))
@@ -177,7 +177,7 @@ subroutine filter_connected(key1,key2,Nint,sze,idx)
     !DIR$ LOOP COUNT (1000)
     do i=1,sze
       degree_x2 = 0
-      !DEC$ LOOP COUNT MIN(4)
+      !DIR$ LOOP COUNT MIN(4)
       do j=1,Nint
         degree_x2 = degree_x2+ popcnt(xor( key1(j,1,i), key2(j,1))) +&
             popcnt(xor( key1(j,2,i), key2(j,2)))
@@ -235,7 +235,9 @@ subroutine create_microlist(minilist, N_minilist, key_mask, microlist, idx_micro
   integer(bit_kind), intent(out) :: microlist(Nint,2,N_minilist*4)
   
   integer :: i,j,k,nt,n_element(2)
-  integer :: list(Nint*bit_kind_size,2), cur_microlist(0:mo_tot_num*2+1)
+  integer :: list(Nint*bit_kind_size,2)
+  integer, allocatable :: cur_microlist(:)
+  allocate (cur_microlist(0:mo_tot_num*2+1))
   integer(bit_kind) :: key_mask_neg(Nint,2), mobileMask(Nint,2)
   integer :: mo_tot_num_2
   mo_tot_num_2 = mo_tot_num+mo_tot_num
@@ -324,6 +326,7 @@ subroutine create_microlist(minilist, N_minilist, key_mask, microlist, idx_micro
       end do
     end if
   end do
+  deallocate(cur_microlist)
 end subroutine
   
   
@@ -401,7 +404,7 @@ subroutine filter_connected_i_H_psi0(key1,key2,Nint,sze,idx)
     !DIR$ LOOP COUNT (1000)
     outer: do i=1,sze
       degree_x2 = 0
-      !DEC$ LOOP COUNT MIN(4)
+      !DIR$ LOOP COUNT MIN(4)
       do m=1,Nint
         if ( key1(m,1,i) /=  key2(m,1)) then
           degree_x2 = degree_x2+ popcnt(xor( key1(m,1,i), key2(m,1))) 
@@ -451,7 +454,7 @@ subroutine filter_connected_i_H_psi0_SC2(key1,key2,Nint,sze,idx,idx_repeat)
   integer :: degree
   degree = popcnt(xor( ref_bitmask(1,1), key2(1,1))) +                      &
       popcnt(xor( ref_bitmask(1,2), key2(1,2)))
-  !DEC$ NOUNROLL
+  !DIR$ NOUNROLL
   do m=2,Nint
     degree = degree+ popcnt(xor( ref_bitmask(m,1), key2(m,1))) +            &
         popcnt(xor( ref_bitmask(m,2), key2(m,2)))
@@ -523,7 +526,7 @@ subroutine filter_connected_i_H_psi0_SC2(key1,key2,Nint,sze,idx,idx_repeat)
      !DIR$ LOOP COUNT (1000)
      do i=1,sze
        degree_x2 = 0
-       !DEC$ LOOP COUNT MIN(4)
+       !DIR$ LOOP COUNT MIN(4)
        do m=1,Nint
          degree_x2 = degree_x2+ popcnt(xor( key1(m,1,i), key2(m,1))) +&
              popcnt(xor( key1(m,2,i), key2(m,2)))
@@ -607,7 +610,7 @@ subroutine filter_connected_i_H_psi0_SC2(key1,key2,Nint,sze,idx,idx_repeat)
      !DIR$ LOOP COUNT (1000)
      do i=1,sze
        degree_x2 = 0
-       !DEC$ LOOP COUNT MIN(4)
+       !DIR$ LOOP COUNT MIN(4)
        do m=1,Nint
          degree_x2 = degree_x2+ popcnt(xor( key1(m,1,i), key2(m,1))) +&
              popcnt(xor( key1(m,2,i), key2(m,2)))

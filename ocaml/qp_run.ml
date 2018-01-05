@@ -1,4 +1,4 @@
-open Core.Std
+open Core
 open Qputils
 
 (* Environment variables :
@@ -16,7 +16,6 @@ let () =
   Random.self_init ()
 
 let run slave exe ezfio_file =
-
 
   (** Check availability of the ports *)
   let port_number = 
@@ -46,6 +45,7 @@ let run slave exe ezfio_file =
     ZMQ.Context.terminate zmq_context;
     result
   in
+
   let time_start = 
     Time.now ()
   in
@@ -70,11 +70,12 @@ let run slave exe ezfio_file =
 
 
   (** Check input *)
-  begin
-    match (Sys.command ("qp_edit -c "^ezfio_file)) with
-    | 0 -> ()
-    | i -> failwith "Error: Input inconsistent\n"
-  end;
+  if (not slave) then
+    begin
+      match (Sys.command ("qp_edit -c "^ezfio_file)) with
+      | 0 -> ()
+      | i -> failwith "Error: Input inconsistent\n"
+    end;
 
   let qp_run_address_filename = 
    Filename.concat (Qpackage.ezfio_work ezfio_file) "qp_run_address"
@@ -120,10 +121,11 @@ let run slave exe ezfio_file =
     | Some (_,x) -> x^" "
     | None -> assert false
   in
-  match (Sys.command (prefix^exe^ezfio_file)) with
-  | 0 -> ()
-  | i -> Printf.printf "Program exited with code %d.\n%!" i;
-  ;
+  let exit_code = 
+    match (Sys.command (prefix^exe^ezfio_file)) with
+    | 0 -> 0
+    | i -> (Printf.printf "Program exited with code %d.\n%!" i; i)
+  in
 
   TaskServer.stop ~port:port_number;
   Thread.join task_thread;
@@ -131,14 +133,16 @@ let run slave exe ezfio_file =
     Sys.remove qp_run_address_filename;
 
   let duration = Time.diff (Time.now()) time_start 
-  |> Core.Span.to_string in
-  Printf.printf "Wall time : %s\n\n" duration
+  |> Time.Span.to_string in
+  Printf.printf "Wall time : %s\n\n" duration;
+  if (exit_code <> 0) then
+    exit exit_code
 
 let spec = 
   let open Command.Spec in
   empty
   +> flag "slave" no_arg
-     ~doc:(" Needed for slave tasks")
+     ~doc:(" Required for slave tasks")
   +> anon ("executable" %: string)
   +> anon ("ezfio_file" %: string)
 ;;

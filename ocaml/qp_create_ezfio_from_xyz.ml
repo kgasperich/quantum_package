@@ -1,6 +1,6 @@
 open Qputils
 open Qptypes
-open Core.Std
+open Core
 
 let spec =
   let open Command.Spec in
@@ -9,6 +9,8 @@ let spec =
      ~doc:"file Name of the created EZFIO file."
   +> flag "b" (required string)
      ~doc:"string Name of basis set."
+  +> flag "au" no_arg
+     ~doc:"Input geometry is in atomic units."
   +> flag "c" (optional_with_default 0 int)
      ~doc:"int Total charge of the molecule. Default is 0."
   +> flag "d" (optional_with_default 0. float)
@@ -92,12 +94,16 @@ let list_basis () =
 
 
 (** Run the program *)
-let run ?o b c d m p cart xyz_file =
+let run ?o b au c d m p cart xyz_file =
 
   (* Read molecule *)
   let molecule =
-    (Molecule.of_file xyz_file ~charge:(Charge.of_int c)
-      ~multiplicity:(Multiplicity.of_int m) )
+    if au then
+      (Molecule.of_file xyz_file ~charge:(Charge.of_int c)
+        ~multiplicity:(Multiplicity.of_int m) ~units:Units.Bohr)
+    else
+      (Molecule.of_file xyz_file ~charge:(Charge.of_int c)
+        ~multiplicity:(Multiplicity.of_int m) )
   in
   let dummy =
     dummy_centers ~threshold:d ~molecule ~nuclei:molecule.Molecule.nuclei
@@ -420,7 +426,7 @@ let run ?o b c d m p cart xyz_file =
           let x = 
             List.fold x.Pseudo.non_local ~init:0 ~f:(fun accu (x,_) ->
               let x = 
-                Positive_int.to_int x.Pseudo.Primitive_non_local.proj
+                Positive_int.to_int x.Pseudo.GaussianPrimitive_non_local.proj
               in
               if (x > accu) then x
               else accu
@@ -435,7 +441,7 @@ let run ?o b c d m p cart xyz_file =
          Array.init (lmax+1) ~f:(fun i->
            List.map pseudo ~f:(fun x -> 
              List.filter x.Pseudo.non_local ~f:(fun (y,_) -> 
-               (Positive_int.to_int y.Pseudo.Primitive_non_local.proj) = i)
+               (Positive_int.to_int y.Pseudo.GaussianPrimitive_non_local.proj) = i)
              |> List.length )
            |> List.fold ~init:0 ~f:(fun accu x ->
              if accu > x then accu else x)
@@ -458,8 +464,8 @@ let run ?o b c d m p cart xyz_file =
           List.iteri x.Pseudo.local ~f:(fun i (y,c) ->
             tmp_array_v_k.(i).(j)  <- AO_coef.to_float c;
             let y, z =
-              AO_expo.to_float y.Pseudo.Primitive_local.expo, 
-              R_power.to_int y.Pseudo.Primitive_local.r_power 
+              AO_expo.to_float y.Pseudo.GaussianPrimitive_local.expo, 
+              R_power.to_int y.Pseudo.GaussianPrimitive_local.r_power 
             in
             tmp_array_dz_k.(i).(j) <- y;
             tmp_array_n_k.(i).(j)  <- z;
@@ -494,9 +500,9 @@ let run ?o b c d m p cart xyz_file =
           in
           List.iter x.Pseudo.non_local ~f:(fun (y,c) -> 
             let k, y, z =
-              Positive_int.to_int y.Pseudo.Primitive_non_local.proj,
-              AO_expo.to_float y.Pseudo.Primitive_non_local.expo,
-              R_power.to_int y.Pseudo.Primitive_non_local.r_power
+              Positive_int.to_int y.Pseudo.GaussianPrimitive_non_local.proj,
+              AO_expo.to_float y.Pseudo.GaussianPrimitive_non_local.expo,
+              R_power.to_int y.Pseudo.GaussianPrimitive_non_local.r_power
             in
             let i = 
               last_idx.(k) 
@@ -602,7 +608,7 @@ let run ?o b c d m p cart xyz_file =
               List.map x.Gto.lc ~f:(fun (_,coef) -> AO_coef.to_float coef) )
             | `Expos -> List.map gtos ~f:(fun x->
               List.map x.Gto.lc ~f:(fun (prim,_) -> AO_expo.to_float
-              prim.Primitive.expo) )
+              prim.GaussianPrimitive.expo) )
             end
           in
           let rec get_n n accu = function
@@ -682,8 +688,8 @@ Otherwise, the basis set is obtained from the database.
 
 " )
     spec
-    (fun o b c d m p cart xyz_file () ->
-       run ?o b c d m p cart xyz_file )
+    (fun o b au c d m p cart xyz_file () ->
+       run ?o b au c d m p cart xyz_file )
 
 
 let () =

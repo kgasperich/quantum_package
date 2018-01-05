@@ -7,7 +7,7 @@ function run_FCI() {
   test_exe full_ci || skip
   qp_edit -c $1
   ezfio set_file $1
-  ezfio set perturbation do_pt2_end True
+  ezfio set perturbation do_pt2 True
   ezfio set determinants n_det_max $2
   ezfio set davidson threshold_davidson 1.e-10
 
@@ -23,7 +23,7 @@ function run_FCI_ZMQ() {
   test_exe fci_zmq || skip
   qp_edit -c $1
   ezfio set_file $1
-  ezfio set perturbation do_pt2_end True
+  ezfio set perturbation do_pt2 True
   ezfio set determinants n_det_max $2
   ezfio set davidson threshold_davidson 1.e-10
 
@@ -42,13 +42,14 @@ function run_FCI_ZMQ() {
   qp_set_mo_class h2o.ezfio -core "[1]" -act "[2-12]" -del "[13-24]"
 }
 @test "FCI H2O cc-pVDZ" {
-  run_FCI h2o.ezfio 2000  -76.1253758241716     -76.1258130146102     
+  run_FCI h2o.ezfio 2000  -76.1253757275131     -76.1258128174355
 }
 
 
 
+
 @test "FCI-ZMQ H2O cc-pVDZ" {
-  run_FCI_ZMQ h2o.ezfio 2000 -76.1250552686394     -76.1258817228809  
+  run_FCI_ZMQ h2o.ezfio 2000 -76.1255113765945     -76.12588757
 }
 
 

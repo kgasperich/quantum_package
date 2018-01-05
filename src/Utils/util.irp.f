@@ -10,7 +10,7 @@ double precision function binom_func(i,j)
   double precision               :: logfact
   integer, save                  :: ifirst
   double precision, save         :: memo(0:15,0:15)
-  !DEC$ ATTRIBUTES ALIGN : $IRP_ALIGN :: memo
+  !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: memo
   integer                        :: k,l
   if (ifirst == 0) then
     ifirst = 1
@@ -44,20 +44,6 @@ end
   enddo
 END_PROVIDER
 
-
-integer function align_double(n)
-  implicit none
-  BEGIN_DOC
-  ! Compute 1st dimension such that it is aligned for vectorization.
-  END_DOC
-  integer                        :: n
-  include 'constants.include.F'
-  if (mod(n,SIMD_vector/4) /= 0) then
-    align_double= n + SIMD_vector/4 - mod(n,SIMD_vector/4)
-  else
-    align_double= n
-  endif
-end
 
 
 double precision function fact(n)
@@ -234,30 +220,14 @@ double precision function dble_logfact(n) result(logfact2)
   ! n!!
   END_DOC
   integer                        :: n
-  double precision, save         :: memo(1:100)
-  integer, save                  :: memomax = 1
-  
-  ASSERT (iand(n,1) /= 0)
-  if (n<=memomax) then
-    if (n<3) then
-      logfact2 = 0.d0
-    else
-      logfact2 = memo(n)
-    endif
-    return
-  endif
-  
-  integer                        :: i
-  memo(1) = 0.d0
-  do i=memomax+2,min(n,99),2
-    memo(i) = memo(i-2)+ dlog(dble(i))
+  integer :: k
+  double precision :: prod
+  prod=0.d0
+  do k=2,n,2
+   prod=prod+dlog(dfloat(k))
   enddo
-  memomax = min(n,99)
-  logfact2 = memo(memomax)
-  
-  do i=101,n,2
-    logfact2 += dlog(dble(i))
-  enddo
+  logfact2=prod
+  return
   
 end function
 
@@ -349,7 +319,6 @@ subroutine normalize(u,sze)
   implicit none
   BEGIN_DOC
   ! Normalizes vector u
-  ! u is expected to be aligned in memory.
   END_DOC
   integer, intent(in)            :: sze
   double precision, intent(inout):: u(sze)

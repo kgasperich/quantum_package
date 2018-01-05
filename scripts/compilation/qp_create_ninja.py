@@ -25,6 +25,7 @@ except ImportError:
                                       "quantum_package.rc"))
 
     print "\n".join(["", "Error:", "source %s" % f, ""])
+    raise
     sys.exit(1)
 
 
@@ -265,7 +266,7 @@ def ninja_ezfio_rule():
 
     install_lib_ezfio = join(QP_ROOT, 'install', 'EZFIO', "lib", "libezfio_irp.a")
     l_cmd = ["cd {0}".format(QP_EZFIO)] + l_flag
-    l_cmd += ["rm -f make.config ; ninja && ln -sf {0} {1}".format(install_lib_ezfio, EZFIO_LIB)]
+    l_cmd += ["rm -f make.config ; ninja && rm -f {1} ; ln -sf {0} {1}".format(install_lib_ezfio, EZFIO_LIB)]
 
     l_string = ["rule build_ezfio",
                 "   command = {0}".format(" ; ".join(l_cmd)),
@@ -306,7 +307,7 @@ def ninja_symlink_rule():
     """
     Return the command to create for the symlink
     """
-    return ["rule build_symlink", "   command =  ln -sf $in $out", ""]
+    return ["rule build_symlink", "   command =  rm -f $out ; ln -sf $in $out", ""]
 
 
 def ninja_symlink_build(path_module, l_symlink):
@@ -824,6 +825,7 @@ if __name__ == "__main__":
                 arguments = pickle.load(handle)
         except IOError:
             print "You need to create first my friend"
+            raise
             sys.exit(1)
 
     elif arguments["create"]:
@@ -926,6 +928,7 @@ if __name__ == "__main__":
                      "- Or install a module that needs {0} with a main "]
 
             print "\n".join(l_msg).format(module.rel)
+            raise
             sys.exit(1)
 
     # ~#~#~#~#~#~#~#~#~#~#~#~ #

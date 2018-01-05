@@ -20,7 +20,7 @@ integer*8 function spin_det_search_key(det,Nint)
   do i=2,Nint
     spin_det_search_key = ieor(spin_det_search_key,det(i))
   enddo
-  spin_det_search_key = spin_det_search_key+1_bit_kind-unsigned_shift
+  spin_det_search_key = spin_det_search_key+unsigned_shift
 end
 
 
@@ -189,9 +189,7 @@ integer function get_index_in_psi_det_alpha_unique(key,Nint)
   enddo
   i += 1
 
-  if (i > N_det_alpha_unique) then
-    return
-  endif
+  ASSERT (i <= N_det_alpha_unique)
 
   !DIR$ FORCEINLINE
   do while (spin_det_search_key(psi_det_alpha_unique(1,i),Nint) == det_ref)
@@ -213,6 +211,7 @@ integer function get_index_in_psi_det_alpha_unique(key,Nint)
     endif
     i += 1
     if (i > N_det_alpha_unique) then
+      ASSERT (get_index_in_psi_det_alpha_unique > 0)
       return
     endif
 
@@ -270,9 +269,7 @@ integer function get_index_in_psi_det_beta_unique(key,Nint)
   enddo
   i += 1
 
-  if (i > N_det_beta_unique) then
-    return
-  endif
+  ASSERT (i <= N_det_beta_unique)
 
   !DIR$ FORCEINLINE
   do while (spin_det_search_key(psi_det_beta_unique(1,i),Nint) == det_ref)
@@ -294,6 +291,7 @@ integer function get_index_in_psi_det_beta_unique(key,Nint)
     endif
     i += 1
     if (i > N_det_beta_unique) then
+      ASSERT (get_index_in_psi_det_beta_unique > 0)
       return
     endif
 
@@ -367,8 +365,9 @@ end
  do k=1,N_det
    i = psi_bilinear_matrix_rows(k)
    j = psi_bilinear_matrix_columns(k)
+   f = 0.d0
    do l=1,N_states
-    f = psi_bilinear_matrix_values(k,l)*psi_bilinear_matrix_values(k,l)
+    f += psi_bilinear_matrix_values(k,l)*psi_bilinear_matrix_values(k,l)
    enddo
    det_alpha_norm(i) += f
    det_beta_norm(j)  += f
@@ -413,7 +412,12 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_values, (N_det,N_states)
   !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i,j,k,l)
   do k=1,N_det
     i = get_index_in_psi_det_alpha_unique(psi_det(1,1,k),N_int)
+    ASSERT (i>0)
+    ASSERT (i<=N_det_alpha_unique)
+
     j = get_index_in_psi_det_beta_unique (psi_det(1,2,k),N_int)
+    ASSERT (j>0)
+    ASSERT (j<=N_det_beta_unique)
 
     do l=1,N_states
       psi_bilinear_matrix_values(k,l) = psi_coef(k,l)
@@ -421,6 +425,7 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_values, (N_det,N_states)
     psi_bilinear_matrix_rows(k) = i
     psi_bilinear_matrix_columns(k) = j
     to_sort(k) = int(N_det_alpha_unique,8) * int(j-1,8) + int(i,8)
+    ASSERT (to_sort(k) > 0_8)
     psi_bilinear_matrix_order(k) = k
   enddo
   !$OMP END PARALLEL DO
@@ -431,6 +436,12 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_values, (N_det,N_states)
     call dset_order(psi_bilinear_matrix_values(1,l),psi_bilinear_matrix_order,N_det)
   enddo
   deallocate(to_sort)
+  ASSERT (minval(psi_bilinear_matrix_rows) == 1)
+  ASSERT (minval(psi_bilinear_matrix_columns) == 1)
+  ASSERT (minval(psi_bilinear_matrix_order) == 1)
+  ASSERT (maxval(psi_bilinear_matrix_rows) == N_det_alpha_unique)
+  ASSERT (maxval(psi_bilinear_matrix_columns) == N_det_beta_unique)
+  ASSERT (maxval(psi_bilinear_matrix_order) == N_det)
 END_PROVIDER
 
 
@@ -438,7 +449,7 @@ BEGIN_PROVIDER [ integer, psi_bilinear_matrix_order_reverse , (N_det) ]
   use bitmasks
   implicit none
   BEGIN_DOC
-! Order which allors to go from psi_bilinear_matrix to psi_det
+! Order which allows to go from psi_bilinear_matrix to psi_det
   END_DOC
   integer                        :: k
   !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(k)
@@ -446,6 +457,8 @@ BEGIN_PROVIDER [ integer, psi_bilinear_matrix_order_reverse , (N_det) ]
     psi_bilinear_matrix_order_reverse(psi_bilinear_matrix_order(k)) = k
   enddo
   !$OMP END PARALLEL DO
+  ASSERT (minval(psi_bilinear_matrix_order) == 1)
+  ASSERT (maxval(psi_bilinear_matrix_order) == N_det)
 END_PROVIDER
 
 
@@ -471,8 +484,13 @@ BEGIN_PROVIDER [ integer, psi_bilinear_matrix_columns_loc, (N_det_beta_unique+1)
       l = psi_bilinear_matrix_columns(k)
       psi_bilinear_matrix_columns_loc(l) = k
     endif
+    if (psi_bilinear_matrix_columns(k) < 1) then
+     stop '(psi_bilinear_matrix_columns(k) < 1)'
+    endif
   enddo
   psi_bilinear_matrix_columns_loc(N_det_beta_unique+1) = N_det+1
+  ASSERT (minval(psi_bilinear_matrix_columns_loc) == 1)
+  ASSERT (maxval(psi_bilinear_matrix_columns_loc) == N_det+1)
 END_PROVIDER
 
 BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_transp_values, (N_det,N_states) ]
@@ -496,20 +514,27 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_transp_values, (N_det,N_
   integer*8, allocatable :: to_sort(:)
   allocate(to_sort(N_det))
   !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(i,j,k,l)
-  !$OMP DO COLLAPSE(2)
   do l=1,N_states
+    !$OMP DO
     do k=1,N_det
       psi_bilinear_matrix_transp_values (k,l) = psi_bilinear_matrix_values (k,l)
     enddo
+    !$OMP ENDDO
   enddo
-  !$OMP ENDDO 
   !$OMP DO 
   do k=1,N_det
     psi_bilinear_matrix_transp_columns(k) = psi_bilinear_matrix_columns(k)
+    ASSERT (psi_bilinear_matrix_transp_columns(k) > 0)
+    ASSERT (psi_bilinear_matrix_transp_columns(k) <= N_det)
+
     psi_bilinear_matrix_transp_rows   (k) = psi_bilinear_matrix_rows   (k)
+    ASSERT (psi_bilinear_matrix_transp_rows(k) > 0)
+    ASSERT (psi_bilinear_matrix_transp_rows(k) <= N_det)
+
     i = psi_bilinear_matrix_transp_columns(k) 
     j = psi_bilinear_matrix_transp_rows   (k)
     to_sort(k) = int(N_det_beta_unique,8) * int(j-1,8) + int(i,8)
+    ASSERT (to_sort(k) > 0)
     psi_bilinear_matrix_transp_order(k) = k
   enddo
   !$OMP ENDDO
@@ -521,6 +546,12 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_transp_values, (N_det,N_
     call dset_order(psi_bilinear_matrix_transp_values(1,l),psi_bilinear_matrix_transp_order,N_det)
   enddo
   deallocate(to_sort)
+  ASSERT (minval(psi_bilinear_matrix_transp_columns) == 1)
+  ASSERT (minval(psi_bilinear_matrix_transp_rows) == 1)
+  ASSERT (minval(psi_bilinear_matrix_transp_order) == 1)
+  ASSERT (maxval(psi_bilinear_matrix_transp_columns) == N_det_beta_unique)
+  ASSERT (maxval(psi_bilinear_matrix_transp_rows) == N_det_alpha_unique)
+  ASSERT (maxval(psi_bilinear_matrix_transp_order) == N_det)
 END_PROVIDER
 
 BEGIN_PROVIDER [ integer, psi_bilinear_matrix_transp_rows_loc, (N_det_alpha_unique+1) ]
@@ -542,6 +573,8 @@ BEGIN_PROVIDER [ integer, psi_bilinear_matrix_transp_rows_loc, (N_det_alpha_uniq
     endif
   enddo
   psi_bilinear_matrix_transp_rows_loc(N_det_alpha_unique+1) = N_det+1
+  ASSERT (minval(psi_bilinear_matrix_transp_rows_loc) == 1)
+  ASSERT (maxval(psi_bilinear_matrix_transp_rows_loc) == N_det+1)
 END_PROVIDER
 
 BEGIN_PROVIDER [ integer, psi_bilinear_matrix_order_transp_reverse , (N_det) ]
@@ -552,11 +585,14 @@ BEGIN_PROVIDER [ integer, psi_bilinear_matrix_order_transp_reverse , (N_det) ]
   END_DOC
   integer                        :: k
 
+  psi_bilinear_matrix_order_transp_reverse = -1
   !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(k)
   do k=1,N_det
     psi_bilinear_matrix_order_transp_reverse(psi_bilinear_matrix_transp_order(k)) = k
   enddo
   !$OMP END PARALLEL DO
+  ASSERT (minval(psi_bilinear_matrix_order_transp_reverse) == 1)
+  ASSERT (maxval(psi_bilinear_matrix_order_transp_reverse) == N_det)
 END_PROVIDER
 
 
@@ -590,9 +626,16 @@ subroutine create_wf_of_psi_bilinear_matrix(truncate)
   integer                        :: idx
   integer, external              :: get_index_in_psi_det_sorted_bit
   double precision               :: norm(N_states)
+  PROVIDE psi_bilinear_matrix
 
   call generate_all_alpha_beta_det_products
   norm = 0.d0
+  !$OMP PARALLEL DO DEFAULT(NONE)                                    &
+      !$OMP PRIVATE(i,j,k,idx,tmp_det)                               &
+      !$OMP SHARED(N_det_alpha_unique, N_det_beta_unique, N_det,     &
+      !$OMP N_int, N_states, norm, psi_det_beta_unique,              &
+      !$OMP psi_det_alpha_unique, psi_bilinear_matrix,               &
+      !$OMP psi_coef_sorted_bit)
   do j=1,N_det_beta_unique
     do k=1,N_int
       tmp_det(k,2) = psi_det_beta_unique(k,j)
@@ -605,11 +648,14 @@ subroutine create_wf_of_psi_bilinear_matrix(truncate)
       if (idx > 0) then
         do k=1,N_states
           psi_coef_sorted_bit(idx,k) = psi_bilinear_matrix(i,j,k) 
+          !$OMP ATOMIC
           norm(k) += psi_bilinear_matrix(i,j,k)
         enddo
       endif
     enddo
   enddo
+  !$OMP END PARALLEL DO
+
   do k=1,N_states
     norm(k) = 1.d0/dsqrt(norm(k))
     do i=1,N_det
@@ -645,7 +691,7 @@ subroutine generate_all_alpha_beta_det_products
   integer, external              :: get_index_in_psi_det_sorted_bit
   integer(bit_kind), allocatable :: tmp_det(:,:,:)
   logical, external              :: is_in_wavefunction
-  integer, external              :: omp_get_thread_num
+  PROVIDE H_apply_buffer_allocated
 
   !$OMP PARALLEL DEFAULT(NONE) SHARED(psi_coef_sorted_bit,N_det_beta_unique,&
       !$OMP N_det_alpha_unique, N_int, psi_det_alpha_unique, psi_det_beta_unique,&
@@ -653,7 +699,7 @@ subroutine generate_all_alpha_beta_det_products
       !$OMP PRIVATE(i,j,k,l,tmp_det,iproc)
   !$ iproc = omp_get_thread_num()
   allocate (tmp_det(N_int,2,N_det_alpha_unique))
-  !$OMP DO
+  !$OMP DO SCHEDULE(static,1)
   do j=1,N_det_beta_unique
     l = 1
     do i=1,N_det_alpha_unique
@@ -667,7 +713,7 @@ subroutine generate_all_alpha_beta_det_products
     enddo
     call fill_H_apply_buffer_no_selection(l-1, tmp_det, N_int, iproc)
   enddo
-  !$OMP END DO NOWAIT
+  !$OMP END DO 
   deallocate(tmp_det)
   !$OMP END PARALLEL
   call copy_H_apply_buffer_to_wf
@@ -897,7 +943,6 @@ subroutine get_all_spin_singles_and_doubles_1(buffer, idx, spindet, size_buffer,
 
   n_singles = 1
   n_doubles = 1
-  !DIR$ VECTOR ALIGNED
   do i=1,size_buffer
     degree =  popcnt(  xor( spindet, buffer(i) ) )
     if ( degree == 4 ) then
@@ -965,7 +1010,6 @@ subroutine get_all_spin_doubles_1(buffer, idx, spindet, size_buffer, doubles, n_
   integer                        :: degree
 
   n_doubles = 1
-  !DIR$ VECTOR ALIGNED
   do i=1,size_buffer
     degree = popcnt(xor( spindet, buffer(i) ))
     if ( degree == 4 ) then
@@ -1004,12 +1048,8 @@ subroutine get_all_spin_singles_and_doubles_$N_int(buffer, idx, spindet, size_bu
   integer(bit_kind)              :: xorvec($N_int)
   integer                        :: degree
 
-  integer, external              :: align_double
-
-  !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: xorvec, degree
   n_singles = 1
   n_doubles = 1
-  !DIR$ VECTOR ALIGNED
   do i=1,size_buffer
 
     do k=1,$N_int
@@ -1023,7 +1063,6 @@ subroutine get_all_spin_singles_and_doubles_$N_int(buffer, idx, spindet, size_bu
     endif
   
     do k=2,$N_int
-      !DIR$ VECTOR ALIGNED
       if ( (degree <= 4).and.(xorvec(k) /= 0_8) ) then
         degree = degree + popcnt(xorvec(k))
       endif
@@ -1064,12 +1103,7 @@ subroutine get_all_spin_singles_$N_int(buffer, idx, spindet, size_buffer, single
   integer(bit_kind)              :: xorvec($N_int)
   integer                        :: degree
 
-  integer, external              :: align_double
-
-  !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: xorvec
-
   n_singles = 1
-  !DIR$ VECTOR ALIGNED
   do i=1,size_buffer
 
     do k=1,$N_int
@@ -1119,7 +1153,6 @@ subroutine get_all_spin_doubles_$N_int(buffer, idx, spindet, size_buffer, double
   integer(bit_kind)              :: xorvec($N_int)
 
   n_doubles = 1
-  !DIR$ VECTOR ALIGNED
   do i=1,size_buffer
 
     do k=1,$N_int
@@ -1133,7 +1166,6 @@ subroutine get_all_spin_doubles_$N_int(buffer, idx, spindet, size_buffer, double
     endif
   
     do k=2,$N_int
-      !DIR$ VECTOR ALIGNED
       if ( (degree <= 4).and.(xorvec(k) /= 0_8) ) then
         degree = degree + popcnt(xorvec(k))
       endif
@@ -1158,4 +1190,36 @@ N_int;;
 
 END_TEMPLATE
 
+
+subroutine wf_of_psi_bilinear_matrix(truncate)
+  use bitmasks
+  implicit none
+  BEGIN_DOC
+! Generate a wave function containing all possible products 
+! of alpha and beta determinants
+  END_DOC
+  logical, intent(in)            :: truncate
+  integer                        :: i,j,k
+  integer(bit_kind)              :: tmp_det(N_int,2)
+  integer                        :: idx
+  integer, external              :: get_index_in_psi_det_sorted_bit
+  double precision               :: norm(N_states)
+
+  do k=1,N_det
+   i = psi_bilinear_matrix_rows(k)
+   j = psi_bilinear_matrix_columns(k)
+   psi_det(1:N_int,1,k) = psi_det_alpha_unique(1:N_int,i)
+   psi_det(1:N_int,2,k) = psi_det_beta_unique (1:N_int,j)
+  enddo
+  psi_coef(1:N_det,1:N_states) = psi_bilinear_matrix_values(1:N_det,1:N_states)
+  TOUCH psi_det psi_coef 
+
+  psi_det   = psi_det_sorted
+  psi_coef  = psi_coef_sorted
+  do while (sum( dabs(psi_coef(N_det,1:N_states)) ) == 0.d0)
+    N_det -= 1
+  enddo
+  SOFT_TOUCH psi_det psi_coef N_det
+
+end
 

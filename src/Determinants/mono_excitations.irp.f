@@ -19,7 +19,7 @@ BEGIN_PROVIDER [integer(bit_kind), ref_closed_shell_bitmask, (N_int,2)]
 END_PROVIDER
 
 
-BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_tot_num_align, mo_tot_num) ]
+BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_tot_num, mo_tot_num) ]
  implicit none
  integer :: i0,j0,i,j,k0,k
  integer :: n_occ_ab(2)
@@ -36,7 +36,8 @@ BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_to
   key_virt(i,1) = xor(key_virt(i,1),ref_closed_shell_bitmask(i,1))
   key_virt(i,2) = xor(key_virt(i,2),ref_closed_shell_bitmask(i,2))
  enddo
- double precision :: array_coulomb(mo_tot_num),array_exchange(mo_tot_num)
+ double precision, allocatable :: array_coulomb(:),array_exchange(:)
+ allocate (array_coulomb(mo_tot_num),array_exchange(mo_tot_num))
  call bitstring_to_list_ab(key_virt, occ_virt, n_occ_ab_virt, N_int)
  ! docc ---> virt mono excitations
  do i0 = 1,  n_occ_ab(1)
@@ -89,6 +90,7 @@ BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_to
    fock_operator_closed_shell_ref_bitmask(j,i) = accu+ mo_mono_elec_integral(i,j)
   enddo
  enddo
+ deallocate(array_coulomb,array_exchange)
 
 END_PROVIDER
 
