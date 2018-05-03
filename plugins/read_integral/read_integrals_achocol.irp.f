@@ -23,7 +23,7 @@ subroutine run
    
   call ezfio_set_integrals_monoelec_disk_access_ao_one_integrals("Read")
 
-  allocate(buffer_i(ao_num**4)/8, buffer_values(ao_num**4)/8)
+  allocate(buffer_i(ao_num**4/8), buffer_values(ao_num**4/8))
    
   iunit = getunitandopen('bielec_ao','r')
   n_integrals=0
