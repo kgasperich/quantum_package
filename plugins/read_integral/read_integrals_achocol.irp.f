@@ -16,15 +16,27 @@ subroutine run
   double precision :: integral
   double precision, allocatable :: A(:,:)
 
-  integer             :: n_integrals 
+  integer(KIND=16)             :: n_integrals 
+  integer(KIND=16)             :: n_tot_integrals
+
   integer(key_kind), allocatable   :: buffer_i(:) 
   real(integral_kind), allocatable :: buffer_values(:)
   integer(key_kind)  :: key
-   
-  call ezfio_set_integrals_monoelec_disk_access_ao_one_integrals("Read")
 
-  allocate(buffer_i(ao_num**4/8), buffer_values(ao_num**4/8))
+ !Compute number of integrals in the file
+  iunit = getunitandopen('bielec_ao','r')
+  n_tot_integrals=0
+  do
+    read (iunit,*,end=132)
+    n_tot_integrals += 1
+  enddo
+  132 continue
+  close(iunit)
+  print *, n_tot_integrals, "will be readed"
+
+  allocate(buffer_i(n_tot_integrals), buffer_values(n_tot_integrals))
    
+  ! Read the actual integrals
   iunit = getunitandopen('bielec_ao','r')
   n_integrals=0
   do 
