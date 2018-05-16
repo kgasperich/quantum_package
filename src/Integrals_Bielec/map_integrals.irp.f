@@ -21,6 +21,18 @@ subroutine bielec_integrals_index(i,j,k,l,i1)
   implicit none
   integer, intent(in)            :: i,j,k,l
   integer(key_kind), intent(out) :: i1
+  if (has_complex_mos) then
+    call bielec_integrals_index_complex(i,j,k,l,i1)
+  else
+    call bielec_integrals_index_real(i,j,k,l,i1)
+  endif
+end
+
+subroutine bielec_integrals_index_real(i,j,k,l,i1)
+  use map_module
+  implicit none
+  integer, intent(in)            :: i,j,k,l
+  integer(key_kind), intent(out) :: i1
   integer(key_kind)              :: p,q,r,s,i2
   p = min(i,k)
   r = max(i,k)
@@ -33,7 +45,136 @@ subroutine bielec_integrals_index(i,j,k,l,i1)
   i1 = i1+ishft(i2*i2-i2,-1)
 end
 
+subroutine bielec_integrals_index_complex(i,j,k,l,i1)
+  use map_module
+  implicit none
+  integer, intent(in)            :: i,j,k,l
+  integer(key_kind), intent(out) :: i1
+  integer(key_kind)              :: p,q,i2
+  if (i.eq.k) then
+    p=i*i
+  else if (i.lt.k) then
+    p=(k-1)*(k-1)+2*i-mod(k+1,2)
+  else
+    p=(i-1)*(i-1)+2*k-mod(i,2)
+  endif
+  if (j.eq.l) then
+    q=j*j
+  else if (j.lt.l) then
+    q=(l-1)*(l-1)+2*j-mod(l+1,2)
+  else
+    q=(j-1)*(j-1)+2*l-mod(j,2)
+  endif
+  i1 = min(p,q)
+  i2 = max(p,q)
+  i1 = i1+ishft(i2*i2-i2,-1)
+end
+
 subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
+  use map_module
+  implicit none
+  integer, intent(out)           :: i(8),j(8),k(8),l(8)
+  integer(key_kind), intent(in)  :: i1
+  if (has_complex_mos) then
+    call bielec_integrals_index_reverse_complex(i,j,k,l,i1)
+  else
+    call bielec_integrals_index_reverse_real(i,j,k,l,i1)
+  endif
+end
+
+subroutine bielec_integrals_index_reverse_complex(i,j,k,l,i1)
+  use map_module
+  implicit none
+  integer, intent(out)           :: i(8),j(8),k(8),l(8)
+  integer(key_kind), intent(in)  :: i1
+  integer(key_kind)              :: i2,i3,p,q
+  i = 0
+  i2   = ceiling(0.5d0*(dsqrt(8.d0*dble(i1)+1.d0)-1.d0))
+  i3   = i1 - ishft(i2*i2-i2,-1)
+  p = ceiling(dsqrt(dble(i2)))
+  q = ceiling(0.5d0*(dble(i2)-dble((p-1)*(p-1))))
+  if (mod(i2,2).eq.0) then
+    l(1)=p
+    j(1)=q
+  else
+    j(1)=p
+    l(1)=q
+  endif
+  p = ceiling(dsqrt(dble(i3)))
+  q = ceiling(0.5d0*(dble(i3)-dble((p-1)*(p-1))))
+  if (mod(i3,2).eq.0) then
+    k(1)=p
+    i(1)=q
+  else
+    i(1)=p
+    k(1)=q
+  endif
+
+              !ijkl
+  i(2) = j(1) !jilk
+  j(2) = i(1)
+  k(2) = l(1)
+  l(2) = k(1)
+
+!  i(3) = k(1) !klij   complex conjugate
+!  j(3) = l(1)
+!  k(3) = i(1)
+!  l(3) = j(1)
+!
+!  i(4) = l(1) !lkji   complex conjugate
+!  j(4) = k(1)
+!  k(4) = j(1)
+!  l(4) = i(1)
+!! not sure whether we should keep the next 4
+!! 8-fold symmetry is gone, so these represent a different integral unless i=k or j=l
+!! maybe just set to zero?
+!! eventually might be better to only return 2 sets of indices, ijkl and jilk
+!  i(5) = i(1) !ijlk
+!  j(5) = j(1)
+!  k(5) = l(1)
+!  l(5) = k(1)
+!
+!  i(6) = j(1) !jikl
+!  j(6) = i(1)
+!  k(6) = k(1)
+!  l(6) = l(1)
+!
+!  i(7) = l(1) !lkij
+!  j(7) = k(1)
+!  k(7) = i(1)
+!  l(7) = j(1)
+!
+!  i(8) = k(1) !klji
+!  j(8) = l(1)
+!  k(8) = j(1)
+!  l(8) = i(1)
+
+  integer :: ii, jj
+  do ii=2,8
+    do jj=1,ii-1
+      if ( (i(ii) == i(jj)).and. &
+           (j(ii) == j(jj)).and. &
+           (k(ii) == k(jj)).and. &
+           (l(ii) == l(jj)) ) then
+         i(ii) = 0
+         exit
+      endif
+    enddo
+  enddo
+  do ii=1,8
+    if (i(ii) /= 0) then
+      call bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i2)
+      if (i1 /= i2) then
+        print *,  i1, i2
+        print *,  i(ii), j(jj), k(jj), l(jj)
+        stop 'bielec_integrals_index_reverse failed'
+      endif
+    endif
+  enddo
+
+
+end
+subroutine bielec_integrals_index_reverse_real(i,j,k,l,i1)
   use map_module
   implicit none
   integer, intent(out)           :: i(8),j(8),k(8),l(8)
