@@ -152,6 +152,140 @@ BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
   
 END_PROVIDER
 
+!TODO:fix this
+BEGIN_PROVIDER [ logical, comp_mo_bielec_integrals_in_map ]
+  use map_module
+  implicit none
+  integer(bit_kind)              :: mask_ijkl(N_int,4)
+  integer(bit_kind)              :: mask_ijk(N_int,3)
+  
+  BEGIN_DOC
+  ! If True, the map of MO bielectronic integrals is provided
+  END_DOC
+  
+  comp_mo_bielec_integrals_in_map = .True.
+  if (read_mo_integrals) then
+    print*,'Reading the MO integrals'
+    call map_load_from_disk(trim(ezfio_filename)//'/work/comp_mo_ints',comp_mo_integrals_map)
+    print*, 'complex MO integrals provided'
+    return
+  else
+    PROVIDE ao_bielec_integrals_in_map
+  endif
+
+  print *,  ''
+  print *,  'AO -> MO integrals transformation'
+  print *,  '---------------------------------'
+  print *,  ''
+  
+  if(no_vvvv_integrals)then
+    integer                        :: i,j,k,l
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  I I I I !!!!!!!!!!!!!!!!!!!!
+    ! (core+inact+act) ^ 4
+    ! <ii|ii>
+    print*, ''
+    print*, '<ii|ii>'
+    do i = 1,N_int
+      mask_ijkl(i,1) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,2) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,3) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,4) =  core_inact_act_bitmask_4(i,1)
+    enddo
+    call add_integrals_to_map(mask_ijkl)
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  I I V V !!!!!!!!!!!!!!!!!!!!
+    ! (core+inact+act) ^ 2  (virt) ^2
+    ! <iv|iv>  = J_iv
+    print*, ''
+    print*, '<iv|iv>'
+    do i = 1,N_int
+      mask_ijkl(i,1) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,2) =  virt_bitmask(i,1)
+      mask_ijkl(i,3) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,4) =  virt_bitmask(i,1)
+    enddo
+    call add_integrals_to_map(mask_ijkl)
+    
+    ! (core+inact+act) ^ 2  (virt) ^2
+    ! <ii|vv> = (iv|iv)
+    print*, ''
+    print*, '<ii|vv>'
+    do i = 1,N_int
+      mask_ijkl(i,1) = core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,2) = core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,3) = virt_bitmask(i,1)
+      mask_ijkl(i,4) = virt_bitmask(i,1)
+    enddo
+    call add_integrals_to_map(mask_ijkl)
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! V V V !!!!!!!!!!!!!!!!!!!!!!!
+    if(.not.no_vvv_integrals)then
+      print*, ''
+      print*, '<rv|sv> and <rv|vs>'
+      do i = 1,N_int
+        mask_ijk(i,1) =  virt_bitmask(i,1)
+        mask_ijk(i,2) =  virt_bitmask(i,1)
+        mask_ijk(i,3) =  virt_bitmask(i,1)
+      enddo
+      call add_integrals_to_map_three_indices(mask_ijk)
+    endif
+    
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  I I I V !!!!!!!!!!!!!!!!!!!!
+    ! (core+inact+act) ^ 3  (virt) ^1
+    ! <iv|ii>
+    print*, ''
+    print*, '<iv|ii>'
+    do i = 1,N_int
+      mask_ijkl(i,1) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,2) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,3) =  core_inact_act_bitmask_4(i,1)
+      mask_ijkl(i,4) =  virt_bitmask(i,1)
+    enddo
+    call add_integrals_to_map(mask_ijkl)
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  I V V V !!!!!!!!!!!!!!!!!!!!
+    ! (core+inact+act) ^ 1  (virt) ^3
+    ! <iv|vv>
+    if(.not.no_ivvv_integrals)then
+      print*, ''
+      print*, '<iv|vv>'
+      do i = 1,N_int
+        mask_ijkl(i,1) =  core_inact_act_bitmask_4(i,1)
+        mask_ijkl(i,2) =  virt_bitmask(i,1)
+        mask_ijkl(i,3) =  virt_bitmask(i,1)
+        mask_ijkl(i,4) =  virt_bitmask(i,1)
+      enddo
+      call add_integrals_to_map_no_exit_34(mask_ijkl)
+    endif
+    
+  else
+    call add_integrals_to_map(full_ijkl_bitmask_4)
+
+!     call four_index_transform_zmq(ao_integrals_map,mo_integrals_map, &
+!         mo_coef, size(mo_coef,1),                                      &
+!         1, 1, 1, 1, ao_num, ao_num, ao_num, ao_num,                    &
+!         1, 1, 1, 1, mo_num, mo_num, mo_num, mo_num)
+!
+!     call four_index_transform_block(ao_integrals_map,mo_integrals_map, &
+!         mo_coef, size(mo_coef,1),                                      &
+!         1, 1, 1, 1, ao_num, ao_num, ao_num, ao_num,                    &
+!         1, 1, 1, 1, mo_num, mo_num, mo_num, mo_num)
+!
+!     call four_index_transform(ao_integrals_map,mo_integrals_map, &
+!         mo_coef, size(mo_coef,1),                                      &
+!         1, 1, 1, 1, ao_num, ao_num, ao_num, ao_num,                    &
+!         1, 1, 1, 1, mo_tot_num, mo_tot_num, mo_tot_num, mo_tot_num)
+
+    integer*8                      :: get_mo_map_size, mo_map_size
+    mo_map_size = get_mo_map_size()
+    
+    print*,'Molecular integrals provided'
+  endif
+  if (write_mo_integrals.and.mpi_master) then
+    call ezfio_set_work_empty(.False.)
+    call map_save_to_disk(trim(ezfio_filename)//'/work/mo_ints',mo_integrals_map)
+    call ezfio_set_integrals_bielec_disk_access_mo_integrals("Read")
+  endif
+  
+END_PROVIDER
+
 subroutine set_integrals_jj_into_map
   use bitmasks
   implicit none

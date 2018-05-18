@@ -16,19 +16,6 @@ BEGIN_PROVIDER [ type(map_type), ao_integrals_map ]
   print*,  'AO map initialized : ', sze
 END_PROVIDER
 
-!subroutine bielec_integrals_index(i,j,k,l,i1)
-!  use map_module
-!  implicit none
-!  integer, intent(in)            :: i,j,k,l
-!  integer(key_kind), intent(out) :: i1
-!  if (has_complex_mos) then
-!    call bielec_integrals_index_complex(i,j,k,l,i1)
-!  else
-!    call bielec_integrals_index_real(i,j,k,l,i1)
-!  endif
-!end
-
-!subroutine bielec_integrals_index_real(i,j,k,l,i1)
 subroutine bielec_integrals_index(i,j,k,l,i1)
   use map_module
   implicit none
@@ -71,84 +58,6 @@ subroutine comp_bielec_integrals_index(i,j,k,l,i1)
   i1 = i1+ishft(i2*i2-i2,-1)
 end
 
-!subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
-!  use map_module
-!  implicit none
-!  integer, intent(out)           :: i(8),j(8),k(8),l(8)
-!  integer(key_kind), intent(in)  :: i1
-!  if (has_complex_mos) then
-!    call bielec_integrals_index_reverse_complex(i,j,k,l,i1)
-!  else
-!    call bielec_integrals_index_reverse_real(i,j,k,l,i1)
-!  endif
-!end
-
-subroutine comp_bielec_integrals_index_reverse(i,j,k,l,i1)
-  use map_module
-  implicit none
-  integer, intent(out)           :: i(2),j(2),k(2),l(2)
-  integer(key_kind), intent(in)  :: i1
-  integer(key_kind)              :: i2,i3,p,q
-  i = 0
-  i2   = ceiling(0.5d0*(dsqrt(8.d0*dble(i1)+1.d0)-1.d0))
-  i3   = i1 - ishft(i2*i2-i2,-1)
-  p = ceiling(dsqrt(dble(i2)))
-  q = ceiling(0.5d0*(dble(i2)-dble((p-1)*(p-1))))
-  if (mod(i2,2)==0) then
-    l(1)=p
-    j(1)=q
-  else
-    j(1)=p
-    l(1)=q
-  endif
-  p = ceiling(dsqrt(dble(i3)))
-  q = ceiling(0.5d0*(dble(i3)-dble((p-1)*(p-1))))
-  if (mod(i3,2)==0) then
-    k(1)=p
-    i(1)=q
-  else
-    i(1)=p
-    k(1)=q
-  endif
-
-              !ijkl
-  i(2) = j(1) !jilk
-  j(2) = i(1)
-  k(2) = l(1)
-  l(2) = k(1)
-
-!  i(3) = k(1) !klij   complex conjugate
-!  j(3) = l(1)
-!  k(3) = i(1)
-!  l(3) = j(1)
-!
-!  i(4) = l(1) !lkji   complex conjugate
-!  j(4) = k(1)
-!  k(4) = j(1)
-!  l(4) = i(1)
-
-  integer :: ii
-  if ( (i(1)==i(2)).and. &
-       (j(1)==j(2)).and. &
-       (k(1)==k(2)).and. &
-       (l(1)==l(2)) ) then
-    i(2) = 0
-  endif
-  do ii=1,2
-    if (i(ii) /= 0) then
-      call comp_bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i2)
-      if (i1 /= i2) then
-        print *,  i1, i2
-        print *,  i(ii), j(ii), k(ii), l(ii)
-        stop 'comp_bielec_integrals_index_reverse failed'
-      endif
-    endif
-  enddo
-
-
-end
-
-!subroutine bielec_integrals_index_reverse_real(i,j,k,l,i1)
 subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
   use map_module
   implicit none
@@ -221,8 +130,68 @@ subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
       endif
     endif
   enddo
+end
 
+subroutine comp_bielec_integrals_index_reverse(i,j,k,l,i1)
+  use map_module
+  implicit none
+  integer, intent(out)           :: i(2),j(2),k(2),l(2)
+  integer(key_kind), intent(in)  :: i1
+  integer(key_kind)              :: i2,i3,p,q
+  i = 0
+  i2   = ceiling(0.5d0*(dsqrt(8.d0*dble(i1)+1.d0)-1.d0))
+  i3   = i1 - ishft(i2*i2-i2,-1)
+  p = ceiling(dsqrt(dble(i2)))
+  q = ceiling(0.5d0*(dble(i2)-dble((p-1)*(p-1))))
+  if (mod(i2,2)==0) then
+    l(1)=p
+    j(1)=q
+  else
+    j(1)=p
+    l(1)=q
+  endif
+  p = ceiling(dsqrt(dble(i3)))
+  q = ceiling(0.5d0*(dble(i3)-dble((p-1)*(p-1))))
+  if (mod(i3,2)==0) then
+    k(1)=p
+    i(1)=q
+  else
+    i(1)=p
+    k(1)=q
+  endif
+              !ijkl
+  i(2) = j(1) !jilk
+  j(2) = i(1)
+  k(2) = l(1)
+  l(2) = k(1)
 
+!  i(3) = k(1) !klij   complex conjugate
+!  j(3) = l(1)
+!  k(3) = i(1)
+!  l(3) = j(1)
+!
+!  i(4) = l(1) !lkji   complex conjugate
+!  j(4) = k(1)
+!  k(4) = j(1)
+!  l(4) = i(1)
+
+  integer :: ii
+  if ( (i(1)==i(2)).and. &
+       (j(1)==j(2)).and. &
+       (k(1)==k(2)).and. &
+       (l(1)==l(2)) ) then
+    i(2) = 0
+  endif
+  do ii=1,2
+    if (i(ii) /= 0) then
+      call comp_bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i2)
+      if (i1 /= i2) then
+        print *,  i1, i2
+        print *,  i(ii), j(ii), k(ii), l(ii)
+        stop 'comp_bielec_integrals_index_reverse failed'
+      endif
+    endif
+  enddo
 end
 
  BEGIN_PROVIDER [ integer, ao_integrals_cache_min ]
@@ -332,7 +301,6 @@ subroutine get_ao_bielec_integrals(j,k,l,sze,out_val)
   do i=1,sze
     out_val(i) = get_ao_bielec_integral(i,j,k,l,ao_integrals_map)
   enddo
-  
 end
 
 subroutine get_ao_bielec_integrals_non_zero(j,k,l,sze,out_val,out_val_index,non_zero_int)
@@ -557,7 +525,6 @@ BEGIN_PROVIDER [ double complex, comp_mo_integrals_cache, (0_8:128_8*128_8*128_8
  real(integral_kind)            :: tmp1,tmp2
  complex(integral_kind)            :: integral
  FREE ao_integrals_cache
- !$OMP PARALLEL DO PRIVATE (i,j,k,l,i4,j4,k4,l4,idx,ii,integral)
  do l=comp_mo_integrals_cache_min_8,comp_mo_integrals_cache_max_8
    l4 = int(l,4)
    do k=comp_mo_integrals_cache_min_8,comp_mo_integrals_cache_max_8
@@ -572,13 +539,13 @@ BEGIN_PROVIDER [ double complex, comp_mo_integrals_cache, (0_8:128_8*128_8*128_8
          !DIR$ FORCEINLINE
          call map_get(comp_mo_integrals_map,idx1,tmp1)
          if (idx1==idx2) then
-           integral=complex(tmp1)
+           integral=cmplx(tmp1,0.d0)
          else if (idx1.lt.idx2) then
            call map_get(comp_mo_integrals_map,idx2,tmp2)
-           integral=complex(tmp1,tmp2)
+           integral=cmplx(tmp1,tmp2)
          else 
            call map_get(comp_mo_integrals_map,idx2,tmp2)
-           integral=complex(tmp2,-tmp2)
+           integral=cmplx(tmp2,-tmp2)
          endif
 
          ii = l-comp_mo_integrals_cache_min_8
@@ -590,7 +557,6 @@ BEGIN_PROVIDER [ double complex, comp_mo_integrals_cache, (0_8:128_8*128_8*128_8
      enddo
    enddo
  enddo
- !$OMP END PARALLEL DO
 
 END_PROVIDER
 
@@ -626,7 +592,7 @@ double precision function get_mo_bielec_integral(i,j,k,l,map)
   endif
 end
 
-double complex function comp_get_mo_bielec_integral(i,j,k,l,map)
+complex*16 function comp_get_mo_bielec_integral(i,j,k,l,map)
   use map_module
   implicit none
   BEGIN_DOC
@@ -663,8 +629,8 @@ double complex function comp_get_mo_bielec_integral(i,j,k,l,map)
     ii_8 = ior( ishft(ii_8,7), int(i,8)-comp_mo_integrals_cache_min_8)
     comp_get_mo_bielec_integral = comp_mo_integrals_cache(ii_8)
   endif
+  return
 end
-
 
 
 double precision function mo_bielec_integral(i,j,k,l)
@@ -681,13 +647,13 @@ double precision function mo_bielec_integral(i,j,k,l)
   return
 end
 
-double complex function comp_mo_bielec_integral(i,j,k,l)
+complex*16 function comp_mo_bielec_integral(i,j,k,l)
   implicit none
   BEGIN_DOC
   ! Returns one integral <ij|kl> in the MO basis
   END_DOC
   integer, intent(in)            :: i,j,k,l
-  double complex                 :: comp_get_mo_bielec_integral
+  complex*16                 :: comp_get_mo_bielec_integral
   PROVIDE comp_mo_bielec_integrals_in_map comp_mo_integrals_cache
   !DIR$ FORCEINLINE
   PROVIDE comp_mo_bielec_integrals_in_map
@@ -734,13 +700,13 @@ subroutine comp_get_mo_bielec_integrals(j,k,l,sze,out_val,map)
   ! i for j,k,l fixed.
   END_DOC
   integer, intent(in)            :: j,k,l, sze
-  double complex, intent(out)    :: out_val(sze)
-  double complex                 :: out_val1(sze),out_val2(sze)
+  complex(integral_kind), intent(out)    :: out_val(sze)
+  real(integral_kind)            :: out_val1(sze),out_val2(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
   integer(key_kind)              :: hash(2,sze)
   real(integral_kind)            :: tmp1,tmp2
-  complex(integral_kind)         :: tmp_val1(sze),tmp_val2(sze)
+  real(integral_kind)         :: tmp_val1(sze),tmp_val2(sze)
   PROVIDE comp_mo_bielec_integrals_in_map
   
   do i=1,sze
@@ -754,11 +720,11 @@ subroutine comp_get_mo_bielec_integrals(j,k,l,sze,out_val,map)
     call map_get_many(map, hash(2,:), out_val2, sze)
     do i=1,sze
       if (hash(1,i)==hash(2,i)) then
-        out_val(i) = complex(out_val1(i))
+        out_val(i) = cmplx(out_val1(i),0.d0)
       else if (hash(1,i).lt.hash(2,i)) then
-        out_val(i) = complex(out_val1(i),out_val2(i))
+        out_val(i) = cmplx(out_val1(i),out_val2(i))
       else
-        out_val(i) = complex(out_val2(i),-out_val1(i))
+        out_val(i) = cmplx(out_val2(i),-out_val1(i))
       endif
     enddo
   else
