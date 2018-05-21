@@ -434,7 +434,7 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
  ! Cache of MO integrals for fast access
  END_DOC
  !TODO: make this more efficient (can save at least a factor of 2)
- PROVIDE comp_mo_bielec_integrals_in_map
+ PROVIDE complex_mo_bielec_integrals_in_map
  integer*8                      :: i,j,k,l
  integer*4                      :: i4,j4,k4,l4
  integer*8                      :: ii
@@ -451,8 +451,8 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
        do i=mo_integrals_cache_min_8,mo_integrals_cache_max_8
          i4 = int(i,4)
          !DIR$ FORCEINLINE
-         call comp_bielec_integrals_index(i4,j4,k4,l4,idx1)
-         call comp_bielec_integrals_index(k4,l4,i4,j4,idx2)
+         call complex_bielec_integrals_index(i4,j4,k4,l4,idx1)
+         call complex_bielec_integrals_index(k4,l4,i4,j4,idx2)
          !DIR$ FORCEINLINE
          call map_get(mo_integrals_map,idx1,tmp1)
          if (idx1==idx2) then
@@ -495,8 +495,8 @@ complex*16 function get_mo_bielec_integral(i,j,k,l,map)
   ii = ior(ii, i-mo_integrals_cache_min)
   if (iand(ii, -128) /= 0) then
     !DIR$ FORCEINLINE
-    call comp_bielec_integrals_index(i,j,k,l,idx1)
-    call comp_bielec_integrals_index(k,l,i,j,idx2)
+    call complex_bielec_integrals_index(i,j,k,l,idx1)
+    call complex_bielec_integrals_index(k,l,i,j,idx2)
 
     !DIR$ FORCEINLINE
     call map_get(map,idx1,tmp1)
@@ -552,8 +552,8 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
   
   do i=1,sze
     !DIR$ FORCEINLINE
-    call comp_bielec_integrals_index(i,j,k,l,hash(1,i))
-    call comp_bielec_integrals_index(k,l,i,j,hash(2,i))
+    call complex_bielec_integrals_index(i,j,k,l,hash(1,i))
+    call complex_bielec_integrals_index(k,l,i,j,hash(2,i))
   enddo
   
   if (key_kind == 8) then
