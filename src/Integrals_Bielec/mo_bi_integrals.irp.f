@@ -6,19 +6,27 @@ subroutine mo_bielec_integrals_index(i,j,k,l,i1)
   END_DOC
   integer, intent(in)            :: i,j,k,l
   integer(key_kind), intent(out) :: i1
-  integer(key_kind)              :: p,q,r,s,i2
-  p = min(i,k)
-  r = max(i,k)
-  p = p+ishft(r*r-r,-1)
-  q = min(j,l)
-  s = max(j,l)
-  q = q+ishft(s*s-s,-1)
+  integer(key_kind)              :: p,q,i2
+  if (i==k) then
+    p=i*i
+  else if (i.lt.k) then
+    p=(k-1)*(k-1)+2*i-mod(k+1,2)
+  else
+    p=(i-1)*(i-1)+2*k-mod(i,2)
+  endif
+  if (j==l) then
+    q=j*j
+  else if (j.lt.l) then
+    q=(l-1)*(l-1)+2*j-mod(l+1,2)
+  else
+    q=(j-1)*(j-1)+2*l-mod(j,2)
+  endif
   i1 = min(p,q)
   i2 = max(p,q)
   i1 = i1+ishft(i2*i2-i2,-1)
 end
 
-
+!TODO: modify this to work with complex MOs
 BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
   use map_module
   implicit none
