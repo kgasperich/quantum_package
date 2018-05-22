@@ -434,7 +434,7 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
  ! Cache of MO integrals for fast access
  END_DOC
  !TODO: make this more efficient (can save at least a factor of 2)
- PROVIDE complex_mo_bielec_integrals_in_map
+ PROVIDE mo_bielec_integrals_in_map
  integer*8                      :: i,j,k,l
  integer*4                      :: i4,j4,k4,l4
  integer*8                      :: ii
@@ -594,16 +594,20 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
   ! i, j for k,l fixed.
   END_DOC
   integer, intent(in)            :: k,l, sze
-  double precision, intent(out)  :: out_array(sze,sze)
+  complex*16, intent(out)  :: out_array(sze,sze)
   type(map_type), intent(inout)  :: map
-  integer                        :: i,j,kk,ll,m
-  integer(key_kind),allocatable  :: hash(:)
-  integer  ,allocatable          :: pairs(:,:), iorder(:)
-  real(integral_kind), allocatable :: tmp_val(:)
+  integer                        :: i,j,kk,ll,m1,m2
+  integer(key_kind)              :: idx1,idx2
+  real(integral_kind)            :: p,q
+  integer(key_kind),allocatable  :: hash1(:),hash2(:)
+  integer  ,allocatable          :: pairs(:,:), iorder1(:),iorder2(:)
+  integer  ,allocatable          :: jorder1(:),jorder2(:)
+  real(integral_kind), allocatable :: tmp_val1(:),tmp_val2(:)
 
   PROVIDE mo_bielec_integrals_in_map
-  allocate (hash(sze*sze), pairs(2,sze*sze),iorder(sze*sze), &
-  tmp_val(sze*sze))
+  allocate (hash1(sze*sze), hash2(sze*sze), pairs(2,sze*sze), &
+  iorder1(sze*sze), iorder2(sze*sze), jorder1(sze*sze), jorder2(sze*sze), &
+  tmp_val1(sze*sze), tmp_val2(sze*sze))
   
   kk=0
   out_array = 0.d0
@@ -611,32 +615,53 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
    do i=1,sze
     kk += 1
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(i,j,k,l,hash(kk))
+    call complex_bielec_integrals_index(i,j,k,l,hash1(kk))
+    call complex_bielec_integrals_index(k,l,i,j,hash2(kk))
     pairs(1,kk) = i
     pairs(2,kk) = j
-    iorder(kk) = kk
+    iorder1(kk) = kk
+    iorder2(kk) = kk
+    jorder1(kk) = kk
+    jorder2(kk) = kk
    enddo
   enddo
 
   logical :: integral_is_in_map
   if (key_kind == 8) then
-    call i8radix_sort(hash,iorder,kk,-1)
+    call i8radix_sort(hash1,iorder1,kk,-1)
+    call i8radix_sort(hash2,iorder2,kk,-1)
   else if (key_kind == 4) then
-    call iradix_sort(hash,iorder,kk,-1)
+    call iradix_sort(hash1,iorder1,kk,-1)
+    call iradix_sort(hash2,iorder2,kk,-1)
   else if (key_kind == 2) then
-    call i2radix_sort(hash,iorder,kk,-1)
+    call i2radix_sort(hash1,iorder1,kk,-1)
+    call i2radix_sort(hash2,iorder2,kk,-1)
   endif
+  call iradix_sort(iorder1,jorder1,kk,-1)
+  call iradix_sort(iorder2,jorder2,kk,-1)
 
-  call map_get_many(mo_integrals_map, hash, tmp_val, kk)
+  call map_get_many(mo_integrals_map, hash1, tmp_val1, kk)
+  call map_get_many(mo_integrals_map, hash2, tmp_val2, kk)
 
   do ll=1,kk
-    m = iorder(ll)
-    i=pairs(1,m)
-    j=pairs(2,m)
-    out_array(i,j) = tmp_val(ll)
+    m1=jorder1(ll)
+    m2=jorder2(ll)
+    idx1=hash1(m1)
+    idx2=hash2(m2)
+    i=pairs(1,ll)
+    j=pairs(2,ll)
+    p=tmp_val1(m1)
+    q=tmp_val2(m2)
+    if (p==q) then
+      out_array(i,j) = cmplx(p,0.d0)
+    else if (p.lt.q) then
+      out_array(i,j) = cmplx(p,q)
+    else
+      out_array(i,j) = cmplx(q,-p)
+    endif
   enddo  
 
-  deallocate(pairs,hash,iorder,tmp_val)
+  deallocate(pairs,hash1,hash2,iorder1,iorder2,jorder1,jorder2,tmp_val1,tmp_val2)
 end
 
 !TODO: modify to work with complex MOs
