@@ -584,7 +584,7 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
   endif
 end
 
-!TODO: modify to work with complex MOs
+!TODO: make complex implementation more efficient?
 subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
   use map_module
   implicit none
@@ -664,7 +664,8 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
   deallocate(pairs,hash1,hash2,iorder1,iorder2,jorder1,jorder2,tmp_val1,tmp_val2)
 end
 
-!TODO: modify to work with complex MOs
+!TODO: make complex implementation more efficient?
+!      
 subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
   use map_module
   implicit none
@@ -674,31 +675,37 @@ subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
   ! for k,l fixed.
   END_DOC
   integer, intent(in)            :: k,l, sze
-  double precision, intent(out)  :: out_val(sze)
+  complex*16, intent(out)        :: out_val(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
-  integer(key_kind)              :: hash(sze)
-  real(integral_kind)            :: tmp_val(sze)
+  integer(key_kind)              :: idx1,idx2
+  integer(key_kind)              :: hash1(sze),hash2(sze)
+  real(integral_kind)            :: tmp_val1(sze),tmp_val2(sze)
   PROVIDE mo_bielec_integrals_in_map
   
-  integer :: kk
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,l,i,hash(i))
+    call bielec_integrals_index(k,i,l,i,hash1(i))
+    call bielec_integrals_index(l,i,k,i,hash2(i))
   enddo
   
-  if (key_kind == 8) then
-    call map_get_many(map, hash, out_val, sze)
-  else
-    call map_get_many(map, hash, tmp_val, sze)
-    ! Conversion to double precision 
-    do i=1,sze
-      out_val(i) = dble(tmp_val(i))
-    enddo
-  endif
+  call map_get_many(map, hash1, tmp_val1, sze)
+  call map_get_many(map, hash2, tmp_val2, sze)
+  do i=1,sze
+    idx1=hash1(i)
+    idx2=hash2(i)
+    !TODO: this set of conditionals only needs to be evaluated once
+    if (idx1==idx2) then
+      out_val(i) = dcmplx(tmp_val1(i),0.d0)
+    else if (idx1.lt.idx2) then
+      out_val(i) = dcmplx(tmp_val1(i),tmp_val2(i))
+    else
+      out_val(i) = dcmplx(tmp_val2(i),-tmp_val1(i))
+    endif
+  enddo
 end
 
-!TODO: modify to work with complex MOs
+!TODO: make complex implementation more efficient 
 subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
   use map_module
   implicit none
@@ -708,28 +715,37 @@ subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
   ! for k,l fixed.
   END_DOC
   integer, intent(in)            :: k,l, sze
-  double precision, intent(out)  :: out_val(sze)
+  complex*16, intent(out)        :: out_val(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
-  integer(key_kind)              :: hash(sze)
-  real(integral_kind)            :: tmp_val(sze)
+  integer(key_kind)              :: idx1,idx2
+  integer(key_kind)              :: hash1(sze),hash2(sze)
+  real(integral_kind)            :: tmp_val1(sze),tmp_val2(sze)
   PROVIDE mo_bielec_integrals_in_map
   
-  integer :: kk
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,i,l,hash(i))
+    call bielec_integrals_index(k,i,i,l,hash1(i))
+    call bielec_integrals_index(i,l,k,i,hash2(i))
   enddo
   
-  if (key_kind == 8) then
-    call map_get_many(map, hash, out_val, sze)
-  else
-    call map_get_many(map, hash, tmp_val, sze)
-    ! Conversion to double precision 
-    do i=1,sze
-      out_val(i) = dble(tmp_val(i))
-    enddo
-  endif
+  call map_get_many(map, hash1, tmp_val1, sze)
+  call map_get_many(map, hash2, tmp_val2, sze)
+  do i=1,sze
+    idx1=hash1(i)
+    idx2=hash2(i)
+    !TODO: this set of conditionals may only need to be evaluated a few times
+    ! (probably better to replace with a different set of conditionals)
+    ! which branch to take depends on whether i is less than both l and k,
+    ! between l and k, or greater than l and k
+    if (idx1==idx2) then
+      out_val(i) = dcmplx(tmp_val1(i),0.d0)
+    else if (idx1.lt.idx2) then
+      out_val(i) = dcmplx(tmp_val1(i),tmp_val2(i))
+    else
+      out_val(i) = dcmplx(tmp_val2(i),-tmp_val1(i))
+    endif
+  enddo
 end
 
 
