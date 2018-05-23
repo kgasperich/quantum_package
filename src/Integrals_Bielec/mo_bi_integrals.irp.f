@@ -233,9 +233,11 @@ subroutine add_integrals_to_map(mask_ijkl)
   
   integer                        :: n_integrals
   integer                        :: size_buffer
-  integer(key_kind),allocatable  :: buffer_i(:)
-  real(integral_kind),allocatable :: buffer_value(:)
+  integer(key_kind),allocatable  :: buffer_i1(:), buffer_i2(:)
+  real(integral_kind),allocatable :: buffer_value1(:),buffer_value2(:)
   double precision               :: map_mb
+  integer(key_kind)              :: tmp_idx1,tmp_idx2
+  double precision               :: tmp_re,tmp_im
   
   integer                        :: i1,j1,k1,l1, ii1, kmax, thread_num
   integer                        :: i2,i3,i4
@@ -311,7 +313,9 @@ subroutine add_integrals_to_map(mask_ijkl)
   !$OMP PARALLEL PRIVATE(l1,k1,j1,i1,i2,i3,i4,i,j,k,l,cr,cz, ii1,kmax,   &
       !$OMP  s1,r1,q1,p1,p2,p3,p4,pp1,rmax,                              &
       !$OMP  bielec_tmp_0_idx, bielec_tmp_0, bielec_tmp_1,bielec_tmp_2,bielec_tmp_3,&
-      !$OMP  buffer_i,buffer_value,n_integrals,wall_2,i0,j0,k0,l0,   &
+      !$OMP  buffer_i1,buffer_i2,buffer_value1,buffer_value2,        &
+      !$OMP  tmp_idx1,tmp_idx2,tmp_re,tmp_im,                        &
+      !$OMP  n_integrals,wall_2,i0,j0,k0,l0,                         &
       !$OMP  wall_0,thread_num,accu_bis)                             &
       !$OMP  DEFAULT(NONE)                                           &
       !$OMP  SHARED(size_buffer,ao_num,mo_tot_num,n_i,n_j,n_k,n_l,   &
@@ -326,8 +330,10 @@ subroutine add_integrals_to_map(mask_ijkl)
       bielec_tmp_0(ao_num,ao_num),                                   &
       bielec_tmp_0_idx(ao_num),                                      &
       bielec_tmp_2(mo_tot_num, n_j),                           &
-      buffer_i(size_buffer),                                         &
-      buffer_value(size_buffer) )
+      buffer_i1(size_buffer),                                         &
+      buffer_i2(size_buffer),                                         &
+      buffer_value1(size_buffer),                                     &
+      buffer_value2(size_buffer) )
   
   thread_num = 0
   !$  thread_num = omp_get_thread_num()
@@ -464,18 +470,42 @@ subroutine add_integrals_to_map(mask_ijkl)
               cycle
             endif
             n_integrals += 1
-            buffer_value(n_integrals) = bielec_tmp_1(i)
+            tmp_re = real(bielec_tmp_1(i))
+            tmp_im = imag(bielec_tmp_1(i))
+
+            call mo_bielec_integrals_index(i,j,k,l,tmp_idx1)
+            call mo_bielec_integrals_index(k,l,i,j,tmp_idx2)
+
+            if (tmp_idx1.eq.tmp_idx2) then
+              ! there are mo_num^2 of these:
+              ! is it worth accumulating the imaginary parts somewhere 
+              ! in order to verify that they are actually zero?
+              buffer_i1(n_integrals) = tmp_idx1
+              buffer_i2(n_integrals) = tmp_idx1
+              buffer_value1(n_integrals) = tmp_re
+              buffer_value2(n_integrals) = 0.d0
+            else if (tmp_idx1 .lt. tmp_idx2) then
+              buffer_i1(n_integrals) = tmp_idx1
+              buffer_i2(n_integrals) = tmp_idx2
+              buffer_value1(n_integrals) = tmp_re
+              buffer_value2(n_integrals) = tmp_im
+            else
+              buffer_i1(n_integrals) = tmp_idx2
+              buffer_i2(n_integrals) = tmp_idx1
+              buffer_value1(n_integrals) = tmp_re
+              buffer_value2(n_integrals) = -tmp_im
+            endif
+
+
             !DIR$ FORCEINLINE
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!TODO: CHANGE THIS FOR COMPLEX
-            call mo_bielec_integrals_index(i,j,k,l,buffer_i(n_integrals))
             if (n_integrals == size_buffer) then
-              call insert_into_mo_integrals_map(n_integrals,buffer_i,buffer_value,&
+              call insert_into_mo_integrals_map(n_integrals,buffer_i1,buffer_value1,&
+                  real(mo_integrals_threshold,integral_kind))
+              call insert_into_mo_integrals_map(n_integrals,buffer_i2,buffer_value2,&
                   real(mo_integrals_threshold,integral_kind))
               n_integrals = 0
             endif
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           enddo ! i0
         enddo ! k0
@@ -496,12 +526,11 @@ subroutine add_integrals_to_map(mask_ijkl)
   
   integer                        :: index_needed
   
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!TODO: CHANGE THIS FOR COMPLEX
-  call insert_into_mo_integrals_map(n_integrals,buffer_i,buffer_value,&
+  call insert_into_mo_integrals_map(n_integrals,buffer_i1,buffer_value1,&
       real(mo_integrals_threshold,integral_kind))
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  deallocate(buffer_i, buffer_value)
+  call insert_into_mo_integrals_map(n_integrals,buffer_i2,buffer_value2,&
+      real(mo_integrals_threshold,integral_kind))
+  deallocate(buffer_i1, buffer_i2, buffer_value1, buffer_value2)
   !$OMP END PARALLEL
   call map_merge(mo_integrals_map)
   
