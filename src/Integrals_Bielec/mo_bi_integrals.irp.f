@@ -238,7 +238,7 @@ subroutine add_integrals_to_map(mask_ijkl)
   double precision               :: map_mb
   integer(key_kind)              :: tmp_idx1,tmp_idx2
   double precision               :: tmp_re,tmp_im
-  
+  integer                        :: imax 
   integer                        :: i1,j1,k1,l1, ii1, kmax, thread_num
   integer                        :: i2,i3,i4
   integer                        :: p1,q1,r1,s1, pp1, rmax
@@ -311,7 +311,7 @@ subroutine add_integrals_to_map(mask_ijkl)
   accu_bis = 0.d0
   
   !$OMP PARALLEL PRIVATE(l1,k1,j1,i1,i2,i3,i4,i,j,k,l,cr,cz, ii1,kmax,   &
-      !$OMP  s1,r1,q1,p1,p2,p3,p4,pp1,rmax,                              &
+      !$OMP  s1,r1,q1,p1,p2,p3,p4,pp1,rmax,imax,                         &
       !$OMP  bielec_tmp_0_idx, bielec_tmp_0, bielec_tmp_1,bielec_tmp_2,bielec_tmp_3,&
       !$OMP  buffer_i1,buffer_i2,buffer_value1,buffer_value2,        &
       !$OMP  tmp_idx1,tmp_idx2,tmp_re,tmp_im,                        &
@@ -443,6 +443,7 @@ subroutine add_integrals_to_map(mask_ijkl)
           exit
         endif
         j1 += 1
+        imax=l
         do k0 = 1, n_k
           k = list_ijkl(k0,3)
           i1 = ishft((k*k-k),-1)
@@ -451,16 +452,19 @@ subroutine add_integrals_to_map(mask_ijkl)
           else
             exit
           endif
+          if (j.eq.l) then
+            imax=k
+          endif
           bielec_tmp_1 = 0.d0
           do i0 = 1, n_i
             i = list_ijkl(i0,1)
-            if (i>k) then
+            if (i>imax) then
               exit
             endif
             bielec_tmp_1(i) = cz*bielec_tmp_3(i,j0,k0)
             !           i1+=1
           enddo
-          
+          ! TODO: add ik<=jl conditional
           do i0 = 1, n_i
             i = list_ijkl(i0,1)
             if(i> min(k,j1-i1+list_ijkl(1,1)-1))then
