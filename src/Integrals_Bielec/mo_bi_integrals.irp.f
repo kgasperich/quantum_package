@@ -239,6 +239,8 @@ subroutine add_integrals_to_map(mask_ijkl)
   
   integer                        :: i1,j1,k1,l1, ii1, kmax, thread_num
   integer                        :: i2,i3,i4
+  integer                        :: p1,q1,r1,s1, pp1, rmax
+  integer                        :: p2,p3,p4
   double precision,parameter     :: thr_coef = 1.d-10
   
   PROVIDE ao_bielec_integrals_in_map  mo_coef
@@ -307,6 +309,7 @@ subroutine add_integrals_to_map(mask_ijkl)
   accu_bis = 0.d0
   
   !$OMP PARALLEL PRIVATE(l1,k1,j1,i1,i2,i3,i4,i,j,k,l,cr,cz, ii1,kmax,   &
+      !$OMP  s1,r1,q1,p1,p2,p3,p4,pp1,rmax,                              &
       !$OMP  bielec_tmp_0_idx, bielec_tmp_0, bielec_tmp_1,bielec_tmp_2,bielec_tmp_3,&
       !$OMP  buffer_i,buffer_value,n_integrals,wall_2,i0,j0,k0,l0,   &
       !$OMP  wall_0,thread_num,accu_bis)                             &
@@ -329,53 +332,53 @@ subroutine add_integrals_to_map(mask_ijkl)
   thread_num = 0
   !$  thread_num = omp_get_thread_num()
   !$OMP DO SCHEDULE(guided)
-  do l1 = 1,ao_num
+  do s1 = 1,ao_num
     bielec_tmp_3 = 0.d0
-    do k1 = 1,ao_num
+    do r1 = 1,ao_num
       bielec_tmp_2 = 0.d0
-      do j1 = 1,ao_num
-        call get_ao_bielec_integrals(j1,k1,l1,ao_num,bielec_tmp_0(1,j1))
+      do q1 = 1,ao_num
+        call get_ao_bielec_integrals(q1,r1,s1,ao_num,bielec_tmp_0(1,q1))
         ! call compute_ao_bielec_integrals(j1,k1,l1,ao_num,bielec_tmp_0(1,j1))
       enddo
-      do j1 = 1,ao_num
+      do q1 = 1,ao_num
         kmax = 0
-        do i1 = 1,ao_num
-          cr = bielec_tmp_0(i1,j1)
+        do p1 = 1,ao_num
+          cr = bielec_tmp_0(p1,q1)
           if (cr == 0.d0) then
             cycle
           endif
-          kmax += 1
-          bielec_tmp_0(kmax,j1) = cr
-          bielec_tmp_0_idx(kmax) = i1
+          rmax += 1
+          bielec_tmp_0(rmax,q1) = cr
+          bielec_tmp_0_idx(rmax) = p1
         enddo
         
-        if (kmax==0) then
+        if (rmax==0) then
           cycle
         endif
         
         bielec_tmp_1 = 0.d0
-        ii1=1
-        do ii1 = 1,kmax-4,4
-          i1 = bielec_tmp_0_idx(ii1)
-          i2 = bielec_tmp_0_idx(ii1+1)
-          i3 = bielec_tmp_0_idx(ii1+2)
-          i4 = bielec_tmp_0_idx(ii1+3)
+        pp1=1
+        do pp1 = 1,rmax-4,4
+          p1 = bielec_tmp_0_idx(pp1)
+          p2 = bielec_tmp_0_idx(pp1+1)
+          p3 = bielec_tmp_0_idx(pp1+2)
+          p4 = bielec_tmp_0_idx(pp1+3)
           do i = list_ijkl(1,1), list_ijkl(n_i,1)
             bielec_tmp_1(i)  =  bielec_tmp_1(i) +                    &
-                conjg(mo_coef_transp(i,i1)) * bielec_tmp_0(ii1,j1) +        &
-                conjg(mo_coef_transp(i,i2)) * bielec_tmp_0(ii1+1,j1) +      &
-                conjg(mo_coef_transp(i,i3)) * bielec_tmp_0(ii1+2,j1) +      &
-                conjg(mo_coef_transp(i,i4)) * bielec_tmp_0(ii1+3,j1)
+                conjg(mo_coef_transp(i,p1)) * bielec_tmp_0(pp1,q1) +        &
+                conjg(mo_coef_transp(i,p2)) * bielec_tmp_0(pp1+1,q1) +      &
+                conjg(mo_coef_transp(i,p3)) * bielec_tmp_0(pp1+2,q1) +      &
+                conjg(mo_coef_transp(i,p4)) * bielec_tmp_0(pp1+3,q1)
           enddo ! i
-        enddo  ! ii1
+        enddo  ! pp1
         
-        i2 = ii1
-        do ii1 = i2,kmax
-          i1 = bielec_tmp_0_idx(ii1)
+        p2 = pp1
+        do pp1 = p2,rmax
+          p1 = bielec_tmp_0_idx(pp1)
           do i = list_ijkl(1,1), list_ijkl(n_i,1)
-            bielec_tmp_1(i) = bielec_tmp_1(i) + conjg(mo_coef_transp(i,i1)) * bielec_tmp_0(ii1,j1)
+            bielec_tmp_1(i) = bielec_tmp_1(i) + conjg(mo_coef_transp(i,p1)) * bielec_tmp_0(pp1,q1)
           enddo ! i
-        enddo  ! ii1
+        enddo  ! pp1
         cr = 0.d0
         
         do i = list_ijkl(1,1), list_ijkl(n_i,1)
@@ -388,7 +391,7 @@ subroutine add_integrals_to_map(mask_ijkl)
         
         do j0 = 1, n_j
           j = list_ijkl(j0,2)
-          cz = conjg(mo_coef_transp(j,j1))
+          cz = conjg(mo_coef_transp(j,q1))
           if (cdabs(cz) < thr_coef) then
             cycle
           endif
@@ -396,7 +399,7 @@ subroutine add_integrals_to_map(mask_ijkl)
             bielec_tmp_2(i,j0)  = bielec_tmp_2(i,j0) + cz * bielec_tmp_1(i)
           enddo ! i
         enddo  ! j
-      enddo !j1
+      enddo !q1
       if ( maxval(cdabs(bielec_tmp_2)) < mo_integrals_threshold ) then
         cycle
       endif
@@ -404,7 +407,7 @@ subroutine add_integrals_to_map(mask_ijkl)
       
       do k0 = 1, n_k
         k = list_ijkl(k0,3)
-        cz = mo_coef_transp(k,k1)
+        cz = mo_coef_transp(k,r1)
         if (cdabs(cz) < thr_coef) then
           cycle
         endif
@@ -417,13 +420,13 @@ subroutine add_integrals_to_map(mask_ijkl)
         enddo !j
         
       enddo  !k
-    enddo   !k1
+    enddo   !r1
     
     
     
     do l0 = 1,n_l
       l = list_ijkl(l0,4)
-      cz = mo_coef_transp(l,l1)
+      cz = mo_coef_transp(l,s1)
       if (cdabs(cz) < thr_coef) then
         cycle
       endif
@@ -483,11 +486,11 @@ subroutine add_integrals_to_map(mask_ijkl)
     if (thread_num == 0) then
       if (wall_2 - wall_0 > 1.d0) then
         wall_0 = wall_2
-        print*, 100.*float(l1)/float(ao_num), '% in ',               &
+        print*, 100.*float(s1)/float(ao_num), '% in ',               &
             wall_2-wall_1, 's', map_mb(mo_integrals_map) ,'MB'
       endif
     endif
-  enddo ! l1
+  enddo ! s1
   !$OMP END DO NOWAIT
   deallocate (bielec_tmp_1,bielec_tmp_2,bielec_tmp_3)
   
