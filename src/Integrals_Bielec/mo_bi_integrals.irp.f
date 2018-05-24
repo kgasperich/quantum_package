@@ -429,7 +429,11 @@ subroutine add_integrals_to_map(mask_ijkl)
     enddo   !r1
     
     
-    
+    ! for loop over unique 4-fold (including only one of each pair of complex conjugates)
+    ! required conditionals are:
+    ! j <= l
+    ! i <= k
+    ! ik <= jl (where ik and jl are triangular compound indices)
     do l0 = 1,n_l
       l = list_ijkl(l0,4)
       cz = mo_coef_transp(l,s1)
@@ -446,12 +450,15 @@ subroutine add_integrals_to_map(mask_ijkl)
         imax=l
         do k0 = 1, n_k
           k = list_ijkl(k0,3)
-          i1 = ishft((k*k-k),-1)
-          if (i1<=j1) then
-            continue
-          else
+          if (k.gt.l) then
             exit
           endif
+          i1 = ishft((k*k-k),-1)
+          !if (i1<=j1) then
+          !  continue
+          !else
+          !  exit
+          !endif
           if (j.eq.l) then
             imax=k
           endif
@@ -461,13 +468,23 @@ subroutine add_integrals_to_map(mask_ijkl)
             if (i>imax) then
               exit
             endif
+            if (i.le.k) then
+              i1 += 1
+            else
+              i1 += (i-1) !(might need to use (i0-1) instead? only tested for loops over full set of MOs at each index
+            endif
+            if (i1.gt.j1) then
+              imax=i-1 ! keep track of max i for use in loop over i0 below
+              exit
+            endif
             bielec_tmp_1(i) = cz*bielec_tmp_3(i,j0,k0)
             !           i1+=1
           enddo
-          ! TODO: add ik<=jl conditional
+          ! TODO: add ik<=jl conditional 
           do i0 = 1, n_i
             i = list_ijkl(i0,1)
-            if(i> min(k,j1-i1+list_ijkl(1,1)-1))then
+!            if(i> min(k,j1-i1+list_ijkl(1,1)-1))then
+            if (i > imax) then
               exit
             endif
             if (cdabs(bielec_tmp_1(i)) < mo_integrals_threshold) then
