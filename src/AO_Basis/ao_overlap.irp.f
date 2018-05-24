@@ -123,6 +123,19 @@ BEGIN_PROVIDER [ double precision, ao_overlap_abs,(ao_num,ao_num) ]
   !$OMP END PARALLEL DO
 END_PROVIDER
 
+BEGIN_PROVIDER [ complex*16, complex_ao_overlap,(ao_num,ao_num) ]
+  implicit none
+  integer :: i,j
+  BEGIN_DOC
+! complex version of S
+  END_DOC
+  do i=1,ao_num
+    do j=1,ao_num
+      complex_ao_overlap(i,j) = cmplx(ao_overlap(i,j))
+    enddo
+  enddo
+END_PROVIDER
+
 BEGIN_PROVIDER [ double precision, S_inv,(ao_num,ao_num) ]
  implicit none
  BEGIN_DOC

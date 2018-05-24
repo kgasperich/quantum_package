@@ -92,6 +92,19 @@ BEGIN_PROVIDER [ double precision, ao_ortho_canonical_coef_inv, (ao_num,ao_num)]
      ao_num, ao_ortho_canonical_coef_inv, size(ao_ortho_canonical_coef_inv,1))
 END_PROVIDER
 
+BEGIN_PROVIDER [complex*16, complex_ao_ortho_canonical_coef_inv, (ao_num,ao_num)]
+  implicit none
+  integer :: i,j
+  BEGIN_DOC
+! complex version of ao_ortho_canonical_coef^(-1)
+  END_DOC
+  do i=1,ao_num
+    do j=1,ao_num
+      complex_ao_ortho_canonical_coef_inv(i,j) = cmplx(ao_ortho_canonical_coef_inv(i,j))
+    enddo
+  enddo
+END_PROVIDER
+
  BEGIN_PROVIDER [ double precision, ao_ortho_canonical_coef, (ao_num,ao_num)]
 &BEGIN_PROVIDER [ integer, ao_ortho_canonical_num ]
   implicit none
