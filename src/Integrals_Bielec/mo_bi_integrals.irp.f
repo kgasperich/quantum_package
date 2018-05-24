@@ -355,7 +355,7 @@ subroutine add_integrals_to_map(mask_ijkl)
         ! call compute_ao_bielec_integrals(j1,k1,l1,ao_num,bielec_tmp_0(1,j1))
       enddo
       do q1 = 1,ao_num
-        kmax = 0
+        rmax = 0
         do p1 = 1,ao_num
           cr = bielec_tmp_0(p1,q1)
           if (cr == 0.d0) then
