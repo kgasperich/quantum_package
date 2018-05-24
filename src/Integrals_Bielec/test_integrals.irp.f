@@ -37,6 +37,7 @@ program bench_maps
     k = int(r*mo_tot_num)+1
     call random_number(r)
     l = int(r*mo_tot_num)+1
+    print*,'accessing <ij|kl>:',i,j,k,l
     call get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
   enddo
   call system_clock(cpu1, count_rate, count_max)

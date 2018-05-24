@@ -488,6 +488,8 @@ complex*16 function get_mo_bielec_integral(i,j,k,l,map)
   integer*8                      :: ii_8
   type(map_type), intent(inout)  :: map
   real(integral_kind)            :: tmp1,tmp2
+
+  print*,'retrieving <ij|kl>:',i,j,k,l
   PROVIDE mo_bielec_integrals_in_map mo_integrals_cache
   ii = l-mo_integrals_cache_min
   ii = ior(ii, k-mo_integrals_cache_min)
