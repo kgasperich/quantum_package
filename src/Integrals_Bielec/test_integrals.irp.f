@@ -7,6 +7,7 @@ program bench_maps
   integer*8                      :: ii,jj
   double precision               :: r, cpu
   integer*8                      :: cpu0, cpu1, count_rate, count_max
+  complex*16                     :: c,get_mo_bielec_integral
   
   PROVIDE mo_bielec_integrals_in_map
   print *,  mo_tot_num, 'MOs'
@@ -37,8 +38,7 @@ program bench_maps
     k = int(r*mo_tot_num)+1
     call random_number(r)
     l = int(r*mo_tot_num)+1
-    print*,'accessing <ij|kl>:',i,j,k,l
-    call get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
+    c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
   enddo
   call system_clock(cpu1, count_rate, count_max)
   cpu = -cpu + (cpu1 - cpu0)/count_rate
@@ -52,7 +52,7 @@ program bench_maps
       do j=1,mo_tot_num
         do i=1,mo_tot_num
           ii += 1
-          call get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
+          c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
         enddo
       enddo
     enddo
@@ -70,7 +70,7 @@ program bench_maps
       do k=1,mo_tot_num
         do i=1,mo_tot_num
           ii += 1
-          call get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
+          c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
         enddo
       enddo
     enddo
@@ -88,7 +88,7 @@ program bench_maps
       do j=1,mo_tot_num
         do i=1,mo_tot_num
           ii += 1
-          call get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
+          c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
         enddo
       enddo
     enddo
@@ -106,7 +106,7 @@ program bench_maps
       do k=1,mo_tot_num
         do l=1,mo_tot_num
           ii += 1
-          call get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
+          c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
         enddo
       enddo
     enddo
@@ -124,7 +124,7 @@ program bench_maps
       do k=1,mo_tot_num
         do l=1,mo_tot_num
           ii += 1
-          call get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
+          c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
         enddo
       enddo
     enddo
