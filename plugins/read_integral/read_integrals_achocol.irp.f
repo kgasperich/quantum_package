@@ -16,8 +16,10 @@ subroutine run
   double precision :: integral
   double precision, allocatable :: A(:,:)
 
-  integer(KIND=16)             :: n_integrals 
-  integer(KIND=16)             :: n_tot_integrals
+!  integer(KIND=16)             :: n_integrals 
+!  integer(KIND=16)             :: n_tot_integrals
+  integer             :: n_integrals 
+  integer             :: n_tot_integrals
 
   integer(key_kind), allocatable   :: buffer_i(:) 
   real(integral_kind), allocatable :: buffer_values(:)
