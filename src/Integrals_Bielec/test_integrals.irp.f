@@ -135,7 +135,7 @@ program bench_maps
   call system_clock(cpu1, count_rate, count_max)
   cpu = (cpu1 - cpu0)/count_rate
   print *, 'loop lkij : ', cpu/dble(ii)
-
+  integer(key_kind) :: idx
   integer :: iunit
   integer :: getunitandopen
   iunit = getunitandopen('test_mo_ikjl.txt','w')
@@ -144,11 +144,12 @@ program bench_maps
       do j=1,mo_tot_num
         do l=1,mo_tot_num
           ii += 1
+          call complex_bielec_integrals_index(i,j,k,l,idx)
           c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
           if (dabs(c).gt.thr_mo_int) then
             !print ('(4(I6,X),E25.15)'), i,j,k,l,c
             !write (iunit,'(4(I6,X),E25.15)'), i,j,k,l,c
-            write (iunit,'(4(I6,X),E25.15)'), i,k,j,l,c
+            write (iunit,'(4(I6,X),E25.15,X,I6)'), i,k,j,l,c,idx
           endif
         enddo
       enddo
