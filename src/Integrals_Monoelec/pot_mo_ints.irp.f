@@ -10,8 +10,8 @@ BEGIN_PROVIDER [double precision, mo_nucl_elec_integral, (mo_tot_num,mo_tot_num)
     print *,  'MO N-e integrals read from disk'
   else
     call ao_to_mo(                                                   &
-        ao_nucl_elec_integral,                                       &
-        size(ao_nucl_elec_integral,1),                               &
+        complex_ao_nucl_elec_integral,                               &
+        size(complex_ao_nucl_elec_integral,1),                       &
         mo_nucl_elec_integral,                                       &
         size(mo_nucl_elec_integral,1)                                &
         )

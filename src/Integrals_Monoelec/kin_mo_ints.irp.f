@@ -1,4 +1,5 @@
-BEGIN_PROVIDER [double precision, mo_kinetic_integral, (mo_tot_num,mo_tot_num)]
+!BEGIN_PROVIDER [double precision, mo_kinetic_integral, (mo_tot_num,mo_tot_num)]
+BEGIN_PROVIDER [complex*16, mo_kinetic_integral, (mo_tot_num,mo_tot_num)]
   implicit none
   BEGIN_DOC
   !  Kinetic energy integrals in the MO basis
@@ -10,8 +11,8 @@ BEGIN_PROVIDER [double precision, mo_kinetic_integral, (mo_tot_num,mo_tot_num)]
     print *,  'MO kinetic integrals read from disk'
   else
     call ao_to_mo(                                                   &
-        ao_kinetic_integral,                                         &
-        size(ao_kinetic_integral,1),                                 &
+        complex_ao_kinetic_integral,                                         &
+        size(complex_ao_kinetic_integral,1),                                 &
         mo_kinetic_integral,                                         &
         size(mo_kinetic_integral,1)                                  &
         )

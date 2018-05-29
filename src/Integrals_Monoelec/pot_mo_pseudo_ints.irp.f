@@ -10,8 +10,8 @@ BEGIN_PROVIDER [double precision, mo_pseudo_integral, (mo_tot_num,mo_tot_num)]
     print *,  'MO pseudopotential integrals read from disk'
   else
     call ao_to_mo(                                                   &
-        ao_pseudo_integral,                                         &
-        size(ao_pseudo_integral,1),                                 &
+        complex_ao_pseudo_integral,                                 &
+        size(complex_ao_pseudo_integral,1),                         &
         mo_pseudo_integral,                                         &
         size(mo_pseudo_integral,1)                                  &
         )

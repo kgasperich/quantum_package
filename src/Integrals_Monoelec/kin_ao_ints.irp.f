@@ -149,3 +149,19 @@ BEGIN_PROVIDER [double precision, ao_kinetic_integral, (ao_num,ao_num)]
   endif
 END_PROVIDER
 
+
+BEGIN_PROVIDER [complex*16, complex_ao_kinetic_integral, (ao_num,ao_num)]
+  implicit none
+  BEGIN_DOC
+  ! complex version of array of the priminitve basis kinetic integrals
+  !  \langle \chi_i |\hat{T}| \chi_j \rangle
+  END_DOC
+  
+ call zlacp2('A',ao_num,ao_num,                                 &
+             ao_kinetic_integral,                               &
+             size(ao_kinetic_integral,1),                       &
+             complex_ao_kinetic_integral,                       &
+             size(complex_ao_kinetic_integral,1))
+
+END_PROVIDER
+
