@@ -7,7 +7,8 @@ program bench_maps
   integer*8                      :: ii,jj
   double precision               :: r, cpu
   integer*8                      :: cpu0, cpu1, count_rate, count_max
-  complex*16                     :: c,get_mo_bielec_integral
+  !complex*16                     :: c,get_mo_bielec_integral
+  real(integral_type)            :: c,get_mo_bielec_integral
   
   PROVIDE mo_bielec_integrals_in_map
   print *,  mo_tot_num, 'MOs'

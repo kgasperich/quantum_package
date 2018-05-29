@@ -137,7 +137,7 @@ end
 subroutine complex_bielec_integrals_index_reverse(i,j,k,l,i1)
   use map_module
   implicit none
-  integer, intent(out)           :: i(2),j(2),k(2),l(2)
+  integer, intent(out)           :: i(4),j(4),k(4),l(4)
   integer(key_kind), intent(in)  :: i1
   integer(key_kind)              :: i2,i3,p,q
   i = 0
@@ -167,24 +167,29 @@ subroutine complex_bielec_integrals_index_reverse(i,j,k,l,i1)
   k(2) = l(1)
   l(2) = k(1)
 
-!  i(3) = k(1) !klij   complex conjugate
-!  j(3) = l(1)
-!  k(3) = i(1)
-!  l(3) = j(1)
-!
-!  i(4) = l(1) !lkji   complex conjugate
-!  j(4) = k(1)
-!  k(4) = j(1)
-!  l(4) = i(1)
+  i(3) = k(1) !klij   complex conjugate
+  j(3) = l(1)
+  k(3) = i(1)
+  l(3) = j(1)
 
-  integer :: ii
-  if ( (i(1)==i(2)).and. &
-       (j(1)==j(2)).and. &
-       (k(1)==k(2)).and. &
-       (l(1)==l(2)) ) then
-    i(2) = 0
-  endif
-  do ii=1,2
+  i(4) = l(1) !lkji   complex conjugate
+  j(4) = k(1)
+  k(4) = j(1)
+  l(4) = i(1)
+
+  integer :: ii, jj
+  do ii=2,4
+    do jj=1,ii-1
+      if ( (i(ii) == i(jj)).and. &
+           (j(ii) == j(jj)).and. &
+           (k(ii) == k(jj)).and. &
+           (l(ii) == l(jj)) ) then
+         i(ii) = 0
+         exit
+      endif
+    enddo
+  enddo
+  do ii=1,4
     if (i(ii) /= 0) then
       call complex_bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i2)
       if (i1 /= i2) then
@@ -428,7 +433,7 @@ end
 
 END_PROVIDER
 
-BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
+BEGIN_PROVIDER [ double precision, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
  implicit none
  BEGIN_DOC
  ! Cache of MO integrals for fast access
@@ -439,8 +444,7 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
  integer*4                      :: i4,j4,k4,l4
  integer*8                      :: ii
  integer(key_kind)              :: idx1,idx2
- real(integral_kind)            :: tmp1,tmp2
- complex(integral_kind)            :: integral
+ real(integral_kind)            :: integral
  FREE ao_integrals_cache
  do l=mo_integrals_cache_min_8,mo_integrals_cache_max_8
    l4 = int(l,4)
@@ -454,15 +458,10 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
          call complex_bielec_integrals_index(i4,j4,k4,l4,idx1)
          call complex_bielec_integrals_index(k4,l4,i4,j4,idx2)
          !DIR$ FORCEINLINE
-         call map_get(mo_integrals_map,idx1,tmp1)
-         if (idx1==idx2) then
-           integral=cmplx(tmp1,0.d0)
-         else if (idx1.lt.idx2) then
-           call map_get(mo_integrals_map,idx2,tmp2)
-           integral=cmplx(tmp1,tmp2)
+         if (idx1.le.idx2) then
+           call map_get(mo_integrals_map,idx1,integral)
          else 
-           call map_get(mo_integrals_map,idx2,tmp2)
-           integral=cmplx(tmp2,-tmp1)
+           call map_get(mo_integrals_map,idx2,integral)
          endif
 
          ii = l-mo_integrals_cache_min_8
@@ -476,7 +475,7 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
  enddo
 END_PROVIDER
 
-complex*16 function get_mo_bielec_integral(i,j,k,l,map)
+double precision function get_mo_bielec_integral(i,j,k,l,map)
   use map_module
   implicit none
   BEGIN_DOC
@@ -500,14 +499,12 @@ complex*16 function get_mo_bielec_integral(i,j,k,l,map)
     call complex_bielec_integrals_index(k,l,i,j,idx2)
 
     !DIR$ FORCEINLINE
-    call map_get(map,idx1,tmp1)
-    call map_get(map,idx2,tmp2) !todo:move this inside conditional below
-    if (idx1.eq.idx2) then
-      get_mo_bielec_integral = cmplx(tmp1,0.d0)
-    else if (idx1.lt.idx2) then
-      get_mo_bielec_integral = cmplx(tmp1,tmp2)
+    if (idx1.le.idx2) then
+      call map_get(map,idx1,tmp1)
+      get_mo_bielec_integral = dble(tmp1)
     else
-      get_mo_bielec_integral = cmplx(tmp2,-tmp1)
+      call map_get(map,idx2,tmp2)
+      get_mo_bielec_integral = dble(tmp2)
     endif
   else
     ii_8 = int(l,8)-mo_integrals_cache_min_8
@@ -520,13 +517,13 @@ complex*16 function get_mo_bielec_integral(i,j,k,l,map)
 end
 
 
-complex*16 function mo_bielec_integral(i,j,k,l)
+double precision function mo_bielec_integral(i,j,k,l)
   implicit none
   BEGIN_DOC
   ! Returns one integral <ij|kl> in the MO basis
   END_DOC
   integer, intent(in)            :: i,j,k,l
-  complex*16                 :: get_mo_bielec_integral
+  double precision               :: get_mo_bielec_integral
   PROVIDE mo_bielec_integrals_in_map mo_integrals_cache
   !DIR$ FORCEINLINE
   PROVIDE mo_bielec_integrals_in_map
@@ -542,7 +539,7 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
   ! i for j,k,l fixed.
   END_DOC
   integer, intent(in)            :: j,k,l, sze
-  complex(integral_kind), intent(out)    :: out_val(sze)
+  double precision, intent(out)  :: out_val(sze)
   real(integral_kind)            :: out_val1(sze),out_val2(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
@@ -561,12 +558,10 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
     call map_get_many(map, hash(1,:), out_val1, sze)
     call map_get_many(map, hash(2,:), out_val2, sze)
     do i=1,sze
-      if (hash(1,i)==hash(2,i)) then
-        out_val(i) = cmplx(out_val1(i),0.d0)
-      else if (hash(1,i).lt.hash(2,i)) then
-        out_val(i) = cmplx(out_val1(i),out_val2(i))
+      if (hash(1,i).le.hash(2,i)) then
+        out_val(i) = out_val1(i)
       else
-        out_val(i) = cmplx(out_val2(i),-out_val1(i))
+        out_val(i) = out_val2(i)
       endif
     enddo
   else
@@ -574,12 +569,10 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
     call map_get_many(map, hash(2,:), tmp_val2, sze)
     ! Conversion to double precision 
     do i=1,sze
-      if (hash(1,i)==hash(2,i)) then
-        out_val(i) = cmplx(tmp_val1(i))
-      else if (hash(1,i).lt.hash(2,i)) then
-        out_val(i) = cmplx(tmp_val1(i),tmp_val2(i))
+      if (hash(1,i).le.hash(2,i)) then
+        out_val(i) = dble(tmp_val1(i))
       else
-        out_val(i) = cmplx(tmp_val2(i),-tmp_val1(i))
+        out_val(i) = dble(tmp_val2(i))
       endif
     enddo
   endif
@@ -595,7 +588,7 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
   ! i, j for k,l fixed.
   END_DOC
   integer, intent(in)            :: k,l, sze
-  complex*16, intent(out)  :: out_array(sze,sze)
+  double precision, intent(out)  :: out_array(sze,sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i,j,kk,ll,m1,m2
   integer(key_kind)              :: idx1,idx2
@@ -653,12 +646,10 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
     j=pairs(2,ll)
     p=tmp_val1(m1)
     q=tmp_val2(m2)
-    if (p==q) then
-      out_array(i,j) = cmplx(p,0.d0)
-    else if (p.lt.q) then
-      out_array(i,j) = cmplx(p,q)
+    if (idx1.le.idx2) then
+      out_array(i,j) = dble(p)
     else
-      out_array(i,j) = cmplx(q,-p)
+      out_array(i,j) = dble(q)
     endif
   enddo  
 
@@ -676,7 +667,7 @@ subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
   ! for k,l fixed.
   END_DOC
   integer, intent(in)            :: k,l, sze
-  complex*16, intent(out)        :: out_val(sze)
+  double precision, intent(out)  :: out_val(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
   integer(key_kind)              :: idx1,idx2
@@ -695,13 +686,10 @@ subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
   do i=1,sze
     idx1=hash1(i)
     idx2=hash2(i)
-    !TODO: this set of conditionals only needs to be evaluated once
-    if (idx1==idx2) then
-      out_val(i) = dcmplx(tmp_val1(i),0.d0)
-    else if (idx1.lt.idx2) then
-      out_val(i) = dcmplx(tmp_val1(i),tmp_val2(i))
+    if (idx1.le.idx2) then
+      out_val(i) = dble(tmp_val1(i))
     else
-      out_val(i) = dcmplx(tmp_val2(i),-tmp_val1(i))
+      out_val(i) = dble(tmp_val2(i))
     endif
   enddo
 end
@@ -716,7 +704,7 @@ subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
   ! for k,l fixed.
   END_DOC
   integer, intent(in)            :: k,l, sze
-  complex*16, intent(out)        :: out_val(sze)
+  double precision, intent(out)  :: out_val(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
   integer(key_kind)              :: idx1,idx2
@@ -739,12 +727,10 @@ subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
     ! (probably better to replace with a different set of conditionals)
     ! which branch to take depends on whether i is less than both l and k,
     ! between l and k, or greater than l and k
-    if (idx1==idx2) then
-      out_val(i) = dcmplx(tmp_val1(i),0.d0)
-    else if (idx1.lt.idx2) then
-      out_val(i) = dcmplx(tmp_val1(i),tmp_val2(i))
+    if (idx1.lt.idx2) then
+      out_val(i) = dble(tmp_val1(i))
     else
-      out_val(i) = dcmplx(tmp_val2(i),-tmp_val1(i))
+      out_val(i) = dble(tmp_val2(i))
     endif
   enddo
 end
