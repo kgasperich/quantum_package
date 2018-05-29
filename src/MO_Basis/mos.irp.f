@@ -54,8 +54,7 @@ END_PROVIDER
 
 
 
-!BEGIN_PROVIDER [ double precision, mo_coef, (ao_num,mo_tot_num) ]
-BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
+BEGIN_PROVIDER [ double precision, mo_coef, (ao_num,mo_tot_num) ]
   implicit none
   BEGIN_DOC
   ! Molecular orbital coefficients on AO basis set
@@ -63,8 +62,7 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
   ! mo_label : Label characterizing the MOS (local, canonical, natural, etc)
   END_DOC
   integer                        :: i, j
-!  double precision, allocatable  :: buffer(:,:)
-  complex*16, allocatable        :: buffer(:,:)
+  double precision, allocatable  :: buffer(:,:)
   logical                        :: exists
   PROVIDE ezfio_filename 
   
@@ -84,14 +82,11 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
 
   if (exists) then
     if (mpi_master) then
-      !TODO: probably need to find and change this to read complex mo_coef from ezfio
-      !      see q_p/scripts/ezfio_interface/ezfio_generate_provider.py
       call ezfio_get_mo_basis_mo_coef(mo_coef)
       write(*,*) 'Read  mo_coef'
     endif
     IRP_IF MPI
-      !call MPI_BCAST( mo_coef, mo_tot_num*ao_num, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
-      call MPI_BCAST( mo_coef, mo_tot_num*ao_num, MPI_COMPLEX16, 0, MPI_COMM_WORLD, ierr)
+      call MPI_BCAST( mo_coef, mo_tot_num*ao_num, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
       if (ierr /= MPI_SUCCESS) then
         stop 'Unable to read mo_coef with MPI'
       endif
@@ -100,7 +95,6 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
     ! Orthonormalized AO basis
     do i=1,mo_tot_num
       do j=1,ao_num
-!        mo_coef(j,i) = ao_ortho_canonical_coef(j,i)
         mo_coef(j,i) = cmplx(ao_ortho_canonical_coef(j,i))
       enddo
     enddo
@@ -108,23 +102,16 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
 
 END_PROVIDER
 
-!BEGIN_PROVIDER [ double precision, mo_coef_in_ao_ortho_basis, (ao_num, mo_tot_num) ]
-BEGIN_PROVIDER [ complex*16, mo_coef_in_ao_ortho_basis, (ao_num, mo_tot_num) ]
+BEGIN_PROVIDER [ double precision, mo_coef_in_ao_ortho_basis, (ao_num, mo_tot_num) ]
  implicit none
  BEGIN_DOC
  ! MO coefficients in orthogonalized AO basis
  !
  ! C^(-1).C_mo
  END_DOC
- !call dgemm('N','N',ao_num,mo_tot_num,ao_num,1.d0,                   &
- !    ao_ortho_canonical_coef_inv, size(ao_ortho_canonical_coef_inv,1),&
- !    mo_coef, size(mo_coef,1), 0.d0,                                 &
- !    mo_coef_in_ao_ortho_basis, size(mo_coef_in_ao_ortho_basis,1))
-
- call zgemm('N','N',ao_num,mo_tot_num,ao_num,(1.d0,0.d0),            &
-     complex_ao_ortho_canonical_coef_inv,                            &
-     size(complex_ao_ortho_canonical_coef_inv,1),                            &
-     mo_coef, size(mo_coef,1), (0.d0,0.d0),                          &
+ call dgemm('N','N',ao_num,mo_tot_num,ao_num,1.d0,                   &
+     ao_ortho_canonical_coef_inv, size(ao_ortho_canonical_coef_inv,1),&
+     mo_coef, size(mo_coef,1), 0.d0,                                 &
      mo_coef_in_ao_ortho_basis, size(mo_coef_in_ao_ortho_basis,1))
 
 END_PROVIDER
@@ -160,8 +147,7 @@ BEGIN_PROVIDER [ character*(64), mo_label ]
 
 END_PROVIDER
 
-!BEGIN_PROVIDER [ double precision, mo_coef_transp, (mo_tot_num,ao_num) ]
-BEGIN_PROVIDER [ complex*16, mo_coef_transp, (mo_tot_num,ao_num) ]
+BEGIN_PROVIDER [ double precision, mo_coef_transp, (mo_tot_num,ao_num) ]
   implicit none
   BEGIN_DOC
   ! Molecular orbital coefficients on AO basis set
@@ -176,22 +162,16 @@ BEGIN_PROVIDER [ complex*16, mo_coef_transp, (mo_tot_num,ao_num) ]
   
 END_PROVIDER
 
-!BEGIN_PROVIDER [ double precision, S_mo_coef, (ao_num, mo_tot_num) ]
-BEGIN_PROVIDER [ complex*16, S_mo_coef, (ao_num, mo_tot_num) ]
+BEGIN_PROVIDER [ double precision, S_mo_coef, (ao_num, mo_tot_num) ]
  implicit none
  BEGIN_DOC
  ! Product S.C where S is the overlap matrix in the AO basis and C the mo_coef matrix.
  END_DOC
 
-! call dgemm('N','N', ao_num, mo_tot_num, ao_num,                   &
-!     1.d0, ao_overlap,size(ao_overlap,1),      &
-!     mo_coef, size(mo_coef,1),                                     &
-!     0.d0, S_mo_coef, size(S_mo_coef,1))
-!
- call zgemm('N','N', ao_num, mo_tot_num, ao_num,                   &
-     (1.d0,0.d0), complex_ao_overlap,size(complex_ao_overlap,1),   &
+ call dgemm('N','N', ao_num, mo_tot_num, ao_num,                   &
+     1.d0, ao_overlap,size(ao_overlap,1),      &
      mo_coef, size(mo_coef,1),                                     &
-     (0.d0,0.d0), S_mo_coef, size(S_mo_coef,1))
+     0.d0, S_mo_coef, size(S_mo_coef,1))
 
 END_PROVIDER
 
@@ -238,35 +218,22 @@ subroutine ao_to_mo(A_ao,LDA_ao,A_mo,LDA_mo)
   ! Ct.A_ao.C
   END_DOC
   integer, intent(in)            :: LDA_ao,LDA_mo
-!  double precision, intent(in)   :: A_ao(LDA_ao,ao_num)
-!  double precision, intent(out)  :: A_mo(LDA_mo,mo_tot_num)
-!  double precision, allocatable  :: T(:,:)
-  complex*16, intent(in)   :: A_ao(LDA_ao,ao_num)
-  complex*16, intent(out)  :: A_mo(LDA_mo,mo_tot_num)
-  complex*16, allocatable  :: T(:,:)
+  double precision, intent(in)   :: A_ao(LDA_ao,ao_num)
+  double precision, intent(out)  :: A_mo(LDA_mo,mo_tot_num)
+  double precision, allocatable  :: T(:,:)
   
   allocate ( T(ao_num,mo_tot_num) )
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: T
-  
-!  call dgemm('N','N', ao_num, mo_tot_num, ao_num,                    &
-!      1.d0, A_ao,LDA_ao,                                             &
-!      mo_coef, size(mo_coef,1),                                      &
-!      0.d0, T, size(T,1))
-!  
-!  call dgemm('T','N', mo_tot_num, mo_tot_num, ao_num,                &
-!      1.d0, mo_coef,size(mo_coef,1),                                 &
-!      T, ao_num,                                                     &   
-!      0.d0, A_mo, size(A_mo,1))
   
   call zgemm('N','N', ao_num, mo_tot_num, ao_num,                    &
       (1.d0,0.d0), A_ao,LDA_ao,                                      &
       mo_coef, size(mo_coef,1),                                      &
       (0.d0,0.d0), T, size(T,1))
   
-  call zgemm('C','N', mo_tot_num, mo_tot_num, ao_num,                &
-      (1.d0,0.d0), mo_coef,size(mo_coef,1),                          &
+  call dgemm('T','N', mo_tot_num, mo_tot_num, ao_num,                &
+      1.d0, mo_coef,size(mo_coef,1),                                 &
       T, ao_num,                                                     &   
-      (0.d0,0.d0), A_mo, size(A_mo,1))
+      0.d0, A_mo, size(A_mo,1))
   
   deallocate(T)
 end
@@ -279,34 +246,21 @@ subroutine mo_to_ao(A_mo,LDA_mo,A_ao,LDA_ao)
   ! (S.C).A_mo.(S.C)t
   END_DOC
   integer, intent(in)            :: LDA_ao,LDA_mo
-  !double precision, intent(in)   :: A_mo(LDA_mo,mo_tot_num)
-  !double precision, intent(out)  :: A_ao(LDA_ao,ao_num)
-  !double precision, allocatable  :: T(:,:)
-  complex*16, intent(in)         :: A_mo(LDA_mo,mo_tot_num)
-  complex*16, intent(out)        :: A_ao(LDA_ao,ao_num)
-  complex*16, allocatable        :: T(:,:)
+  double precision, intent(in)   :: A_mo(LDA_mo,mo_tot_num)
+  double precision, intent(out)  :: A_ao(LDA_ao,ao_num)
+  double precision, allocatable  :: T(:,:)
   
   allocate ( T(mo_tot_num,ao_num) )
   
-!  call dgemm('N','T', mo_tot_num, ao_num, mo_tot_num,                &
-!      1.d0, A_mo,size(A_mo,1),                                       &
-!      S_mo_coef, size(S_mo_coef,1),                                  &
-!      0.d0, T, size(T,1))
-!  
-!  call dgemm('N','N', ao_num, ao_num, mo_tot_num,                    &
-!      1.d0, S_mo_coef, size(S_mo_coef,1),                            &
-!      T, size(T,1),                                                  &
-!      0.d0, A_ao, size(A_ao,1))
-
-  call zgemm('N','C', mo_tot_num, ao_num, mo_tot_num,                &
-      (1.d0,0.d0), A_mo,size(A_mo,1),                                &
+  call dgemm('N','T', mo_tot_num, ao_num, mo_tot_num,                &
+      1.d0, A_mo,size(A_mo,1),                                       &
       S_mo_coef, size(S_mo_coef,1),                                  &
-      (0.d0,0.d0), T, size(T,1))
+      0.d0, T, size(T,1))
   
-  call zgemm('N','N', ao_num, ao_num, mo_tot_num,                    &
-      (1.d0,0.d0), S_mo_coef, size(S_mo_coef,1),                     &
+  call dgemm('N','N', ao_num, ao_num, mo_tot_num,                    &
+      1.d0, S_mo_coef, size(S_mo_coef,1),                            &
       T, size(T,1),                                                  &
-      (0.d0,0.d0), A_ao, size(A_ao,1))
+      0.d0, A_ao, size(A_ao,1))
   
   deallocate(T)
 end
@@ -318,35 +272,22 @@ subroutine mo_to_ao_no_overlap(A_mo,LDA_mo,A_ao,LDA_ao)
   ! Useful for density matrix
   END_DOC
   integer, intent(in)            :: LDA_ao,LDA_mo
-!  double precision, intent(in)   :: A_mo(LDA_mo,mo_tot_num)
-!  double precision, intent(out)  :: A_ao(LDA_ao,ao_num)
-!  double precision, allocatable  :: T(:,:)
-  complex*16, intent(in)         :: A_mo(LDA_mo,mo_tot_num)
-  complex*16, intent(out)        :: A_ao(LDA_ao,ao_num)
-  complex*16, allocatable        :: T(:,:)
+  double precision, intent(in)   :: A_mo(LDA_mo,mo_tot_num)
+  double precision, intent(out)  :: A_ao(LDA_ao,ao_num)
+  double precision, allocatable  :: T(:,:)
   
   allocate ( T(mo_tot_num,ao_num) )
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: T
   
-!  call dgemm('N','T', mo_tot_num, ao_num, mo_tot_num,                &
-!      1.d0, A_mo,size(A_mo,1),                                       &
-!      mo_coef, size(mo_coef,1),                                      &
-!      0.d0, T, size(T,1))
-!  
-!  call dgemm('N','N', ao_num, ao_num, mo_tot_num,                    &
-!      1.d0, mo_coef,size(mo_coef,1),                                 &
-!      T, size(T,1),                                                  &
-!      0.d0, A_ao, size(A_ao,1))
-  
-  call zgemm('N','C', mo_tot_num, ao_num, mo_tot_num,                &
-      (1.d0,0.d0), A_mo,size(A_mo,1),                                &
+  call dgemm('N','T', mo_tot_num, ao_num, mo_tot_num,                &
+      1.d0, A_mo,size(A_mo,1),                                       &
       mo_coef, size(mo_coef,1),                                      &
-      (0.d0,0.d0), T, size(T,1))
+      0.d0, T, size(T,1))
   
-  call zgemm('N','N', ao_num, ao_num, mo_tot_num,                    &
-      (1.d0,0.d0), mo_coef,size(mo_coef,1),                          &
+  call dgemm('N','N', ao_num, ao_num, mo_tot_num,                    &
+      1.d0, mo_coef,size(mo_coef,1),                                 &
       T, size(T,1),                                                  &
-      (0.d0,0.d0), A_ao, size(A_ao,1))
+      0.d0, A_ao, size(A_ao,1))
   
   deallocate(T)
 end
@@ -363,16 +304,14 @@ subroutine mix_mo_jk(j,k)
 ! by convention, the '+' MO is in the lower index (min(j,k))
 ! by convention, the '-' MO is in the greater index (max(j,k))
  END_DOC
- !double precision :: array_tmp(ao_num,2),dsqrt_2
- double precision ::dsqrt_2
- complex*16       :: array_tmp(ao_num,2)
+ double precision :: array_tmp(ao_num,2),dsqrt_2
  if(j==k)then
   print*,'You want to mix two orbitals that are the same !'
   print*,'It does not make sense ... '
   print*,'Stopping ...'
   stop
  endif
- array_tmp = (0.d0,0.d0)
+ array_tmp = 0.d0
  dsqrt_2 = 1.d0/dsqrt(2.d0)
  do i = 1, ao_num
   array_tmp(i,1) = dsqrt_2 * (mo_coef(i,j) + mo_coef(i,k))
@@ -395,36 +334,22 @@ subroutine ao_ortho_cano_to_ao(A_ao,LDA_ao,A,LDA)
   ! C^(-1).A_ao.Ct^(-1)
   END_DOC
   integer, intent(in)            :: LDA_ao,LDA
-  !double precision, intent(in)   :: A_ao(LDA_ao,*)
-  !double precision, intent(out)  :: A(LDA,*)
-  !double precision, allocatable  :: T(:,:)
-  complex*16, intent(in)         :: A_ao(LDA_ao,*)
-  complex*16, intent(out)        :: A(LDA,*)
-  complex*16, allocatable        :: T(:,:)
+  double precision, intent(in)   :: A_ao(LDA_ao,*)
+  double precision, intent(out)  :: A(LDA,*)
+  double precision, allocatable  :: T(:,:)
   
   allocate ( T(ao_num,ao_num) )
   
-!  call dgemm('T','N', ao_num, ao_num, ao_num,                        &
-!      1.d0,                                                          &
-!      ao_ortho_canonical_coef_inv, size(ao_ortho_canonical_coef_inv,1),&
-!      A_ao,size(A_ao,1),                                             &
-!      0.d0, T, size(T,1))
-!  
-!  call dgemm('N','N', ao_num, ao_num, ao_num, 1.d0,                  &
-!      T, size(T,1),                                                  &
-!      ao_ortho_canonical_coef_inv,size(ao_ortho_canonical_coef_inv,1),&
-!      0.d0, A, size(A,1))
-  
-  call zgemm('C','N', ao_num, ao_num, ao_num,                        &
-      (1.d0,0.d0), complex_ao_ortho_canonical_coef_inv,              &
-      size(complex_ao_ortho_canonical_coef_inv,1),                   &
+  call dgemm('T','N', ao_num, ao_num, ao_num,                        &
+      1.d0,                                                          &
+      ao_ortho_canonical_coef_inv, size(ao_ortho_canonical_coef_inv,1),&
       A_ao,size(A_ao,1),                                             &
-      (0.d0,0.d0), T, size(T,1))
+      0.d0, T, size(T,1))
   
-  call zgemm('N','N', ao_num, ao_num, ao_num, (1.d0,0.d0),           &
-      T, size(T,1), complex_ao_ortho_canonical_coef_inv,             &
-      size(complex_ao_ortho_canonical_coef_inv,1),                   &
-      (0.d0,0.d0), A, size(A,1))
+  call dgemm('N','N', ao_num, ao_num, ao_num, 1.d0,                  &
+      T, size(T,1),                                                  &
+      ao_ortho_canonical_coef_inv,size(ao_ortho_canonical_coef_inv,1),&
+      0.d0, A, size(A,1))
   
   deallocate(T)
 end
