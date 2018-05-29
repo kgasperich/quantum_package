@@ -1266,9 +1266,9 @@ end
       enddo
       do i=1,mo_tot_num
         do j=1,mo_tot_num
-          cr = mo_coef_transp(j,q)*mo_coef_transp(j,s)
-          mo_bielec_integral_jj_from_ao(j,i) += cr * iqis(i)
-          mo_bielec_integral_jj_exchange_from_ao(j,i) += cr * iqri(i)
+          c = mo_coef_transp(j,q)*mo_coef_transp(j,s)
+          mo_bielec_integral_jj_from_ao(j,i) += c * iqis(i)
+          mo_bielec_integral_jj_exchange_from_ao(j,i) += c * iqri(i)
         enddo
       enddo
       

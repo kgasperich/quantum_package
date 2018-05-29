@@ -6,9 +6,10 @@ program bench_maps
   integer                        :: i,j,k,l
   integer*8                      :: ii,jj
   double precision               :: r, cpu
+  double precision, parameter    :: thr_mo_int = 1.d-10
   integer*8                      :: cpu0, cpu1, count_rate, count_max
   !complex*16                     :: c,get_mo_bielec_integral
-  real(integral_type)            :: c,get_mo_bielec_integral
+  real(integral_kind)            :: c,get_mo_bielec_integral
   
   PROVIDE mo_bielec_integrals_in_map
   print *,  mo_tot_num, 'MOs'
@@ -135,4 +136,23 @@ program bench_maps
   cpu = (cpu1 - cpu0)/count_rate
   print *, 'loop lkij : ', cpu/dble(ii)
 
+  integer :: iunit
+  integer :: getunitandopen
+  iunit = getunitandopen('test_mo_ikjl.txt','w')
+  do i=1,mo_tot_num
+    do k=1,mo_tot_num
+      do j=1,mo_tot_num
+        do l=1,mo_tot_num
+          ii += 1
+          c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
+          if (dabs(c).gt.thr_mo_int) then
+            !print ('(4(I6,X),E25.15)'), i,j,k,l,c
+            !write (iunit,'(4(I6,X),E25.15)'), i,j,k,l,c
+            write (iunit,'(4(I6,X),E25.15)'), i,k,j,l,c
+          endif
+        enddo
+      enddo
+    enddo
+  enddo
+  close(iunit)
 end
