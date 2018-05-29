@@ -653,9 +653,9 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
     j=pairs(2,ll)
     p=tmp_val1(m1)
     q=tmp_val2(m2)
-    if (p==q) then
+    if (idx1==idx2) then
       out_array(i,j) = cmplx(p,0.d0)
-    else if (p.lt.q) then
+    else if (idx1.lt.idx2) then
       out_array(i,j) = cmplx(p,q)
     else
       out_array(i,j) = cmplx(q,-p)
