@@ -210,6 +210,16 @@ END_PROVIDER
 !  
 !end
 
+subroutine idx2_compound_index(i,j,ij)
+  implicit none
+  integer, intent(in) :: i,j
+  integer, intent(out) :: ij
+  integer :: p,q
+  p = min(i,j)
+  q = max(i,j)
+  ij = p + ishft((q*q-q),-1)
+end
+
 ! TODO: test this, especially in cases other than full_ijkl_bitmask*4
 subroutine add_integrals_to_map(mask_ijkl)
   use bitmasks
@@ -426,7 +436,9 @@ subroutine add_integrals_to_map(mask_ijkl)
         
         do j0 = 1, n_j
           j = list_ijkl(j0,2)
-          do i = list_ijkl(1,1), k
+          !do i = list_ijkl(1,1), k
+          do i0 = 1, n_i
+            i = list_ijkl(i0,1)
             bielec_tmp_3(i,j0,k0) = bielec_tmp_3(i,j0,k0) + cr* bielec_tmp_2(i,j0)
           enddo!i
         enddo !j
@@ -446,20 +458,21 @@ subroutine add_integrals_to_map(mask_ijkl)
       if (dabs(cr) < thr_coef) then
         cycle
       endif
-      j1 = ishft((l*l-l),-1)
+      !j1 = ishft((l*l-l),-1)
       do j0 = 1, n_j
         j = list_ijkl(j0,2)
         if (j > l)  then
           exit
         endif
-        j1 += 1
+        !j1 += 1
+        call idx2_compound_index(j,l,j1)
         imax=l
         do k0 = 1, n_k
           k = list_ijkl(k0,3)
           if (k.gt.l) then
             exit
           endif
-          i1 = ishft((k*k-k),-1)
+!          i1 = ishft((k*k-k),-1)
           !if (i1<=j1) then
           !  continue
           !else
@@ -474,11 +487,12 @@ subroutine add_integrals_to_map(mask_ijkl)
             if (i>imax) then
               exit
             endif
-            if (i.le.k) then
-              i1 += 1
-            else
-              i1 += (i-1) !(might need to use (i0-1) instead? only tested for loops over full set of MOs at each index
-            endif
+            call idx2_compound_index(i,k,i1)
+!            if (i.le.k) then
+!              i1 += 1
+!            else
+!              i1 += (i-1) !(might need to use (i0-1) instead? only tested for loops over full set of MOs at each index
+!            endif
             if (i1.gt.j1) then
               imax=i-1 ! keep track of max i for use in loop over i0 below
               exit
@@ -486,7 +500,7 @@ subroutine add_integrals_to_map(mask_ijkl)
             bielec_tmp_1(i) = cr*bielec_tmp_3(i,j0,k0)
             !           i1+=1
           enddo
-          ! TODO: add ik<=jl conditional 
+          ! TODO: implement ik<=jl conditional in more efficient way
           do i0 = 1, n_i
             i = list_ijkl(i0,1)
 !            if(i> min(k,j1-i1+list_ijkl(1,1)-1))then
