@@ -225,10 +225,14 @@ subroutine ao_to_mo(A_ao,LDA_ao,A_mo,LDA_mo)
   allocate ( T(ao_num,mo_tot_num) )
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: T
   
-  call zgemm('N','N', ao_num, mo_tot_num, ao_num,                    &
-      (1.d0,0.d0), A_ao,LDA_ao,                                      &
+!  call zgemm('N','N', ao_num, mo_tot_num, ao_num,                    &
+!      (1.d0,0.d0), A_ao,LDA_ao,                                      &
+!      mo_coef, size(mo_coef,1),                                      &
+!      (0.d0,0.d0), T, size(T,1))
+  call dgemm('N','N', ao_num, mo_tot_num, ao_num,                    &
+      1.d0, A_ao,LDA_ao,                                             &
       mo_coef, size(mo_coef,1),                                      &
-      (0.d0,0.d0), T, size(T,1))
+      0.d0, T, size(T,1))
   
   call dgemm('T','N', mo_tot_num, mo_tot_num, ao_num,                &
       1.d0, mo_coef,size(mo_coef,1),                                 &
