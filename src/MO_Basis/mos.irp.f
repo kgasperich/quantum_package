@@ -95,7 +95,7 @@ BEGIN_PROVIDER [ double precision, mo_coef, (ao_num,mo_tot_num) ]
     ! Orthonormalized AO basis
     do i=1,mo_tot_num
       do j=1,ao_num
-        mo_coef(j,i) = cmplx(ao_ortho_canonical_coef(j,i))
+        mo_coef(j,i) = ao_ortho_canonical_coef(j,i)
       enddo
     enddo
   endif
@@ -109,10 +109,20 @@ BEGIN_PROVIDER [ double precision, mo_coef_in_ao_ortho_basis, (ao_num, mo_tot_nu
  !
  ! C^(-1).C_mo
  END_DOC
+
  call dgemm('N','N',ao_num,mo_tot_num,ao_num,1.d0,                   &
      ao_ortho_canonical_coef_inv, size(ao_ortho_canonical_coef_inv,1),&
      mo_coef, size(mo_coef,1), 0.d0,                                 &
      mo_coef_in_ao_ortho_basis, size(mo_coef_in_ao_ortho_basis,1))
+ 
+! complex*16, allocatable :: buffer(:)
+! allocate(buffer(2*ao_num*mo_tot_num))
+! call zlarcm(ao_num,mo_tot_num,                                       &
+!     ao_ortho_canonical_coef_inv,size(ao_ortho_canonical_coef_inv,1), &
+!     mo_coef, size(mo_coef,1),                                        &
+!     mo_coef_in_ao_ortho_basis, size(mo_coef_in_ao_ortho_basis,1),    &
+!     buffer)
+! deallocate(buffer)
 
 END_PROVIDER
 
