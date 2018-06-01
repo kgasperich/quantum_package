@@ -234,17 +234,18 @@ subroutine add_integrals_to_map(mask_ijkl)
   integer                        :: i,j,k,l
   integer                        :: i0,j0,k0,l0
   double precision               :: cr, cpu_1, cpu_2, wall_1, wall_2, wall_0
+  complex*16                     :: cz
   
   integer, allocatable           :: list_ijkl(:,:)
   integer                        :: n_i, n_j, n_k, n_l
   integer, allocatable           :: bielec_tmp_0_idx(:)
   real(integral_kind), allocatable :: bielec_tmp_0(:,:)
-  double precision, allocatable  :: bielec_tmp_1(:)
-  double precision, allocatable  :: bielec_tmp_2(:,:)
-  double precision, allocatable  :: bielec_tmp_3(:,:,:)
-  !complex*16, allocatable  :: bielec_tmp_1(:)
-  !complex*16, allocatable  :: bielec_tmp_2(:,:)
-  !complex*16, allocatable  :: bielec_tmp_3(:,:,:)
+  !double precision, allocatable  :: bielec_tmp_1(:)
+  !double precision, allocatable  :: bielec_tmp_2(:,:)
+  !double precision, allocatable  :: bielec_tmp_3(:,:,:)
+  complex*16, allocatable  :: bielec_tmp_1(:)
+  complex*16, allocatable  :: bielec_tmp_2(:,:)
+  complex*16, allocatable  :: bielec_tmp_3(:,:,:)
   !DIR$ ATTRIBUTES ALIGN : 64    :: bielec_tmp_1, bielec_tmp_2, bielec_tmp_3
   
   integer                        :: n_integrals
@@ -326,7 +327,7 @@ subroutine add_integrals_to_map(mask_ijkl)
   double precision               :: accu_bis
   accu_bis = 0.d0
   
-  !$OMP PARALLEL PRIVATE(l1,k1,j1,i1,i2,i3,i4,i,j,k,l,cr, ii1,kmax,   &
+  !$OMP PARALLEL PRIVATE(l1,k1,j1,i1,i2,i3,i4,i,j,k,l,cr,cz, ii1,kmax,   &
       !$OMP  s1,r1,q1,p1,p2,p3,p4,pp1,rmax,imax,                         &
       !$OMP  bielec_tmp_0_idx, bielec_tmp_0, bielec_tmp_1,bielec_tmp_2,bielec_tmp_3,&
       !$OMP  buffer_i1,buffer_i2,buffer_value1,buffer_value2,        &
@@ -387,10 +388,10 @@ subroutine add_integrals_to_map(mask_ijkl)
           p4 = bielec_tmp_0_idx(pp1+3)
           do i = list_ijkl(1,1), list_ijkl(n_i,1)
             bielec_tmp_1(i)  =  bielec_tmp_1(i) +                    &
-                mo_coef_transp(i,p1) * bielec_tmp_0(pp1,q1) +        &
-                mo_coef_transp(i,p2) * bielec_tmp_0(pp1+1,q1) +      &
-                mo_coef_transp(i,p3) * bielec_tmp_0(pp1+2,q1) +      &
-                mo_coef_transp(i,p4) * bielec_tmp_0(pp1+3,q1)
+                conjg(mo_coef_transp(i,p1)) * bielec_tmp_0(pp1,q1) +        &
+                conjg(mo_coef_transp(i,p2)) * bielec_tmp_0(pp1+1,q1) +      &
+                conjg(mo_coef_transp(i,p3)) * bielec_tmp_0(pp1+2,q1) +      &
+                conjg(mo_coef_transp(i,p4)) * bielec_tmp_0(pp1+3,q1)
           enddo ! i
         enddo  ! pp1
         
@@ -398,13 +399,13 @@ subroutine add_integrals_to_map(mask_ijkl)
         do pp1 = p2,rmax
           p1 = bielec_tmp_0_idx(pp1)
           do i = list_ijkl(1,1), list_ijkl(n_i,1)
-            bielec_tmp_1(i) = bielec_tmp_1(i) + mo_coef_transp(i,p1) * bielec_tmp_0(pp1,q1)
+            bielec_tmp_1(i) = bielec_tmp_1(i) + conjg(mo_coef_transp(i,p1)) * bielec_tmp_0(pp1,q1)
           enddo ! i
         enddo  ! pp1
         cr = 0.d0
         
         do i = list_ijkl(1,1), list_ijkl(n_i,1)
-          cr = max(cr,dabs(bielec_tmp_1(i)))
+          cr = max(cr,cdabs(bielec_tmp_1(i)))
           if (cr>mo_integrals_threshold) exit
         enddo
         if ( cr < mo_integrals_threshold ) then
@@ -413,24 +414,24 @@ subroutine add_integrals_to_map(mask_ijkl)
         
         do j0 = 1, n_j
           j = list_ijkl(j0,2)
-          cr = mo_coef_transp(j,q1)
-          if (dabs(cr) < thr_coef) then
+          cz = conjg(mo_coef_transp(j,q1))
+          if (cdabs(cz) < thr_coef) then
             cycle
           endif
           do i = list_ijkl(1,1), list_ijkl(n_i,1)
-            bielec_tmp_2(i,j0)  = bielec_tmp_2(i,j0) + cr * bielec_tmp_1(i)
+            bielec_tmp_2(i,j0)  = bielec_tmp_2(i,j0) + cz * bielec_tmp_1(i)
           enddo ! i
         enddo  ! j
       enddo !q1
-      if ( maxval(dabs(bielec_tmp_2)) < mo_integrals_threshold ) then
+      if ( maxval(cdabs(bielec_tmp_2)) < mo_integrals_threshold ) then
         cycle
       endif
       
       
       do k0 = 1, n_k
         k = list_ijkl(k0,3)
-        cr = mo_coef_transp(k,r1)
-        if (dabs(cr) < thr_coef) then
+        cz = mo_coef_transp(k,r1)
+        if (cdabs(cz) < thr_coef) then
           cycle
         endif
         
@@ -439,7 +440,7 @@ subroutine add_integrals_to_map(mask_ijkl)
           !do i = list_ijkl(1,1), k
           do i0 = 1, n_i
             i = list_ijkl(i0,1)
-            bielec_tmp_3(i,j0,k0) = bielec_tmp_3(i,j0,k0) + cr* bielec_tmp_2(i,j0)
+            bielec_tmp_3(i,j0,k0) = bielec_tmp_3(i,j0,k0) + cz* bielec_tmp_2(i,j0)
           enddo!i
         enddo !j
         
@@ -454,8 +455,8 @@ subroutine add_integrals_to_map(mask_ijkl)
     ! ik <= jl (where ik and jl are triangular compound indices)
     do l0 = 1,n_l
       l = list_ijkl(l0,4)
-      cr = mo_coef_transp(l,s1)
-      if (dabs(cr) < thr_coef) then
+      cz = mo_coef_transp(l,s1)
+      if (cdabs(cz) < thr_coef) then
         cycle
       endif
       !j1 = ishft((l*l-l),-1)
@@ -497,7 +498,7 @@ subroutine add_integrals_to_map(mask_ijkl)
               imax=i-1 ! keep track of max i for use in loop over i0 below
               exit
             endif
-            bielec_tmp_1(i) = cr*bielec_tmp_3(i,j0,k0)
+            bielec_tmp_1(i) = cz*bielec_tmp_3(i,j0,k0)
             !           i1+=1
           enddo
           ! TODO: implement ik<=jl conditional in more efficient way
@@ -507,17 +508,17 @@ subroutine add_integrals_to_map(mask_ijkl)
             if (i > imax) then
               exit
             endif
-            if (dabs(bielec_tmp_1(i)) < mo_integrals_threshold) then
+            if (cdabs(bielec_tmp_1(i)) < mo_integrals_threshold) then
               cycle
             endif
             n_integrals += 1
-            tmp_re = bielec_tmp_1(i)
-            tmp_im = 0.d0
+            tmp_re = real(bielec_tmp_1(i))
+            tmp_im = imag(bielec_tmp_1(i))
 
             call mo_bielec_integrals_index(i,j,k,l,tmp_idx1)
             call mo_bielec_integrals_index(k,l,i,j,tmp_idx2)
 
-            if (tmp_idx1.le.tmp_idx2) then
+            if (tmp_idx1.eq.tmp_idx2) then
               ! there are mo_num^2 of these:
               ! is it worth accumulating the imaginary parts somewhere 
               ! in order to verify that they are actually zero?
@@ -525,6 +526,11 @@ subroutine add_integrals_to_map(mask_ijkl)
               buffer_i2(n_integrals) = tmp_idx1
               buffer_value1(n_integrals) = tmp_re
               buffer_value2(n_integrals) = 0.d0
+            else if (tmp_idx1 .lt. tmp_idx2) then
+              buffer_i1(n_integrals) = tmp_idx1
+              buffer_i2(n_integrals) = tmp_idx2
+              buffer_value1(n_integrals) = tmp_re
+              buffer_value2(n_integrals) = tmp_im
             else
               buffer_i1(n_integrals) = tmp_idx2
               buffer_i2(n_integrals) = tmp_idx1
@@ -1182,13 +1188,14 @@ end
   
   integer                        :: i,j,p,q,r,s
   double precision               :: c
+  complex*16                     :: cz
   real(integral_kind)            :: integral
   integer                        :: n, pp
   real(integral_kind), allocatable :: int_value(:)
   integer, allocatable           :: int_idx(:)
   
-  double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
-  !complex*16, allocatable        :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
+  !double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
+  complex*16, allocatable        :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
   
   if (.not.do_direct_integrals) then
     PROVIDE ao_bielec_integrals_in_map mo_coef
@@ -1202,6 +1209,7 @@ end
   
   !$OMP PARALLEL DEFAULT(NONE)                                       &
       !$OMP PRIVATE (i,j,p,q,r,s,integral,c,n,pp,int_value,int_idx,  &
+      !$OMP  cz,                                                     &
       !$OMP  iqrs, iqsr,iqri,iqis)                                   &
       !$OMP SHARED(mo_tot_num,mo_coef_transp,ao_num,                 &
       !$OMP  ao_integrals_threshold,do_direct_integrals)             &
@@ -1230,7 +1238,7 @@ end
             integral = int_value(p)
             if (abs(integral) > ao_integrals_threshold) then
               do i=1,mo_tot_num
-                iqrs(i,r) += mo_coef_transp(i,p) * integral
+                iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1239,7 +1247,7 @@ end
             integral = int_value(p)
             if (abs(integral) > ao_integrals_threshold) then
               do i=1,mo_tot_num
-                iqsr(i,r) += mo_coef_transp(i,p) * integral
+                iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1254,7 +1262,7 @@ end
             integral = int_value(pp)
             if (abs(integral) > ao_integrals_threshold) then
               do i=1,mo_tot_num
-                iqrs(i,r) += mo_coef_transp(i,p) * integral
+                iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1264,7 +1272,7 @@ end
             integral = int_value(pp)
             if (abs(integral) > ao_integrals_threshold) then
               do i=1,mo_tot_num
-                iqsr(i,r) += mo_coef_transp(i,p) * integral
+                iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1280,9 +1288,9 @@ end
       enddo
       do i=1,mo_tot_num
         do j=1,mo_tot_num
-          c = mo_coef_transp(j,q)*mo_coef_transp(j,s)
-          mo_bielec_integral_jj_from_ao(j,i) += c * iqis(i)
-          mo_bielec_integral_jj_exchange_from_ao(j,i) += c * iqri(i)
+          cz = conjg(mo_coef_transp(j,q))*mo_coef_transp(j,s)
+          mo_bielec_integral_jj_from_ao(j,i) += real(cz * iqis(i))
+          mo_bielec_integral_jj_exchange_from_ao(j,i) += real(cz * iqri(i))
         enddo
       enddo
       
@@ -1311,13 +1319,14 @@ END_PROVIDER
   integer                        :: i,j,p,q,r,s
   integer                        :: i0,j0
   double precision               :: c
+  complex*16                     :: cz
   real(integral_kind)            :: integral
   integer                        :: n, pp
   real(integral_kind), allocatable :: int_value(:)
   integer, allocatable           :: int_idx(:)
   
-  double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
-  !complex*16, allocatable        :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
+  !double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
+  complex*16, allocatable        :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
   
   if (.not.do_direct_integrals) then
     PROVIDE ao_bielec_integrals_in_map mo_coef
@@ -1331,6 +1340,7 @@ END_PROVIDER
   
   !$OMP PARALLEL DEFAULT(NONE)                                       &
       !$OMP PRIVATE (i0,j0,i,j,p,q,r,s,integral,c,n,pp,int_value,int_idx,&
+      !$OMP  cz,                                                     &
       !$OMP  iqrs, iqsr,iqri,iqis)                                   &
       !$OMP SHARED(n_virt_orb,mo_tot_num,list_virt,mo_coef_transp,ao_num,&
       !$OMP  ao_integrals_threshold,do_direct_integrals)             &
@@ -1361,7 +1371,7 @@ END_PROVIDER
             if (abs(integral) > ao_integrals_threshold) then
               do i0=1,n_virt_orb
                 i = list_virt(i0)
-                iqrs(i,r) += mo_coef_transp(i,p) * integral
+                iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1371,7 +1381,7 @@ END_PROVIDER
             if (abs(integral) > ao_integrals_threshold) then
               do i0=1,n_virt_orb
                 i =list_virt(i0)
-                iqsr(i,r) += mo_coef_transp(i,p) * integral
+                iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1387,7 +1397,7 @@ END_PROVIDER
             if (abs(integral) > ao_integrals_threshold) then
               do i0=1,n_virt_orb
                 i =list_virt(i0)
-                iqrs(i,r) += mo_coef_transp(i,p) * integral
+                iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1398,7 +1408,7 @@ END_PROVIDER
             if (abs(integral) > ao_integrals_threshold) then
               do i0=1,n_virt_orb
                 i = list_virt(i0)
-                iqsr(i,r) += mo_coef_transp(i,p) * integral
+                iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
             endif
           enddo
@@ -1417,9 +1427,9 @@ END_PROVIDER
         i= list_virt(i0)
         do j0=1,n_virt_orb
           j = list_virt(j0)
-          c = mo_coef_transp(j,q)*mo_coef_transp(j,s)
-          mo_bielec_integral_vv_from_ao(j,i) += c * iqis(i)
-          mo_bielec_integral_vv_exchange_from_ao(j,i) += c * iqri(i)
+          cz = conjg(mo_coef_transp(j,q))*mo_coef_transp(j,s)
+          mo_bielec_integral_vv_from_ao(j,i) += real(cz * iqis(i))
+          mo_bielec_integral_vv_exchange_from_ao(j,i) += real(cz * iqri(i))
         enddo
       enddo
       
@@ -1480,8 +1490,7 @@ END_PROVIDER
   END_DOC
   
   integer                        :: i,j
-  double precision               :: get_mo_bielec_integral
-  !complex*16                     :: get_mo_bielec_integral
+  complex*16                     :: get_mo_bielec_integral
   
   PROVIDE mo_bielec_integrals_in_map
   mo_bielec_integral_jj = 0.d0
@@ -1489,8 +1498,8 @@ END_PROVIDER
   
   do j=1,mo_tot_num
     do i=1,mo_tot_num
-      mo_bielec_integral_jj(i,j) = get_mo_bielec_integral(i,j,i,j,mo_integrals_map)
-      mo_bielec_integral_jj_exchange(i,j) = get_mo_bielec_integral(i,j,j,i,mo_integrals_map)
+      mo_bielec_integral_jj(i,j) = real(get_mo_bielec_integral(i,j,i,j,mo_integrals_map))
+      mo_bielec_integral_jj_exchange(i,j) = real(get_mo_bielec_integral(i,j,j,i,mo_integrals_map))
       mo_bielec_integral_jj_anti(i,j) = mo_bielec_integral_jj(i,j) - mo_bielec_integral_jj_exchange(i,j)
     enddo
   enddo

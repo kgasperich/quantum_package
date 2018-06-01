@@ -1,3 +1,6 @@
+!TODO(keg): change to complex
+!           both used in Determinants/mono_excitations.irp.f
+!           exchange used in Determinants/slater_rules.irp.f
  BEGIN_PROVIDER [double precision, big_array_coulomb_integrals, (mo_tot_num,mo_tot_num, mo_tot_num)]
 &BEGIN_PROVIDER [double precision, big_array_exchange_integrals,(mo_tot_num,mo_tot_num, mo_tot_num)]
  implicit none

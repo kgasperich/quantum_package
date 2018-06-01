@@ -8,8 +8,8 @@ program bench_maps
   double precision               :: r, cpu
   double precision, parameter    :: thr_mo_int = 1.d-10
   integer*8                      :: cpu0, cpu1, count_rate, count_max
-  !complex*16                     :: c,get_mo_bielec_integral
-  real(integral_kind)            :: c,get_mo_bielec_integral
+  complex*16                     :: c,get_mo_bielec_integral
+  !real(integral_kind)            :: c,get_mo_bielec_integral
   
   PROVIDE mo_bielec_integrals_in_map
   print *,  mo_tot_num, 'MOs'
@@ -146,7 +146,7 @@ program bench_maps
           ii += 1
           call complex_bielec_integrals_index(i,j,k,l,idx)
           c = get_mo_bielec_integral(i,j,k,l,mo_integrals_map)
-          if (dabs(c).gt.thr_mo_int) then
+          if (cdabs(c).gt.thr_mo_int) then
             !print ('(4(I6,X),E25.15)'), i,j,k,l,c
             !write (iunit,'(4(I6,X),E25.15)'), i,j,k,l,c
             write (iunit,'(4(I6,X),E25.15,X,I6)'), i,k,j,l,c,idx
