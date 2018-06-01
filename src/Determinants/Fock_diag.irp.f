@@ -27,6 +27,9 @@ subroutine build_fock_tmp(fock_diag_tmp,det_ref,Nint)
     print *, 'Error in build_fock_tmp (beta)', Ne(1), Ne(2)
     stop -1
   endif
+!TODO(keg): add real() to mo_mono_elec_integral elements
+!           array will be complex, but diagonal is all real
+!           jj integral array should already be real
 
   ! Occupied MOs
   do ii=1,elec_alpha_num
