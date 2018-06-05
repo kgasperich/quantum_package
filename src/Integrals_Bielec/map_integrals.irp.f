@@ -677,8 +677,8 @@ subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
   
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,l,i,hash1(i))
-    call bielec_integrals_index(l,i,k,i,hash2(i))
+    call complex_bielec_integrals_index(k,i,l,i,hash1(i))
+    call complex_bielec_integrals_index(l,i,k,i,hash2(i))
   enddo
   
   call map_get_many(map, hash1, tmp_val1, sze)
@@ -714,8 +714,8 @@ subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
   
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,i,l,hash1(i))
-    call bielec_integrals_index(i,l,k,i,hash2(i))
+    call complex_bielec_integrals_index(k,i,i,l,hash1(i))
+    call complex_bielec_integrals_index(i,l,k,i,hash2(i))
   enddo
   
   call map_get_many(map, hash1, tmp_val1, sze)
