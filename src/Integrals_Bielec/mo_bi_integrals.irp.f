@@ -452,12 +452,14 @@ subroutine add_integrals_to_map(mask_ijkl)
       if (dabs(cr) < thr_coef) then
         cycle
       endif
+      j1 = ishft((l*l-l),-1)
       do j0 = 1, n_j
         j = list_ijkl(j0,2)
         if (j > l)  then
           exit
         endif
-        call idx2_compound_index(j,l,j1)
+        !call idx2_compound_index(j,l,j1)
+        j1 += 1
         imax=l
         do k0 = 1, n_k
           k = list_ijkl(k0,3)
@@ -467,13 +469,19 @@ subroutine add_integrals_to_map(mask_ijkl)
           if (j.eq.l) then
             imax=k
           endif
+          i1 = ishft((k*k-k),-1)
           bielec_tmp_1 = 0.d0
           do i0 = 1, n_i
             i = list_ijkl(i0,1)
             if (i>imax) then
               exit
             endif
-            call idx2_compound_index(i,k,i1)
+            !call idx2_compound_index(i,k,i1)
+            if (i.le.k) then
+              i1 += 1
+            else
+              i1 += (i-1)
+            endif
             if (i1.gt.j1) then
               imax=i-1 ! keep track of max i for use in loop over i0 below
               exit
