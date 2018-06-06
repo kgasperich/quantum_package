@@ -19,6 +19,9 @@ END_PROVIDER
 subroutine bielec_integrals_index(i,j,k,l,i1)
   use map_module
   implicit none
+  BEGIN_DOC
+  ! index of <ij|kl> with 8-fold symmetry
+  END_DOC
   integer, intent(in)            :: i,j,k,l
   integer(key_kind), intent(out) :: i1
   integer(key_kind)              :: p,q,r,s,i2
@@ -36,6 +39,9 @@ end
 subroutine complex_bielec_integrals_index(i,j,k,l,i1)
   use map_module
   implicit none
+  BEGIN_DOC
+  ! index of <ij|kl> with 2-fold symmetry
+  END_DOC
   integer, intent(in)            :: i,j,k,l
   integer(key_kind), intent(out) :: i1
   integer(key_kind)              :: p,q,i2

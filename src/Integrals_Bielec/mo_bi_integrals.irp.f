@@ -2,7 +2,7 @@ subroutine mo_bielec_integrals_index(i,j,k,l,i1)
   use map_module
   implicit none
   BEGIN_DOC
-  ! Computes an unique index for i,j,k,l integrals
+  ! Computes an unique index for i,j,k,l integrals with 2-fold symmetry
   END_DOC
   integer, intent(in)            :: i,j,k,l
   integer(key_kind), intent(out) :: i1
@@ -452,13 +452,11 @@ subroutine add_integrals_to_map(mask_ijkl)
       if (dabs(cr) < thr_coef) then
         cycle
       endif
-      !j1 = ishft((l*l-l),-1)
       do j0 = 1, n_j
         j = list_ijkl(j0,2)
         if (j > l)  then
           exit
         endif
-        !j1 += 1
         call idx2_compound_index(j,l,j1)
         imax=l
         do k0 = 1, n_k
@@ -466,12 +464,6 @@ subroutine add_integrals_to_map(mask_ijkl)
           if (k.gt.l) then
             exit
           endif
-!          i1 = ishft((k*k-k),-1)
-          !if (i1<=j1) then
-          !  continue
-          !else
-          !  exit
-          !endif
           if (j.eq.l) then
             imax=k
           endif
@@ -482,17 +474,11 @@ subroutine add_integrals_to_map(mask_ijkl)
               exit
             endif
             call idx2_compound_index(i,k,i1)
-!            if (i.le.k) then
-!              i1 += 1
-!            else
-!              i1 += (i-1) !(might need to use (i0-1) instead? only tested for loops over full set of MOs at each index
-!            endif
             if (i1.gt.j1) then
               imax=i-1 ! keep track of max i for use in loop over i0 below
               exit
             endif
             bielec_tmp_1(i) = cr*bielec_tmp_3(i,j0,k0)
-            !           i1+=1
           enddo
           
           do i0 = 1, n_i
