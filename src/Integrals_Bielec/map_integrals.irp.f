@@ -33,6 +33,31 @@ subroutine bielec_integrals_index(i,j,k,l,i1)
   i1 = i1+ishft(i2*i2-i2,-1)
 end
 
+subroutine complex_bielec_integrals_index(i,j,k,l,i1)
+  use map_module
+  implicit none
+  integer, intent(in)            :: i,j,k,l
+  integer(key_kind), intent(out) :: i1
+  integer(key_kind)              :: p,q,i2
+  if (i==k) then
+    p=i*i
+  else if (i.lt.k) then
+    p=(k-1)*(k-1)+2*i-mod(k+1,2)
+  else
+    p=(i-1)*(i-1)+2*k-mod(i,2)
+  endif
+  if (j==l) then
+    q=j*j
+  else if (j.lt.l) then
+    q=(l-1)*(l-1)+2*j-mod(l+1,2)
+  else
+    q=(j-1)*(j-1)+2*l-mod(j,2)
+  endif
+  i1 = min(p,q)
+  i2 = max(p,q)
+  i1 = i1+ishft(i2*i2-i2,-1)
+end
+
 subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
   use map_module
   implicit none
@@ -107,6 +132,73 @@ subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
   enddo
 
 
+end
+
+subroutine complex_bielec_integrals_index_reverse(i,j,k,l,i1)
+  use map_module
+  implicit none
+  integer, intent(out)           :: i(4),j(4),k(4),l(4)
+  integer(key_kind), intent(in)  :: i1
+  integer(key_kind)              :: i2,i3,p,q
+  i = 0
+  i2   = ceiling(0.5d0*(dsqrt(8.d0*dble(i1)+1.d0)-1.d0))
+  i3   = i1 - ishft(i2*i2-i2,-1)
+  p = ceiling(dsqrt(dble(i2)))
+  q = ceiling(0.5d0*(dble(i2)-dble((p-1)*(p-1))))
+  if (mod(i2,2)==0) then
+    l(1)=p
+    j(1)=q
+  else
+    j(1)=p
+    l(1)=q
+  endif
+  p = ceiling(dsqrt(dble(i3)))
+  q = ceiling(0.5d0*(dble(i3)-dble((p-1)*(p-1))))
+  if (mod(i3,2)==0) then
+    k(1)=p
+    i(1)=q
+  else
+    i(1)=p
+    k(1)=q
+  endif
+              !ijkl
+  i(2) = j(1) !jilk
+  j(2) = i(1)
+  k(2) = l(1)
+  l(2) = k(1)
+
+  i(3) = k(1) !klij   complex conjugate
+  j(3) = l(1)
+  k(3) = i(1)
+  l(3) = j(1)
+
+  i(4) = l(1) !lkji   complex conjugate
+  j(4) = k(1)
+  k(4) = j(1)
+  l(4) = i(1)
+
+  integer :: ii, jj
+  do ii=2,4
+    do jj=1,ii-1
+      if ( (i(ii) == i(jj)).and. &
+           (j(ii) == j(jj)).and. &
+           (k(ii) == k(jj)).and. &
+           (l(ii) == l(jj)) ) then
+         i(ii) = 0
+         exit
+      endif
+    enddo
+  enddo
+  do ii=1,4
+    if (i(ii) /= 0) then
+      call complex_bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i2)
+      if (i1 /= i2) then
+        print *,  i1, i2
+        print *,  i(ii), j(ii), k(ii), l(ii)
+        stop 'complex_bielec_integrals_index_reverse failed'
+      endif
+    endif
+  enddo
 end
 
  BEGIN_PROVIDER [ integer, ao_integrals_cache_min ]
@@ -290,10 +382,10 @@ BEGIN_PROVIDER [ type(map_type), mo_integrals_map ]
   END_DOC
   integer(key_kind)              :: key_max
   integer(map_size_kind)         :: sze
-  call bielec_integrals_index(mo_tot_num,mo_tot_num,mo_tot_num,mo_tot_num,key_max)
+  call complex_bielec_integrals_index(mo_tot_num,mo_tot_num,mo_tot_num,mo_tot_num,key_max)
   sze = key_max
   call map_init(mo_integrals_map,sze)
-  print*, 'MO map initialized: ', sze
+  print*, 'complex MO map initialized: ', sze
 END_PROVIDER
 
 subroutine insert_into_ao_integrals_map(n_integrals,buffer_i, buffer_values)
@@ -350,10 +442,10 @@ BEGIN_PROVIDER [ double precision, mo_integrals_cache, (0_8:128_8*128_8*128_8*12
  integer*8                      :: i,j,k,l
  integer*4                      :: i4,j4,k4,l4
  integer*8                      :: ii
- integer(key_kind)              :: idx
+ integer(key_kind)              :: idx1,idx2
  real(integral_kind)            :: integral
  FREE ao_integrals_cache
- !$OMP PARALLEL DO PRIVATE (i,j,k,l,i4,j4,k4,l4,idx,ii,integral)
+ !$OMP PARALLEL DO PRIVATE (i,j,k,l,i4,j4,k4,l4,idx1,idx2,ii,integral)
  do l=mo_integrals_cache_min_8,mo_integrals_cache_max_8
    l4 = int(l,4)
    do k=mo_integrals_cache_min_8,mo_integrals_cache_max_8
@@ -363,9 +455,15 @@ BEGIN_PROVIDER [ double precision, mo_integrals_cache, (0_8:128_8*128_8*128_8*12
        do i=mo_integrals_cache_min_8,mo_integrals_cache_max_8
          i4 = int(i,4)
          !DIR$ FORCEINLINE
-         call bielec_integrals_index(i4,j4,k4,l4,idx)
+         call complex_bielec_integrals_index(i4,j4,k4,l4,idx1)
+         call complex_bielec_integrals_index(k4,l4,i4,j4,idx2)
          !DIR$ FORCEINLINE
-         call map_get(mo_integrals_map,idx,integral)
+         if (idx1.le.idx2) then
+           call map_get(mo_integrals_map,idx1,integral)
+         else 
+           call map_get(mo_integrals_map,idx2,integral)
+         endif
+
          ii = l-mo_integrals_cache_min_8
          ii = ior( ishft(ii,7), k-mo_integrals_cache_min_8)
          ii = ior( ishft(ii,7), j-mo_integrals_cache_min_8)
@@ -387,11 +485,11 @@ double precision function get_mo_bielec_integral(i,j,k,l,map)
   ! Returns one integral <ij|kl> in the MO basis
   END_DOC
   integer, intent(in)            :: i,j,k,l
-  integer(key_kind)              :: idx
+  integer(key_kind)              :: idx1,idx2
   integer                        :: ii
   integer*8                      :: ii_8
   type(map_type), intent(inout)  :: map
-  real(integral_kind)            :: tmp
+  real(integral_kind)            :: tmp1,tmp2
   PROVIDE mo_bielec_integrals_in_map mo_integrals_cache
   ii = l-mo_integrals_cache_min
   ii = ior(ii, k-mo_integrals_cache_min)
@@ -399,10 +497,16 @@ double precision function get_mo_bielec_integral(i,j,k,l,map)
   ii = ior(ii, i-mo_integrals_cache_min)
   if (iand(ii, -128) /= 0) then
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(i,j,k,l,idx)
+    call complex_bielec_integrals_index(i,j,k,l,idx1)
+    call complex_bielec_integrals_index(k,l,i,j,idx2)
     !DIR$ FORCEINLINE
-    call map_get(map,idx,tmp)
-    get_mo_bielec_integral = dble(tmp)
+    if (idx1.le.idx2) then
+      call map_get(map,idx1,tmp1)
+      get_mo_bielec_integral = dble(tmp1)
+    else
+      call map_get(map,idx2,tmp2)
+      get_mo_bielec_integral = dble(tmp2)
+    endif
   else
     ii_8 = int(l,8)-mo_integrals_cache_min_8
     ii_8 = ior( ishft(ii_8,7), int(k,8)-mo_integrals_cache_min_8)
@@ -436,24 +540,40 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
   END_DOC
   integer, intent(in)            :: j,k,l, sze
   double precision, intent(out)  :: out_val(sze)
+  double precision               :: out_val1(sze),out_val2(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
-  integer(key_kind)              :: hash(sze)
-  real(integral_kind)            :: tmp_val(sze)
+  integer(key_kind)              :: hash(2,sze)
+  real(integral_kind)            :: tmp1,tmp2
+  real(integral_kind)         :: tmp_val1(sze),tmp_val2(sze)
   PROVIDE mo_bielec_integrals_in_map
   
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(i,j,k,l,hash(i))
+    call complex_bielec_integrals_index(i,j,k,l,hash(1,i))
+    call complex_bielec_integrals_index(k,l,i,j,hash(2,i))
   enddo
   
   if (integral_kind == 8) then
-    call map_get_many(map, hash, out_val, sze)
+    call map_get_many(map, hash(1,:), out_val1, sze)
+    call map_get_many(map, hash(2,:), out_val2, sze)
+    do i=1,sze
+      if (hash(1,i).le.hash(2,i)) then
+        out_val(i) = out_val1(i)
+      else
+        out_val(i) = out_val2(i)
+      endif
+    enddo
   else
-    call map_get_many(map, hash, tmp_val, sze)
+    call map_get_many(map, hash(1,:), tmp_val1, sze)
+    call map_get_many(map, hash(2,:), tmp_val2, sze)
     ! Conversion to double precision 
     do i=1,sze
-      out_val(i) = dble(tmp_val(i))
+      if (hash(1,i).le.hash(2,i)) then
+        out_val(i) = dble(tmp_val1(i))
+      else
+        out_val(i) = dble(tmp_val2(i))
+      endif
     enddo
   endif
 end
@@ -469,14 +589,18 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
   integer, intent(in)            :: k,l, sze
   double precision, intent(out)  :: out_array(sze,sze)
   type(map_type), intent(inout)  :: map
-  integer                        :: i,j,kk,ll,m
-  integer(key_kind),allocatable  :: hash(:)
-  integer  ,allocatable          :: pairs(:,:), iorder(:)
-  real(integral_kind), allocatable :: tmp_val(:)
+  integer                        :: i,j,kk,ll,m1,m2
+  integer(key_kind)              :: idx1,idx2
+  real(integral_kind)            :: p,q
+  integer(key_kind),allocatable  :: hash1(:),hash2(:)
+  integer  ,allocatable          :: pairs(:,:), iorder1(:),iorder2(:)
+  integer  ,allocatable          :: jorder1(:),jorder2(:)
+  real(integral_kind), allocatable :: tmp_val1(:),tmp_val2(:)
 
   PROVIDE mo_bielec_integrals_in_map
-  allocate (hash(sze*sze), pairs(2,sze*sze),iorder(sze*sze), &
-  tmp_val(sze*sze))
+  allocate (hash1(sze*sze), hash2(sze*sze), pairs(2,sze*sze), &
+  iorder1(sze*sze), iorder2(sze*sze), jorder1(sze*sze), jorder2(sze*sze), &
+  tmp_val1(sze*sze), tmp_val2(sze*sze))
   
   kk=0
   out_array = 0.d0
@@ -484,32 +608,51 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
    do i=1,sze
     kk += 1
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(i,j,k,l,hash(kk))
+    call complex_bielec_integrals_index(i,j,k,l,hash1(kk))
+    call complex_bielec_integrals_index(k,l,i,j,hash2(kk))
     pairs(1,kk) = i
     pairs(2,kk) = j
-    iorder(kk) = kk
+    iorder1(kk) = kk
+    iorder2(kk) = kk
+    jorder1(kk) = kk
+    jorder2(kk) = kk
    enddo
   enddo
 
   logical :: integral_is_in_map
   if (key_kind == 8) then
-    call i8radix_sort(hash,iorder,kk,-1)
+    call i8radix_sort(hash1,iorder1,kk,-1)
+    call i8radix_sort(hash2,iorder2,kk,-1)
   else if (key_kind == 4) then
-    call iradix_sort(hash,iorder,kk,-1)
+    call iradix_sort(hash1,iorder1,kk,-1)
+    call iradix_sort(hash2,iorder2,kk,-1)
   else if (key_kind == 2) then
-    call i2radix_sort(hash,iorder,kk,-1)
+    call i2radix_sort(hash1,iorder1,kk,-1)
+    call i2radix_sort(hash2,iorder2,kk,-1)
   endif
+  call iradix_sort(iorder1,jorder1,kk,-1)
+  call iradix_sort(iorder2,jorder2,kk,-1)
 
-  call map_get_many(mo_integrals_map, hash, tmp_val, kk)
+  call map_get_many(mo_integrals_map, hash1, tmp_val1, kk)
+  call map_get_many(mo_integrals_map, hash2, tmp_val2, kk)
 
   do ll=1,kk
-    m = iorder(ll)
-    i=pairs(1,m)
-    j=pairs(2,m)
-    out_array(i,j) = tmp_val(ll)
+    m1=jorder1(ll)
+    m2=jorder2(ll)
+    idx1=hash1(m1)
+    idx2=hash2(m2)
+    i=pairs(1,ll)
+    j=pairs(2,ll)
+    p=tmp_val1(m1)
+    q=tmp_val2(m2)
+    if (idx1.le.idx2) then
+      out_array(i,j) = dble(p)
+    else
+      out_array(i,j) = dble(q)
+    endif
   enddo  
 
-  deallocate(pairs,hash,iorder,tmp_val)
+  deallocate(pairs,hash1,hash2,iorder1,iorder2,jorder1,jorder2,tmp_val1,tmp_val2)
 end
 
 subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
@@ -524,25 +667,28 @@ subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
   double precision, intent(out)  :: out_val(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
-  integer(key_kind)              :: hash(sze)
-  real(integral_kind)            :: tmp_val(sze)
+  integer(key_kind)              :: idx1,idx2
+  integer(key_kind)              :: hash1(sze),hash2(sze)
+  real(integral_kind)            :: tmp_val1(sze),tmp_val2(sze)
   PROVIDE mo_bielec_integrals_in_map
   
-  integer :: kk
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,l,i,hash(i))
+    call complex_bielec_integrals_index(k,i,l,i,hash1(i))
+    call complex_bielec_integrals_index(l,i,k,i,hash2(i))
   enddo
   
-  if (integral_kind == 8) then
-    call map_get_many(map, hash, out_val, sze)
-  else
-    call map_get_many(map, hash, tmp_val, sze)
-    ! Conversion to double precision 
-    do i=1,sze
-      out_val(i) = dble(tmp_val(i))
-    enddo
-  endif
+  call map_get_many(map, hash1, tmp_val1, sze)
+  call map_get_many(map, hash2, tmp_val2, sze)
+  do i=1,sze
+    idx1=hash1(i)
+    idx2=hash2(i)
+    if (idx1.le.idx2) then
+      out_val(i) = dble(tmp_val1(i))
+    else
+      out_val(i) = dble(tmp_val2(i))
+    endif
+  enddo
 end
 
 subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
@@ -557,25 +703,28 @@ subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
   double precision, intent(out)  :: out_val(sze)
   type(map_type), intent(inout)  :: map
   integer                        :: i
-  integer(key_kind)              :: hash(sze)
-  real(integral_kind)            :: tmp_val(sze)
+  integer(key_kind)              :: idx1,idx2
+  integer(key_kind)              :: hash1(sze),hash2(sze)
+  real(integral_kind)            :: tmp_val1(sze),tmp_val2(sze)
   PROVIDE mo_bielec_integrals_in_map
   
-  integer :: kk
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,i,l,hash(i))
+    call complex_bielec_integrals_index(k,i,i,l,hash1(i))
+    call complex_bielec_integrals_index(i,l,k,i,hash2(i))
   enddo
   
-  if (integral_kind == 8) then
-    call map_get_many(map, hash, out_val, sze)
-  else
-    call map_get_many(map, hash, tmp_val, sze)
-    ! Conversion to double precision 
-    do i=1,sze
-      out_val(i) = dble(tmp_val(i))
-    enddo
-  endif
+  call map_get_many(map, hash1, tmp_val1, sze)
+  call map_get_many(map, hash2, tmp_val2, sze)
+  do i=1,sze
+    idx1=hash1(i)
+    idx2=hash2(i)
+    if (idx1.lt.idx2) then
+      out_val(i) = dble(tmp_val1(i))
+    else
+      out_val(i) = dble(tmp_val2(i))
+    endif
+  enddo
 end
 
 
