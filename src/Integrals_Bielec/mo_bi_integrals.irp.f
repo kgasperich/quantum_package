@@ -44,6 +44,16 @@ BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
   print *,  '---------------------------------'
   print *,  ''
   integer :: i,j,k,l
+  
+  character*(2048) :: output(1)
+  
+  print*, 'core_inact_act bitmask'
+  call bitstring_to_str( output(1), core_inact_act_bitmask_4(1,1), N_int)
+  print *, trim(output(1))
+  
+  print*, 'virt bitmask'
+  call bitstring_to_str( output(1), virt_bitmask(1,1), N_int)
+  print *, trim(output(1))
 
   if (ints_iiii) then
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  I I I I !!!!!!!!!!!!!!!!!!!!
