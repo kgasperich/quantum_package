@@ -16,6 +16,36 @@ BEGIN_PROVIDER [ type(map_type), ao_integrals_map ]
   print*,  'AO map initialized : ', sze
 END_PROVIDER
 
+
+subroutine compound_index_triangle(i,j,ij)
+  BEGIN_DOC
+  ! triangular compound indexing function
+  END_DOC
+  implicit none
+  integer, intent(in) :: i,j
+  integer, intent(out) :: ij
+  integer :: p,q
+  p = min(i,j)
+  q = max(i,j)
+  ij = p + ishft((q*q-q),-1)
+end
+
+subroutine compound_index_square(i,j,ij)
+  BEGIN_DOC
+  ! square compound indexing function
+  END_DOC
+  implicit none
+  integer, intent(in) :: i,j
+  integer, intent(out) :: ij
+  if (i.lt.j) then
+    ij=(j-1)*(j-1)+2*i-mod(j+1,2)
+  else if (i.gt.j) then
+    ij=(i-1)*(i-1)+2*j-mod(i,2)
+  else
+    ij=i*i
+  endif
+end
+
 subroutine bielec_integrals_index(i,j,k,l,i1)
   use map_module
   implicit none
