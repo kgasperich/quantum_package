@@ -42,9 +42,10 @@ subroutine save_mos_truncated(n)
       buffer_im(i,j) = imag(mo_coef(i,j))
     enddo
   enddo
-  call ezfio_set_mo_basis_mo_coef(buffer)
+  call ezfio_set_mo_basis_mo_coef_real(buffer_re)
+  call ezfio_set_mo_basis_mo_coef_imag(buffer_im)
   call ezfio_set_mo_basis_mo_occ(mo_occ)
-  deallocate (buffer)
+  deallocate (buffer_re, buffer_im)
   
 end
 
@@ -52,11 +53,12 @@ subroutine mo_as_eigvectors_of_mo_matrix(matrix,n,m,label,sign,output)
   implicit none
   integer,intent(in)             :: n,m, sign
   character*(64), intent(in)     :: label
-  double precision, intent(in)   :: matrix(n,m)
+  complex*16, intent(in)   :: matrix(n,m)
   logical, intent(in)            :: output
   
   integer :: i,j
-  double precision, allocatable  :: mo_coef_new(:,:), R(:,:),eigvalues(:), A(:,:)
+  double precision, allocatable  :: eigvalues(:)
+  complex*16, allocatable  :: mo_coef_new(:,:), R(:,:), A(:,:)
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: mo_coef_new, R
   
   call write_time(6)
@@ -80,7 +82,7 @@ subroutine mo_as_eigvectors_of_mo_matrix(matrix,n,m,label,sign,output)
   endif
   mo_coef_new = mo_coef
   
-  call lapack_diag(eigvalues,R,A,n,m)
+  call lapack_diag_z(eigvalues,R,A,n,m)
   if (output) then
     write (6,'(A)')  'MOs are now **'//trim(label)//'**'
     write (6,'(A)') ''
@@ -102,7 +104,8 @@ subroutine mo_as_eigvectors_of_mo_matrix(matrix,n,m,label,sign,output)
     write (6,'(A)')  ''
   endif
   
-  call dgemm('N','N',ao_num,m,m,1.d0,mo_coef_new,size(mo_coef_new,1),R,size(R,1),0.d0,mo_coef,size(mo_coef,1))
+  call zgemm('N','N',ao_num,m,m,(1.d0,0.d0),mo_coef_new,size(mo_coef_new,1),&
+             R,size(R,1),(0.d0,0.d0),mo_coef,size(mo_coef,1))
   deallocate(A,mo_coef_new,R,eigvalues)
   call write_time(6)
   
@@ -113,10 +116,11 @@ subroutine mo_as_svd_vectors_of_mo_matrix(matrix,lda,m,n,label)
   implicit none
   integer,intent(in)             :: lda,m,n
   character*(64), intent(in)     :: label
-  double precision, intent(in)   :: matrix(lda,n)
+  complex*16, intent(in)   :: matrix(lda,n)
   
   integer :: i,j
-  double precision, allocatable  :: mo_coef_new(:,:), U(:,:),D(:), A(:,:), Vt(:,:), work(:)
+  double precision, allocatable  :: D(:)
+  complex*16, allocatable  :: mo_coef_new(:,:), U(:,:), A(:,:), Vt(:,:)
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: mo_coef_new, U, Vt, A
   
   call write_time(6)
@@ -134,7 +138,7 @@ subroutine mo_as_svd_vectors_of_mo_matrix(matrix,lda,m,n,label)
   enddo
   mo_coef_new = mo_coef
   
-  call svd(A,lda,U,lda,D,Vt,lda,m,n)
+  call svd_z(A,lda,U,lda,D,Vt,lda,m,n)
 
   write (6,'(A)') 'MOs are now **'//trim(label)//'**'
   write (6,'(A)')  ''
@@ -149,151 +153,34 @@ subroutine mo_as_svd_vectors_of_mo_matrix(matrix,lda,m,n,label)
   write (6,'(A)')  '======== ================'
   write (6,'(A)')  ''
   
-  call dgemm('N','N',ao_num,m,m,1.d0,mo_coef_new,size(mo_coef_new,1),U,size(U,1),0.d0,mo_coef,size(mo_coef,1))
+  call zgemm('N','N',ao_num,m,m,(1.d0,0.d0),mo_coef_new,size(mo_coef_new,1),&
+             U,size(U,1),(0.d0,0.d0),mo_coef,size(mo_coef,1))
   deallocate(A,mo_coef_new,U,Vt,D)
   call write_time(6)
   
   mo_label = label
 end
 
-subroutine mo_as_eigvectors_of_mo_matrix_sort_by_observable(matrix,observable,n,m,label)
-  implicit none
-  integer,intent(in)             :: n,m
-  character*(64), intent(in)     :: label
-  double precision, intent(in)   :: matrix(n,m),observable(n,n)
-  
-  double precision, allocatable  :: mo_coef_new(:,:), R(:,:),eigvalues(:),value(:)
-  integer,allocatable :: iorder(:)
-  !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: mo_coef_new, R
-  
-  call write_time(6)
-  if (m /= mo_tot_num) then
-    print *, irp_here, ': Error : m/= mo_tot_num'
-    stop 1
-  endif
-  allocate(R(n,m),mo_coef_new(ao_num,m),eigvalues(m),value(m),iorder(m))
-  mo_coef_new = mo_coef
-  
-  call lapack_diag(eigvalues,R,matrix,size(matrix,1),size(matrix,2))
-
-  do i = 1, mo_tot_num
-   value(i) = 0.d0
-   iorder(i) = i
-   do j = 1, mo_tot_num
-    do k = 1, mo_tot_num
-     value(i) += R(k,i) * R(j,i) * observable(k,j)
-    enddo
-   enddo
-!  print*,'value(i) = ',i,value(i)
-  enddo
-  integer :: i,j,k,index
-  double precision :: R_tmp(m,m),obs(m)
-  print*,'sort ....'
-  call dsort(value,iorder,n)
-  do i = 1, mo_tot_num
-   index = iorder(i)
-!  print*,'iorder(i) = ',iorder(i)
-   obs(i) = eigvalues(iorder(i))
-   do j = 1, mo_tot_num
-    R_tmp(j,i) = R(j,index)
-   enddo
-  enddo
-  do i = 1, mo_tot_num
-   do j = 1, mo_tot_num
-    R(j,i) = R_tmp(j,i)
-   enddo
-  enddo
-
-  do i = 1, mo_tot_num
-   value(i) = 0.d0
-   do j = 1, mo_tot_num
-    do k = 1, mo_tot_num
-     value(i) += R(k,i) * R(j,i) * observable(k,j)
-    enddo
-   enddo
-   print*,'i = ',i
-   print*,'value(i) = ',value(i)
-   print*,'obs(i)   = ',obs(i)
-   print*,''
-  enddo
-
-  write (6,'(A)')  'MOs are now **'//trim(label)//'**'
-  write (6,'(A)')  ''
-  write (6,'(A)')  'Eigenvalues'
-  write (6,'(A)')  '-----------'
-  write (6,'(A)')  ''
-  write (6,'(A)')  '======== ================'
-  do i = 1, m
-   write (6,'(I8,1X,F16.10)')  i,eigvalues(i)
-  enddo
-  write (6,'(A)')  '======== ================'
-  write (6,'(A)')  ''
-  
-  call dgemm('N','N',ao_num,m,m,1.d0,mo_coef_new,size(mo_coef_new,1),R,size(R,1),0.d0,mo_coef,size(mo_coef,1))
-  deallocate(mo_coef_new,R,eigvalues)
-  call write_time(6)
-  
-  mo_label = label
-  SOFT_TOUCH mo_coef mo_label
-end
-
-
-subroutine mo_sort_by_observable(observable,label)
-  implicit none
-  character*(64), intent(in)     :: label
-  double precision, intent(in)   :: observable(mo_tot_num)
-  
-  double precision, allocatable  :: mo_coef_new(:,:),value(:)
-  integer,allocatable :: iorder(:)
-  
-  allocate(mo_coef_new(ao_num,mo_tot_num),value(mo_tot_num),iorder(mo_tot_num))
-  print*,'allocate !'
-  mo_coef_new = mo_coef
-  
-
-  do i = 1, mo_tot_num
-   iorder(i) = i
-   value(i)  = observable(i)
-  enddo
-  integer :: i,j,k,index
-  print*,'sort ....'
-  call dsort(value,iorder,mo_tot_num)
-  do i = 1, mo_tot_num
-   index = iorder(i)
-   do j = 1, mo_tot_num
-    mo_coef(j,i) = mo_coef_new(j,index)
-   enddo
-  enddo
-
-  write (6,'(A)')  'MOs are now **'//trim(label)//'**'
-  write (6,'(A)')  ''
-
-  
-  deallocate(mo_coef_new,value)
-! call write_time(6)
-  
-  mo_label = label
-  SOFT_TOUCH mo_coef mo_label
-end
 
 
 subroutine give_all_mos_at_r(r,mos_array)
  implicit none
  double precision, intent(in) :: r(3)
- double precision, intent(out) :: mos_array(mo_tot_num)
+ complex*16, intent(out) :: mos_array(mo_tot_num)
  call give_specific_mos_at_r(r,mos_array, mo_coef)
 end
 
 subroutine give_specific_mos_at_r(r,mos_array, mo_coef_specific)
  implicit none
- double precision, intent(in) :: r(3)
- double precision, intent(in)  :: mo_coef_specific(ao_num, mo_tot_num)
- double precision, intent(out) :: mos_array(mo_tot_num)
- double precision :: aos_array(ao_num),accu
+ double precision, intent(in)  :: r(3)
+ complex*16, intent(in)        :: mo_coef_specific(ao_num, mo_tot_num)
+ complex*16, intent(out)       :: mos_array(mo_tot_num)
+ double precision              :: aos_array(ao_num)
+ complex*16                    :: accu
  integer :: i,j
  call give_all_aos_at_r(r,aos_array)
  do i = 1, mo_tot_num
-  accu = 0.d0
+  accu = (0.d0,0.d0)
   do j = 1, ao_num
    accu += mo_coef_specific(j,i) * aos_array(j) 
   enddo
