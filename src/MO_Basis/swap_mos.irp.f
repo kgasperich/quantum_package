@@ -1,7 +1,7 @@
 program swap_mos
   implicit none
   integer :: i,j, i1, i2
-  double precision :: x
+  complex*16 :: x
   print *,  'MOs to swap?'
   read(*,*) i1, i2
   do i=1,ao_num
