@@ -1,6 +1,6 @@
 subroutine save_mos
   implicit none
-  double precision, allocatable  :: buffer(:,:)
+  double precision, allocatable  :: buffer_re(:,:), buffer_im(:,:)
   integer                        :: i,j
   
   call system('$QP_ROOT/scripts/save_current_mos.sh '//trim(ezfio_filename))
@@ -8,22 +8,25 @@ subroutine save_mos
   call ezfio_set_mo_basis_mo_tot_num(mo_tot_num)
   call ezfio_set_mo_basis_mo_label(mo_label)
   call ezfio_set_mo_basis_ao_md5(ao_md5)
-  allocate ( buffer(ao_num,mo_tot_num) )
-  buffer = 0.d0
+  allocate ( buffer_re(ao_num,mo_tot_num), buffer_im(ao_num,mo_tot_num) )
+  buffer_re = 0.d0
+  buffer_im = 0.d0
   do j = 1, mo_tot_num
     do i = 1, ao_num
-      buffer(i,j) = mo_coef(i,j)
+      buffer_re(i,j) = real(mo_coef(i,j))
+      buffer_im(i,j) = imag(mo_coef(i,j))
     enddo
   enddo
-  call ezfio_set_mo_basis_mo_coef(buffer)
+  call ezfio_set_mo_basis_mo_coef_real(buffer_re)
+  call ezfio_set_mo_basis_mo_coef_imag(buffer_im)
   call ezfio_set_mo_basis_mo_occ(mo_occ)
-  deallocate (buffer)
+  deallocate (buffer_re, buffer_im)
   
 end
 
 subroutine save_mos_truncated(n)
   implicit none
-  double precision, allocatable  :: buffer(:,:)
+  double precision, allocatable  :: buffer_re(:,:), buffer_im(:,:)
   integer                        :: i,j,n
   
   call system('$QP_ROOT/scripts/save_current_mos.sh '//trim(ezfio_filename))
@@ -31,11 +34,12 @@ subroutine save_mos_truncated(n)
   call ezfio_set_mo_basis_mo_tot_num(n)
   call ezfio_set_mo_basis_mo_label(mo_label)
   call ezfio_set_mo_basis_ao_md5(ao_md5)
-  allocate ( buffer(ao_num,n) )
+  allocate ( buffer_re(ao_num,n), buffer_im(ao_num,n) )
   buffer = 0.d0
   do j = 1, n
     do i = 1, ao_num
-      buffer(i,j) = mo_coef(i,j)
+      buffer_re(i,j) = real(mo_coef(i,j))
+      buffer_im(i,j) = imag(mo_coef(i,j))
     enddo
   enddo
   call ezfio_set_mo_basis_mo_coef(buffer)
