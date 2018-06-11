@@ -41,6 +41,52 @@ subroutine svd(A,LDA,U,LDU,D,Vt,LDVt,m,n)
   
 end
 
+subroutine svd_z(A,LDA,U,LDU,D,Vt,LDVt,m,n)
+  implicit none
+  BEGIN_DOC
+  ! Compute A = U.D.Vt
+  !
+  ! LDx : leftmost dimension of x
+  !
+  ! Dimsneion of A is m x n
+  ! A,U,Vt are complex*16
+  ! D is double precision
+  END_DOC
+  
+  integer, intent(in)             :: LDA, LDU, LDVt, m, n
+  complex*16, intent(in)          :: A(LDA,n)
+  complex*16, intent(out)         :: U(LDU,m)
+  complex*16, intent(out)         :: Vt(LDVt,n)
+  double precision,intent(out)    :: D(min(m,n))
+  complex*16,allocatable          :: work(:)
+  double precision,allocatable    :: rwork(:)
+  integer                         :: info, lwork, i, j, k, lrwork
+  
+  double precision,allocatable    :: A_tmp(:,:)
+  allocate (A_tmp(LDA,n))
+  A_tmp = A
+  lrwork = 5*min(m,n)
+  
+  ! Find optimal size for temp arrays
+  allocate(work(1),rwork(lrwork))
+  lwork = -1
+  call zgesvd('A','A', m, n, A_tmp, LDA,                             &
+      D, U, LDU, Vt, LDVt, work, lwork, rwork, info)
+  lwork = int(work(1))
+  deallocate(work)
+
+  allocate(work(lwork))
+  call zgesvd('A','A', m, n, A_tmp, LDA,                             &
+      D, U, LDU, Vt, LDVt, work, lwork, rwork, info)
+  deallocate(work,rwork,A_tmp)
+
+  if (info /= 0) then
+    print *,  info, ': SVD failed'
+    stop
+  endif
+  
+end
+
 
 subroutine ortho_canonical(overlap,LDA,N,C,LDC,m)
   implicit none
@@ -602,7 +648,7 @@ subroutine lapack_diag_z(eigvalues,eigvectors,H,nmax,n)
   complex*16, intent(in)   :: H(nmax,n)
   double precision,allocatable   :: eigenvalues(:)
   complex*16,allocatable   :: work(:)
-  double precision,allocatable   :: A(:,:)
+  complex*16,allocatable   :: A(:,:)
   double precision,allocatable   :: rwork(:)
   integer                        :: lwork, info, i,j,l,k,lrwork
 
