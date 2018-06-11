@@ -33,7 +33,7 @@ subroutine bielec_integrals_index(i,j,k,l,i1)
   i1 = i1+ishft(i2*i2-i2,-1)
 end
 
-subroutine complex_bielec_integrals_index(i,j,k,l,i1)
+subroutine bielec_integrals_index_2fold(i,j,k,l,i1)
   use map_module
   implicit none
   integer, intent(in)            :: i,j,k,l
@@ -134,7 +134,7 @@ subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
 
 end
 
-subroutine complex_bielec_integrals_index_reverse(i,j,k,l,i1)
+subroutine bielec_integrals_index_reverse_2fold(i,j,k,l,i1)
   use map_module
   implicit none
   integer, intent(out)           :: i(2),j(2),k(2),l(2)
@@ -186,11 +186,11 @@ subroutine complex_bielec_integrals_index_reverse(i,j,k,l,i1)
   endif
   do ii=1,2
     if (i(ii) /= 0) then
-      call complex_bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i2)
+      call bielec_integrals_index_2fold(i(ii),j(ii),k(ii),l(ii),i2)
       if (i1 /= i2) then
         print *,  i1, i2
         print *,  i(ii), j(ii), k(ii), l(ii)
-        stop 'complex_bielec_integrals_index_reverse failed'
+        stop 'bielec_integrals_index_reverse_2fold failed'
       endif
     endif
   enddo
@@ -377,7 +377,7 @@ BEGIN_PROVIDER [ type(map_type), mo_integrals_map ]
   END_DOC
   integer(key_kind)              :: key_max
   integer(map_size_kind)         :: sze
-  call complex_bielec_integrals_index(mo_tot_num,mo_tot_num,mo_tot_num,mo_tot_num,key_max)
+  call bielec_integrals_index_2fold(mo_tot_num,mo_tot_num,mo_tot_num,mo_tot_num,key_max)
   sze = key_max
   call map_init(mo_integrals_map,sze)
   print*, 'complex MO map initialized: ', sze
@@ -451,8 +451,8 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
        do i=mo_integrals_cache_min_8,mo_integrals_cache_max_8
          i4 = int(i,4)
          !DIR$ FORCEINLINE
-         call complex_bielec_integrals_index(i4,j4,k4,l4,idx1)
-         call complex_bielec_integrals_index(k4,l4,i4,j4,idx2)
+         call bielec_integrals_index_2fold(i4,j4,k4,l4,idx1)
+         call bielec_integrals_index_2fold(k4,l4,i4,j4,idx2)
          !DIR$ FORCEINLINE
          call map_get(mo_integrals_map,idx1,tmp1)
          if (idx1==idx2) then
@@ -496,8 +496,8 @@ complex*16 function get_mo_bielec_integral(i,j,k,l,map)
   ii = ior(ii, i-mo_integrals_cache_min)
   if (iand(ii, -128) /= 0) then
     !DIR$ FORCEINLINE
-    call complex_bielec_integrals_index(i,j,k,l,idx1)
-    call complex_bielec_integrals_index(k,l,i,j,idx2)
+    call bielec_integrals_index_2fold(i,j,k,l,idx1)
+    call bielec_integrals_index_2fold(k,l,i,j,idx2)
 
     !DIR$ FORCEINLINE
     call map_get(map,idx1,tmp1)
@@ -553,8 +553,8 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
   
   do i=1,sze
     !DIR$ FORCEINLINE
-    call complex_bielec_integrals_index(i,j,k,l,hash(1,i))
-    call complex_bielec_integrals_index(k,l,i,j,hash(2,i))
+    call bielec_integrals_index_2fold(i,j,k,l,hash(1,i))
+    call bielec_integrals_index_2fold(k,l,i,j,hash(2,i))
   enddo
   
   if (key_kind == 8) then
@@ -616,8 +616,8 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
    do i=1,sze
     kk += 1
     !DIR$ FORCEINLINE
-    call complex_bielec_integrals_index(i,j,k,l,hash1(kk))
-    call complex_bielec_integrals_index(k,l,i,j,hash2(kk))
+    call bielec_integrals_index_2fold(i,j,k,l,hash1(kk))
+    call bielec_integrals_index_2fold(k,l,i,j,hash2(kk))
     pairs(1,kk) = i
     pairs(2,kk) = j
     iorder1(kk) = kk
@@ -686,8 +686,8 @@ subroutine get_mo_bielec_integrals_coulomb_ii(k,l,sze,out_val,map)
   
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,l,i,hash1(i))
-    call bielec_integrals_index(l,i,k,i,hash2(i))
+    call bielec_integrals_index_2fold(k,i,l,i,hash1(i))
+    call bielec_integrals_index_2fold(l,i,k,i,hash2(i))
   enddo
   
   call map_get_many(map, hash1, tmp_val1, sze)
@@ -726,8 +726,8 @@ subroutine get_mo_bielec_integrals_exch_ii(k,l,sze,out_val,map)
   
   do i=1,sze
     !DIR$ FORCEINLINE
-    call bielec_integrals_index(k,i,i,l,hash1(i))
-    call bielec_integrals_index(i,l,k,i,hash2(i))
+    call bielec_integrals_index_2fold(k,i,i,l,hash1(i))
+    call bielec_integrals_index_2fold(i,l,k,i,hash2(i))
   enddo
   
   call map_get_many(map, hash1, tmp_val1, sze)
