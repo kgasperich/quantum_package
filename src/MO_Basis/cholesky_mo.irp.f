@@ -70,7 +70,7 @@ subroutine cholesky_mo_z(n,m,P,LDP,C,LDC,tol_in,rank)
  END_DOC
  integer, intent(in) :: n,m, LDC, LDP
  complex*16, intent(in) :: P(LDP,n)
- double precision, intent(out) :: C(LDC,m)
+ complex*16, intent(out) :: C(LDC,m)
  double precision, intent(in) :: tol_in
  integer, intent(out) :: rank
 
