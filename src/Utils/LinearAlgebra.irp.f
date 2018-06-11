@@ -443,6 +443,79 @@ subroutine lapack_diagd(eigvalues,eigvectors,H,nmax,n)
   deallocate(A,eigenvalues)
 end
 
+subroutine lapack_diagd_z(eigvalues,eigvectors,H,nmax,n)
+  implicit none
+  BEGIN_DOC
+  ! Diagonalize matrix H(complex)
+  !
+  ! H is untouched between input and ouptut
+  !
+  ! eigevalues(i) = ith lowest eigenvalue of the H matrix
+  !
+  ! eigvectors(i,j) = <i|psi_j> where i is the basis function and psi_j is the j th eigenvector
+  !
+  END_DOC
+  integer, intent(in)            :: n,nmax
+!  double precision, intent(out)  :: eigvectors(nmax,n)
+  complex*16, intent(out)        :: eigvectors(nmax,n)
+  double precision, intent(out)  :: eigvalues(n)
+!  double precision, intent(in)   :: H(nmax,n)
+  complex*16, intent(in)         :: H(nmax,n)
+  double precision, allocatable  :: eigenvalues(:)
+  complex*16,allocatable         :: work(:)
+  integer         ,allocatable   :: iwork(:)
+  complex*16,allocatable         :: A(:,:)
+  double precision, allocatable  :: rwork(:)
+  integer                        :: lrwork, lwork, info, i,j,l,k, liwork
+
+  allocate(A(nmax,n),eigenvalues(n))
+! print*,'Diagonalization by jacobi'
+! print*,'n = ',n
+
+  A=H
+  lwork = 2*n*n + 2*n
+  lrwork = 2*n*n + 5*n+ 1
+  liwork = 5*n + 3
+  allocate (work(lwork),iwork(liwork),rwork(lrwork))
+
+  lwork = -1
+  liwork = -1
+  lrwork = -1
+  call ZHEEVD( 'V', 'U', n, A, nmax, eigenvalues, work, lwork, &
+    rwork, lrwork, iwork, liwork, info )
+  if (info < 0) then
+    print *, irp_here, ': ZHEEVD: the ',-info,'-th argument had an illegal value'
+    stop 2
+  endif
+  lwork  = int( work( 1 ) )
+  liwork = iwork(1)
+  lrwork = rwork(1)
+  deallocate (work,iwork,rwork)
+
+  allocate (work(lwork),iwork(liwork),rwork(lrwork))
+  call ZHEEVD( 'V', 'U', n, A, nmax, eigenvalues, work, lwork, &
+    rwork, lrwork, iwork, liwork, info )
+  deallocate(work,iwork,rwork)
+
+  if (info < 0) then
+    print *, irp_here, ': ZHEEVD: the ',-info,'-th argument had an illegal value'
+    stop 2
+  else if( info > 0  ) then
+     write(*,*)'ZHEEVD Failed'
+     stop 1
+  end if
+
+  eigvectors = (0.d0,0.d0)
+  eigvalues = 0.d0
+  do j = 1, n
+    eigvalues(j) = eigenvalues(j)
+    do i = 1, n
+      eigvectors(i,j) = A(i,j)
+    enddo
+  enddo
+  deallocate(A,eigenvalues)
+end
+
 subroutine lapack_diag(eigvalues,eigvectors,H,nmax,n)
   implicit none
   BEGIN_DOC
@@ -501,6 +574,77 @@ subroutine lapack_diag(eigvalues,eigvectors,H,nmax,n)
   end if
 
   eigvectors = 0.d0
+  eigvalues = 0.d0
+  do j = 1, n
+    eigvalues(j) = eigenvalues(j)
+    do i = 1, n
+      eigvectors(i,j) = A(i,j)
+    enddo
+  enddo
+  deallocate(A,eigenvalues)
+end
+
+subroutine lapack_diag_z(eigvalues,eigvectors,H,nmax,n)
+  implicit none
+  BEGIN_DOC
+  ! Diagonalize matrix H (complex)
+  !
+  ! H is untouched between input and ouptut
+  !
+  ! eigevalues(i) = ith lowest eigenvalue of the H matrix
+  !
+  ! eigvectors(i,j) = <i|psi_j> where i is the basis function and psi_j is the j th eigenvector
+  !
+  END_DOC
+  integer, intent(in)            :: n,nmax
+  complex*16, intent(out)        :: eigvectors(nmax,n)
+  double precision, intent(out)  :: eigvalues(n)
+  complex*16, intent(in)   :: H(nmax,n)
+  double precision,allocatable   :: eigenvalues(:)
+  complex*16,allocatable   :: work(:)
+  double precision,allocatable   :: A(:,:)
+  double precision,allocatable   :: rwork(:)
+  integer                        :: lwork, info, i,j,l,k,lrwork
+
+  allocate(A(nmax,n),eigenvalues(n))
+! print*,'Diagonalization by jacobi'
+! print*,'n = ',n
+
+  A=H
+  !lwork = 2*n*n + 6*n+ 1
+  lwork = 2*n - 1
+  lrwork = 3*n - 2
+  allocate (work(lwork),rwork(lrwork))
+
+  lwork = -1
+  call ZHEEV( 'V', 'U', n, A, nmax, eigenvalues, work, lwork, &
+    rwork, info )
+  if (info < 0) then
+    print *, irp_here, ': ZHEEV: the ',-info,'-th argument had an illegal value'
+    stop 2
+  endif
+  lwork  = int( work( 1 ) )
+  deallocate (work)
+
+  allocate (work(lwork))
+  call ZHEEV( 'V', 'U', n, A, nmax, eigenvalues, work, lwork, &
+    rwork, info )
+  deallocate(work,rwork)
+
+  if (info < 0) then
+    print *, irp_here, ': ZHEEV: the ',-info,'-th argument had an illegal value'
+    stop 2
+  else if( info > 0  ) then
+     write(*,*)'ZHEEV Failed : ', info
+     do i=1,n
+      do j=1,n
+        print *,  H(i,j)
+      enddo
+     enddo
+     stop 1
+  end if
+
+  eigvectors = (0.d0,0.d0)
   eigvalues = 0.d0
   do j = 1, n
     eigvalues(j) = eigenvalues(j)
