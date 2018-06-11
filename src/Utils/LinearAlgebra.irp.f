@@ -308,6 +308,89 @@ subroutine ortho_lowdin(overlap,LDA,N,C,LDC,m)
 end
 
 
+subroutine ortho_lowdin_z(overlap,LDA,N,C,LDC,m)
+  implicit none
+  BEGIN_DOC
+  ! Compute C_new=C_old.S^-1/2 orthogonalization.
+  !
+  ! overlap : overlap matrix 
+  !
+  ! LDA : leftmost dimension of overlap array
+  !
+  ! N : Overlap matrix is NxN (array is (LDA,N) )
+  !
+  ! C : Coefficients of the vectors to orthogonalize. On exit,
+  !     orthogonal vectors
+  !
+  ! LDC : leftmost dimension of C
+  !
+  ! M : Coefficients matrix is MxN, ( array is (LDC,N) )
+  !
+  END_DOC
+  
+  integer, intent(in)            :: LDA, ldc, n, m
+  complex*16, intent(in)   :: overlap(lda,n)
+  complex*16, intent(inout) :: C(ldc,n)
+  complex*16, allocatable  :: U(:,:)
+  complex*16, allocatable  :: Vt(:,:)
+  double precision, allocatable  :: D(:)
+  complex*16, allocatable  :: S(:,:)
+  integer                        :: info, i, j, k
+  
+  if (n < 2) then
+    return
+  endif
+
+  allocate(U(ldc,n),Vt(lda,n),S(lda,n),D(n))
+
+  call svd_z(overlap,lda,U,ldc,D,Vt,lda,n,n)
+
+  !$OMP PARALLEL DEFAULT(NONE) &
+  !$OMP SHARED(S,U,D,Vt,n,C,m) &
+  !$OMP PRIVATE(i,j,k)
+
+  !$OMP DO
+  do i=1,n
+    if ( D(i) < 1.d-6 ) then
+      D(i) = 0.d0
+    else
+      D(i) = 1.d0/dsqrt(D(i))
+    endif
+    do j=1,n
+      S(j,i) = (0.d0,0.d0)
+    enddo
+  enddo
+  !$OMP END DO
+
+  do k=1,n
+    if (D(k) /= 0.d0) then
+      !$OMP DO
+      do j=1,n
+        do i=1,n
+          S(i,j) = S(i,j) + U(i,k)*D(k)*Vt(k,j)
+        enddo
+      enddo
+      !$OMP END DO NOWAIT
+    endif
+  enddo
+  
+  !$OMP BARRIER
+  !$OMP DO
+  do j=1,n
+    do i=1,m
+      U(i,j) = C(i,j)
+    enddo
+  enddo
+  !$OMP END DO
+  
+  !$OMP END PARALLEL
+
+  call zgemm('N','N',m,n,n,(1.d0,0.d0),U,size(U,1),S,size(S,1),(0.d0,0.d0),C,size(C,1))
+  
+  deallocate(U,Vt,S,D)
+end
+
+
 
 subroutine get_inverse(A,LDA,m,C,LDC)
   implicit none
