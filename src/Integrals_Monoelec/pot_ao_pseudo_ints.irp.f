@@ -29,20 +29,6 @@ BEGIN_PROVIDER [ double precision, ao_pseudo_integral, (ao_num,ao_num)]
   
 END_PROVIDER
 
-BEGIN_PROVIDER [complex*16, complex_ao_pseudo_integral, (ao_num,ao_num)]
-  implicit none
-  BEGIN_DOC
-  ! Pseudo-potential integrals
-  END_DOC
-  
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_pseudo_integral,                               &
-             size(ao_pseudo_integral,1),                       &
-             complex_ao_pseudo_integral,                       &
-             size(complex_ao_pseudo_integral,1))
-
-END_PROVIDER
-
 BEGIN_PROVIDER [ double precision, ao_pseudo_integral_local, (ao_num,ao_num)]
   implicit none
   BEGIN_DOC

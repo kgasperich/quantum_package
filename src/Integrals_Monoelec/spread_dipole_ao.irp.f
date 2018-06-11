@@ -67,43 +67,6 @@
   !$OMP END PARALLEL DO
  END_PROVIDER
 
-
-  BEGIN_PROVIDER [ complex*16, complex_ao_spread_x, (ao_num,ao_num)]
- &BEGIN_PROVIDER [ complex*16, complex_ao_spread_y, (ao_num,ao_num)]
- &BEGIN_PROVIDER [ complex*16, complex_ao_spread_z, (ao_num,ao_num)]
- implicit none
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_spread_x,size(ao_spread_x,1),                   &
-             complex_ao_spread_x,size(complex_ao_spread_x,1))
-
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_spread_y,size(ao_spread_y,1),                   &
-             complex_ao_spread_y,size(complex_ao_spread_y,1))
-
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_spread_z,size(ao_spread_z,1),                   &
-             complex_ao_spread_z,size(complex_ao_spread_z,1))
-
- END_PROVIDER
-
-  BEGIN_PROVIDER [ complex*16, complex_ao_dipole_x, (ao_num,ao_num)]
- &BEGIN_PROVIDER [ complex*16, complex_ao_dipole_y, (ao_num,ao_num)]
- &BEGIN_PROVIDER [ complex*16, complex_ao_dipole_z, (ao_num,ao_num)]
- implicit none
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_dipole_x,size(ao_dipole_x,1),                   &
-             complex_ao_dipole_x,size(complex_ao_dipole_x,1))
-
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_dipole_y,size(ao_dipole_y,1),                   &
-             complex_ao_dipole_y,size(complex_ao_dipole_y,1))
-
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_dipole_z,size(ao_dipole_z,1),                   &
-             complex_ao_dipole_z,size(complex_ao_dipole_z,1))
-
- END_PROVIDER
-
   BEGIN_PROVIDER [ double precision, ao_dipole_x, (ao_num,ao_num)]
  &BEGIN_PROVIDER [ double precision, ao_dipole_y, (ao_num,ao_num)]
  &BEGIN_PROVIDER [ double precision, ao_dipole_z, (ao_num,ao_num)]

@@ -1,4 +1,4 @@
-BEGIN_PROVIDER [ double precision, mo_mono_elec_integral,(mo_tot_num,mo_tot_num)]
+BEGIN_PROVIDER [ complex*16, mo_mono_elec_integral,(mo_tot_num,mo_tot_num)]
   implicit none
   integer                        :: i,j,n,l
   BEGIN_DOC

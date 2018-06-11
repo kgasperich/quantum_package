@@ -82,35 +82,6 @@ BEGIN_PROVIDER [ double precision, ao_nucl_elec_integral, (ao_num,ao_num)]
    
 END_PROVIDER
 
-BEGIN_PROVIDER [complex*16, complex_ao_nucl_elec_integral, (ao_num,ao_num)]
-  implicit none
-  BEGIN_DOC
-  ! interaction nuclear electron
-  END_DOC
-  
- call zlacp2('A',ao_num,ao_num,                                 &
-             ao_nucl_elec_integral,                               &
-             size(ao_nucl_elec_integral,1),                       &
-             complex_ao_nucl_elec_integral,                       &
-             size(complex_ao_nucl_elec_integral,1))
-
-END_PROVIDER
-
-BEGIN_PROVIDER [complex*16, complex_ao_nucl_elec_integral_per_atom, (ao_num,ao_num,nucl_num)]
-  implicit none
-  BEGIN_DOC
-! ao_nucl_elec_integral_per_atom(i,j,k) = -<AO(i)|1/|r-Rk|AO(j)> 
-! where Rk is the geometry of the kth atom
-  END_DOC
- do k = 1, nucl_num 
-   call zlacp2('A',ao_num,ao_num,                                 &
-               ao_nucl_elec_integral_per_atom(1,1,k),             &
-               size(ao_nucl_elec_integral_per_atom,1),            &
-               complex_ao_nucl_elec_integral_per_atom(1,1,k),     &
-               size(complex_ao_nucl_elec_integral_per_atom,1))
-
-END_PROVIDER
-
  BEGIN_PROVIDER [ double precision, ao_nucl_elec_integral_per_atom, (ao_num,ao_num,nucl_num)]
  BEGIN_DOC
 ! ao_nucl_elec_integral_per_atom(i,j,k) = -<AO(i)|1/|r-Rk|AO(j)> 

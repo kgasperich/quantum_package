@@ -82,3 +82,71 @@ subroutine read_one_e_integrals(filename, A, m, n)
   close(iunit)
 end
 
+subroutine write_one_e_integrals_complex(filename, A, m, n)
+  implicit none
+  BEGIN_DOC
+! Write the 1-electron integrals stored in A(m,n) into file 'filename'
+  END_DOC
+  character(len=*), intent(in)   :: filename
+  integer, intent(in)            :: m,n
+  complex*16, intent(in)   :: A(m,n)
+  double precision, allocatable :: A_re(:,:), A_im(:,:)
+
+  integer                        :: i,j
+  integer                        :: iunit
+  integer, external              :: getUnitAndOpen
+  character*(256)                :: f
+
+  allocate( A_re(m,n), A_im(m,n) )
+
+  do i=1,m
+    do j=1,n
+      A_re(i,j) = real(A(i,j))
+      A_im(i,j) = imag(A(i,j))
+    enddo
+  enddo
+
+  iunit = getUnitAndOpen( trim(ezfio_work_dir)//trim(filename)//'_real', 'W' )
+  write(iunit) A_re
+  close(iunit)
+
+  iunit = getUnitAndOpen( trim(ezfio_work_dir)//trim(filename)//'_imag', 'W' )
+  write(iunit) A_im
+  close(iunit)
+  deallocate( A_re, A_im )
+end
+
+subroutine read_one_e_integrals_complex(filename, A, m, n)
+  implicit none
+  BEGIN_DOC
+! Read the 1-electron integrals into in A(m,n) from file 'filename'
+  END_DOC
+  character(len=*), intent(in)   :: filename
+  integer, intent(in)            :: m,n
+  complex*16, intent(out)  :: A(m,n)
+  double precision, allocatable  :: A_re(:,:), A_im(:,:)
+
+  integer                        :: i,j
+  integer                        :: iunit
+  integer, external              :: getUnitAndOpen
+  character*(256)                :: f
+
+  allocate( A_re(m,n), A_im(m,n) )
+
+  iunit = getUnitAndOpen( trim(ezfio_work_dir)//trim(filename)//'_real', 'R' )
+  read(iunit) A_re
+  close(iunit)
+  
+  iunit = getUnitAndOpen( trim(ezfio_work_dir)//trim(filename)//'_imag', 'R' )
+  read(iunit) A_im
+  close(iunit)
+
+  do i=1,m
+    do j=1,n
+      A(i,j) = cmplx(A_re(i,j),A_im(i,j))
+    enddo
+  enddo
+  deallocate( A_re, A_im )
+
+end
+
