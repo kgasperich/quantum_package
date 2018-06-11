@@ -1,17 +1,18 @@
- BEGIN_PROVIDER [ double precision, diagonal_Fock_matrix_mo, (ao_num) ]
-&BEGIN_PROVIDER [ double precision, eigenvectors_Fock_matrix_mo, (ao_num,mo_tot_num) ]
+ BEGIN_PROVIDER [ double precision, diagonal_Fock_matrix_mo, (mo_tot_num) ]
+&BEGIN_PROVIDER [ complex*16, eigenvectors_Fock_matrix_mo, (ao_num,mo_tot_num) ]
    implicit none
    BEGIN_DOC
    ! Diagonal Fock matrix in the MO basis
    END_DOC
    
    integer                        :: i,j
-   integer                        :: liwork, lwork, n, info
-   integer, allocatable           :: iwork(:)
-   double precision, allocatable  :: work(:), F(:,:), S(:,:)
+   integer                        :: n
+   complex*16, allocatable        :: eigvecs_tmp(:,:), F(:,:)
+
+
    
    
-   allocate( F(mo_tot_num,mo_tot_num) )
+   allocate( F(mo_tot_num,mo_tot_num), eigvecs_tmp(mo_tot_num,mo_tot_num))
    do j=1,mo_tot_num
      do i=1,mo_tot_num
        F(i,j) = Fock_matrix_mo(i,j)
@@ -23,18 +24,18 @@
        iorb = list_act(i)
        do j = 1, n_inact_orb
          jorb = list_inact(j)
-         F(iorb,jorb) = 0.d0
-         F(jorb,iorb) = 0.d0
+         F(iorb,jorb) = (0.d0,0.d0)
+         F(jorb,iorb) = (0.d0,0.d0)
        enddo
        do j = 1, n_virt_orb
          jorb = list_virt(j)
-         F(iorb,jorb) = 0.d0
-         F(jorb,iorb) = 0.d0
+         F(iorb,jorb) = (0.d0,0.d0)
+         F(jorb,iorb) = (0.d0,0.d0)
        enddo
        do j = 1, n_core_orb
          jorb = list_core(j)
-         F(iorb,jorb) = 0.d0
-         F(jorb,iorb) = 0.d0
+         F(iorb,jorb) = (0.d0,0.d0)
+         F(jorb,iorb) = (0.d0,0.d0)
        enddo
      enddo
    endif
@@ -52,49 +53,9 @@
    enddo
    
    n = mo_tot_num
-   lwork = 1+6*n + 2*n*n
-   liwork = 3 + 5*n
-   
-   allocate(work(lwork))
-   allocate(iwork(liwork) )
-   
-   lwork = -1
-   liwork = -1
-   
-   call dsyevd( 'V', 'U', mo_tot_num, F,                             &
-       size(F,1), diagonal_Fock_matrix_mo,                           &
-       work, lwork, iwork, liwork, info)
-   
-   if (info /= 0) then
-     print *,  irp_here//' DSYEVD failed : ', info
-     stop 1
-   endif
-   lwork = int(work(1))
-   liwork = iwork(1)
-   deallocate(iwork)
-   deallocate(work)
-   
-   allocate(work(lwork))
-   allocate(iwork(liwork) )
-   call dsyevd( 'V', 'U', mo_tot_num, F,                             &
-       size(F,1), diagonal_Fock_matrix_mo,                           &
-       work, lwork, iwork, liwork, info)
-   deallocate(iwork)
-   
-   
-   if (info /= 0) then
-     call dsyev( 'V', 'L', mo_tot_num, F,                            &
-         size(F,1), diagonal_Fock_matrix_mo,                         &
-         work, lwork, info)
-     
-     if (info /= 0) then
-       print *,  irp_here//' DSYEV failed : ', info
-       stop 1
-     endif
-   endif
-   
-   call dgemm('N','N',ao_num,mo_tot_num,mo_tot_num, 1.d0,            &
-       mo_coef, size(mo_coef,1), F, size(F,1),                       &
+   call lapack_diagd_diag_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
+   call zgemm('N','N',ao_num,mo_tot_num,mo_tot_num, (1.d0,0.d0),     &
+       mo_coef, size(mo_coef,1), eigvecs_tmp, size(eigvecs_tmp,1),   &
        0.d0, eigenvectors_Fock_matrix_mo, size(eigenvectors_Fock_matrix_mo,1))
    deallocate(work, F)
    
