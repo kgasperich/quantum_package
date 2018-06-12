@@ -154,7 +154,7 @@ END_PROVIDER
        scratch,size(scratch,1),                &
        eigenvectors_Fock_matrix_AO,size(eigenvectors_Fock_matrix_AO,1), &
        rwork)
-  deallocate(rwork)
+  deallocate(rwork, scratch, Xt)
    
 END_PROVIDER
 
