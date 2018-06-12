@@ -1,30 +1,30 @@
-BEGIN_PROVIDER [double precision, HF_density_matrix_ao_alpha, (ao_num,ao_num) ]
+BEGIN_PROVIDER [complex*16, HF_density_matrix_ao_alpha, (ao_num,ao_num) ]
    implicit none
    BEGIN_DOC
    ! S^{-1}.P_alpha.S^{-1}
    END_DOC
    
-   call dgemm('N','T',ao_num,ao_num,elec_alpha_num,1.d0, &
+   call zgemm('N','C',ao_num,ao_num,elec_alpha_num,(1.d0,0.d0), &
         mo_coef, size(mo_coef,1), &
-        mo_coef, size(mo_coef,1), 0.d0, &
+        mo_coef, size(mo_coef,1), (0.d0,0.d0), &
         HF_density_matrix_ao_alpha, size(HF_density_matrix_ao_alpha,1))
 
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, HF_density_matrix_ao_beta,  (ao_num,ao_num) ]
+BEGIN_PROVIDER [ complex*16, HF_density_matrix_ao_beta,  (ao_num,ao_num) ]
    implicit none
    BEGIN_DOC
    ! S^{-1}.P_beta.S^{-1}
    END_DOC
    
-   call dgemm('N','T',ao_num,ao_num,elec_beta_num,1.d0, &
+   call zgemm('N','C',ao_num,ao_num,elec_beta_num,(1.d0,0.d0), &
         mo_coef, size(mo_coef,1), &
-        mo_coef, size(mo_coef,1), 0.d0, &
+        mo_coef, size(mo_coef,1), (0.d0,0.d0), &
         HF_density_matrix_ao_beta, size(HF_density_matrix_ao_beta,1))
 
 END_PROVIDER
  
-BEGIN_PROVIDER [ double precision, HF_density_matrix_ao, (ao_num,ao_num) ]
+BEGIN_PROVIDER [ complex*16, HF_density_matrix_ao, (ao_num,ao_num) ]
    implicit none
    BEGIN_DOC
    ! S^{-1}.P.S^{-1}  where P = C.C^t

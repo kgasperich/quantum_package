@@ -1,4 +1,4 @@
- BEGIN_PROVIDER [ double precision, Fock_matrix_mo, (mo_tot_num,mo_tot_num) ]
+ BEGIN_PROVIDER [ complex*16, Fock_matrix_mo, (mo_tot_num,mo_tot_num) ]
 &BEGIN_PROVIDER [ double precision, Fock_matrix_diag_mo, (mo_tot_num)]
    implicit none
    BEGIN_DOC
@@ -75,14 +75,17 @@
    endif
 
    do i = 1, mo_tot_num
-     Fock_matrix_diag_mo(i) = Fock_matrix_mo(i,i) 
+     Fock_matrix_diag_mo(i) = real(Fock_matrix_mo(i,i))
+     if (dabs(imag(Fock_matrix_mo(i,i))) .gt. 1.0d-12) then
+       stop 'diagonal elements of Fock matrix should be real'
+     endif
    enddo
 END_PROVIDER
  
  
  
- BEGIN_PROVIDER [ double precision, Fock_matrix_ao_alpha, (ao_num, ao_num) ]
-&BEGIN_PROVIDER [ double precision, Fock_matrix_ao_beta,  (ao_num, ao_num) ]
+ BEGIN_PROVIDER [ complex*16, Fock_matrix_ao_alpha, (ao_num, ao_num) ]
+&BEGIN_PROVIDER [ complex*16, Fock_matrix_ao_beta,  (ao_num, ao_num) ]
  implicit none
  BEGIN_DOC
  ! Alpha Fock matrix in AO basis set
@@ -99,8 +102,8 @@ END_PROVIDER
 END_PROVIDER
 
 
- BEGIN_PROVIDER [ double precision, ao_bi_elec_integral_alpha, (ao_num, ao_num) ]
-&BEGIN_PROVIDER [ double precision, ao_bi_elec_integral_beta ,  (ao_num, ao_num) ]
+ BEGIN_PROVIDER [ complex*16, ao_bi_elec_integral_alpha, (ao_num, ao_num) ]
+&BEGIN_PROVIDER [ complex*16, ao_bi_elec_integral_beta ,  (ao_num, ao_num) ]
  use map_module
  implicit none
  BEGIN_DOC
@@ -110,13 +113,13 @@ END_PROVIDER
  integer                        :: i,j,k,l,k1,r,s
  integer                        :: i0,j0,k0,l0
  integer*8                      :: p,q
- double precision               :: integral, c0, c1, c2
+ complex*16                     :: integral, c0, c1, c2 
  double precision               :: ao_bielec_integral, local_threshold
- double precision, allocatable  :: ao_bi_elec_integral_alpha_tmp(:,:)
- double precision, allocatable  :: ao_bi_elec_integral_beta_tmp(:,:)
+ complex*16, allocatable        :: ao_bi_elec_integral_alpha_tmp(:,:)
+ complex*16, allocatable        :: ao_bi_elec_integral_beta_tmp(:,:)
 
- ao_bi_elec_integral_alpha = 0.d0
- ao_bi_elec_integral_beta  = 0.d0
+ ao_bi_elec_integral_alpha = (0.d0,0.d0)
+ ao_bi_elec_integral_beta  = (0.d0,0.d0)
  if (do_direct_integrals) then
 
    !$OMP PARALLEL DEFAULT(NONE)                                      &
@@ -130,8 +133,8 @@ END_PROVIDER
    allocate(keys(1), values(1))
    allocate(ao_bi_elec_integral_alpha_tmp(ao_num,ao_num), &
             ao_bi_elec_integral_beta_tmp(ao_num,ao_num))
-   ao_bi_elec_integral_alpha_tmp = 0.d0
-   ao_bi_elec_integral_beta_tmp  = 0.d0
+   ao_bi_elec_integral_alpha_tmp = (0.d0,0.d0)
+   ao_bi_elec_integral_beta_tmp  = (0.d0,0.d0)
 
    q = ao_num*ao_num*ao_num*ao_num
    !$OMP DO SCHEDULE(dynamic)
@@ -173,7 +176,7 @@ END_PROVIDER
              c0 = HF_density_matrix_ao_alpha(k,l)+HF_density_matrix_ao_beta(k,l)
              c1 = HF_density_matrix_ao_alpha(k,i)
              c2 = HF_density_matrix_ao_beta(k,i)
-             if ( dabs(c0)+dabs(c1)+dabs(c2) < local_threshold) then
+             if ( cdabs(c0)+cdabs(c1)+cdabs(c2) < local_threshold) then
                cycle
              endif
              if (values(1) == 0.d0) then
@@ -216,8 +219,8 @@ END_PROVIDER
    allocate(keys(n_elements_max), values(n_elements_max))
    allocate(ao_bi_elec_integral_alpha_tmp(ao_num,ao_num), &
             ao_bi_elec_integral_beta_tmp(ao_num,ao_num))
-   ao_bi_elec_integral_alpha_tmp = 0.d0
-   ao_bi_elec_integral_beta_tmp  = 0.d0
+   ao_bi_elec_integral_alpha_tmp = (0.d0,0.d0)
+   ao_bi_elec_integral_beta_tmp  = (0.d0,0.d0)
 
    !$OMP DO SCHEDULE(dynamic,64)
    !DIR$ NOVECTOR
@@ -258,22 +261,22 @@ END_PROVIDER
 
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, Fock_matrix_mo_alpha, (mo_tot_num,mo_tot_num) ]
+BEGIN_PROVIDER [ complex*16, Fock_matrix_mo_alpha, (mo_tot_num,mo_tot_num) ]
    implicit none
    BEGIN_DOC
    ! Fock matrix on the MO basis
    END_DOC
-   call ao_to_mo(Fock_matrix_ao_alpha,size(Fock_matrix_ao_alpha,1), &
+   call complex_ao_to_mo(Fock_matrix_ao_alpha,size(Fock_matrix_ao_alpha,1), &
                  Fock_matrix_mo_alpha,size(Fock_matrix_mo_alpha,1))
 END_PROVIDER
  
  
-BEGIN_PROVIDER [ double precision, Fock_matrix_mo_beta, (mo_tot_num,mo_tot_num) ]
+BEGIN_PROVIDER [ complex*16, Fock_matrix_mo_beta, (mo_tot_num,mo_tot_num) ]
    implicit none
    BEGIN_DOC
    ! Fock matrix on the MO basis
    END_DOC
-   call ao_to_mo(Fock_matrix_ao_beta,size(Fock_matrix_ao_beta,1), &
+   call complex_ao_to_mo(Fock_matrix_ao_beta,size(Fock_matrix_ao_beta,1), &
                  Fock_matrix_mo_beta,size(Fock_matrix_mo_beta,1))
 END_PROVIDER
  
@@ -282,21 +285,27 @@ BEGIN_PROVIDER [ double precision, HF_energy ]
  BEGIN_DOC
  ! Hartree-Fock energy
  END_DOC
- HF_energy = nuclear_repulsion
+ complex*16 :: HF_energy_tmp
+ HF_energy_tmp = nuclear_repulsion
  
  integer                        :: i,j
  do j=1,ao_num
    do i=1,ao_num
-     HF_energy += 0.5d0 * (                                          &
+     HF_energy_tmp += 0.5d0 * (                                          &
          (ao_mono_elec_integral(i,j) + Fock_matrix_ao_alpha(i,j) ) *  HF_density_matrix_ao_alpha(i,j) +&
          (ao_mono_elec_integral(i,j) + Fock_matrix_ao_beta (i,j) ) *  HF_density_matrix_ao_beta (i,j) )
    enddo
  enddo
+
+ if (abs(imag(HF_energy_tmp)) .gt. 1.0d-12) then
+   stop 'HF energy should be real'
+ endif
+ HF_energy = real(HF_energy_tmp)
   
 END_PROVIDER
 
 
-BEGIN_PROVIDER [ double precision, Fock_matrix_ao, (ao_num, ao_num) ]
+BEGIN_PROVIDER [ complex*16, Fock_matrix_ao, (ao_num, ao_num) ]
  implicit none
  BEGIN_DOC
  ! Fock matrix in AO basis set
@@ -311,8 +320,11 @@ BEGIN_PROVIDER [ double precision, Fock_matrix_ao, (ao_num, ao_num) ]
        Fock_matrix_ao(i,j) = Fock_matrix_ao_alpha(i,j)
      enddo
    enddo
+!   call zlacpy('X',ao_num,ao_num, &
+!         Fock_matrix_ao_alpha, size(Fock_matrix_ao_alpha,1), &
+!         Fock_matrix_ao, size(Fock_matrix_ao,1))
  else
-   call mo_to_ao(Fock_matrix_mo,size(Fock_matrix_mo,1), &
+   call complex_mo_to_ao(Fock_matrix_mo,size(Fock_matrix_mo,1), &
       Fock_matrix_ao,size(Fock_matrix_ao,1)) 
  endif
 END_PROVIDER
