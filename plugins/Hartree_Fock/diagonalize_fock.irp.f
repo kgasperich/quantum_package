@@ -57,7 +57,7 @@
    call zgemm('N','N',ao_num,mo_tot_num,mo_tot_num, (1.d0,0.d0),     &
        mo_coef, size(mo_coef,1), eigvecs_tmp, size(eigvecs_tmp,1),   &
        0.d0, eigenvectors_Fock_matrix_mo, size(eigenvectors_Fock_matrix_mo,1))
-   deallocate(work, F)
+   deallocate( F)
    
 
 

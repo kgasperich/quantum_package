@@ -35,7 +35,8 @@ subroutine save_mos_truncated(n)
   call ezfio_set_mo_basis_mo_label(mo_label)
   call ezfio_set_mo_basis_ao_md5(ao_md5)
   allocate ( buffer_re(ao_num,n), buffer_im(ao_num,n) )
-  buffer = 0.d0
+  buffer_re = 0.d0
+  buffer_im = 0.d0
   do j = 1, n
     do i = 1, ao_num
       buffer_re(i,j) = real(mo_coef(i,j))

@@ -187,7 +187,7 @@ END_DOC
      ! should this use the complex conjugate/transpose of error(j)?
      ! error matrix should be anti-hermitian
       call zgemm('N','N',ao_num,ao_num,ao_num,                      &
-           (1.d0,0.d0)                                              &
+           (1.d0,0.d0),                                             &
            error_matrix_DIIS(1,1,i_DIIS),size(error_matrix_DIIS,1), &
            error_matrix_DIIS(1,1,j_DIIS),size(error_matrix_DIIS,1), &
            (0.d0,0.d0),                                             &

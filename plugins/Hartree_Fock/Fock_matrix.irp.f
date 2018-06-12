@@ -324,7 +324,7 @@ BEGIN_PROVIDER [ complex*16, Fock_matrix_ao, (ao_num, ao_num) ]
 !         Fock_matrix_ao_alpha, size(Fock_matrix_ao_alpha,1), &
 !         Fock_matrix_ao, size(Fock_matrix_ao,1))
  else
-   call complex_mo_to_ao(Fock_matrix_mo,size(Fock_matrix_mo,1), &
+   call mo_to_ao(Fock_matrix_mo,size(Fock_matrix_mo,1), &
       Fock_matrix_ao,size(Fock_matrix_ao,1)) 
  endif
 END_PROVIDER

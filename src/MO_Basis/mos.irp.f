@@ -138,7 +138,6 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
         mo_coef(j,i) = cmplx(mo_coef_real(j,i),mo_coef_imag(j,i))
       enddo
     enddo
-  endif
 
 END_PROVIDER
 

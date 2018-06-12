@@ -17,7 +17,7 @@ subroutine create_guess
   END_DOC
   logical                        :: exists
   PROVIDE ezfio_filename
-  call ezfio_has_mo_basis_mo_coef(exists)
+  call ezfio_has_mo_basis_mo_coef_real(exists)
   if (.not.exists) then
     if (mo_guess_type == "HCore") then
      ! mo_coef = ao_ortho_lowdin_coef
