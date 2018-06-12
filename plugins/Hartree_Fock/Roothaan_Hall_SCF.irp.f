@@ -8,12 +8,12 @@ END_DOC
 
   double precision               :: energy_SCF,energy_SCF_previous,Delta_energy_SCF
   double precision               :: max_error_DIIS,max_error_DIIS_alpha,max_error_DIIS_beta
-  double precision, allocatable  :: Fock_matrix_DIIS(:,:,:),error_matrix_DIIS(:,:,:)
+  complex*16, allocatable        :: Fock_matrix_DIIS(:,:,:),error_matrix_DIIS(:,:,:)
 
   integer                        :: iteration_SCF,dim_DIIS,index_dim_DIIS
  
   integer                        :: i,j
-  double precision, allocatable :: mo_coef_save(:,:)
+  complex*16, allocatable        :: mo_coef_save(:,:)
 
   PROVIDE ao_md5 mo_occ level_shift 
  
@@ -157,15 +157,15 @@ END_DOC
 
   implicit none
 
-  double precision,intent(in)   :: Fock_matrix_DIIS(ao_num,ao_num,*),error_matrix_DIIS(ao_num,ao_num,*)
+  complex*16,intent(in)         :: Fock_matrix_DIIS(ao_num,ao_num,*),error_matrix_DIIS(ao_num,ao_num,*)
   integer,intent(in)            :: iteration_SCF, size_Fock_matrix_AO
-  double precision,intent(inout):: Fock_matrix_AO_(size_Fock_matrix_AO,ao_num)
+  complex*16,intent(inout)      :: Fock_matrix_AO_(size_Fock_matrix_AO,ao_num)
   integer,intent(inout)         :: dim_DIIS
 
   double precision,allocatable  :: B_matrix_DIIS(:,:),X_vector_DIIS(:)
   double precision,allocatable  :: C_vector_DIIS(:)
-
-  double precision,allocatable  :: scratch(:,:)
+  double precision              :: accum_im
+  complex*16,allocatable  :: scratch(:,:)
   integer                       :: i,j,k,i_DIIS,j_DIIS
 
   allocate(                               &
@@ -184,19 +184,26 @@ END_DOC
 
 ! Compute product of two errors vectors
 
-      call dgemm('N','N',ao_num,ao_num,ao_num,                      &
-           1.d0,                                                    &
+     ! should this use the complex conjugate/transpose of error(j)?
+     ! error matrix should be anti-hermitian
+      call zgemm('N','N',ao_num,ao_num,ao_num,                      &
+           (1.d0,0.d0)                                              &
            error_matrix_DIIS(1,1,i_DIIS),size(error_matrix_DIIS,1), &
            error_matrix_DIIS(1,1,j_DIIS),size(error_matrix_DIIS,1), &
-           0.d0,                                                    &
+           (0.d0,0.d0),                                             &
            scratch,size(scratch,1))                                                  
 
 ! Compute Trace
 
       B_matrix_DIIS(i,j) = 0.d0
+      accum_im = 0.d0
       do k=1,ao_num
-        B_matrix_DIIS(i,j) = B_matrix_DIIS(i,j) + scratch(k,k)
+        B_matrix_DIIS(i,j) = B_matrix_DIIS(i,j) + real(scratch(k,k))
+        accum_im = accum_im + imag(scratch(k,k))
       enddo
+      if (dabs(accum_im) .gt. 1.0d-10) then
+        stop 'problem with imaginary parts in DIIS B_matrix?'
+      endif
     enddo
   enddo
 
@@ -254,6 +261,7 @@ END_DOC
     iwork,                               &
     info                                 &
   )
+  deallocate(scratch,ipiv)
 
  if(info < 0) then
    stop 'bug in DIIS'
