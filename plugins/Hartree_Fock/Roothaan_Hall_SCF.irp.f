@@ -164,10 +164,10 @@ END_DOC
 
   double precision,allocatable  :: B_matrix_DIIS(:,:),X_vector_DIIS(:)
   double precision,allocatable  :: C_vector_DIIS(:)
-  double precision              :: accum_im
+  double precision              :: accum_im, thr_im
   complex*16,allocatable  :: scratch(:,:)
   integer                       :: i,j,k,i_DIIS,j_DIIS
-
+  thr_im = 1.0d-10
   allocate(                               &
     B_matrix_DIIS(dim_DIIS+1,dim_DIIS+1), &
     X_vector_DIIS(dim_DIIS+1),            &
@@ -201,7 +201,7 @@ END_DOC
         B_matrix_DIIS(i,j) = B_matrix_DIIS(i,j) + real(scratch(k,k))
         accum_im = accum_im + imag(scratch(k,k))
       enddo
-      if (dabs(accum_im) .gt. 1.0d-10) then
+      if (dabs(accum_im) .gt. thr_im) then
         stop 'problem with imaginary parts in DIIS B_matrix?'
       endif
     enddo
