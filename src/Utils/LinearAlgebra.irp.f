@@ -62,7 +62,7 @@ subroutine svd_z(A,LDA,U,LDU,D,Vt,LDVt,m,n)
   double precision,allocatable    :: rwork(:)
   integer                         :: info, lwork, i, j, k, lrwork
   
-  double precision,allocatable    :: A_tmp(:,:)
+  complex*16,allocatable          :: A_tmp(:,:)
   allocate (A_tmp(LDA,n))
   A_tmp = A
   lrwork = 5*min(m,n)
@@ -651,7 +651,7 @@ subroutine lapack_diagd_diag_z(eigvalues,eigvectors,H,nmax,n)
   endif
   lwork  = int( work( 1 ) )
   liwork = iwork(1)
-  lrwork = rwork(1)
+  lrwork = int(rwork(1))
   deallocate (work,iwork,rwork)
 
   allocate (work(lwork),iwork(liwork),rwork(lrwork))
