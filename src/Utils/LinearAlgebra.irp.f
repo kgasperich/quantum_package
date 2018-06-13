@@ -649,8 +649,8 @@ subroutine lapack_diagd_diag_z(eigvalues,eigvectors,H,nmax,n)
        write(*,*)'ZHEEV Failed'
        stop 1
      endif
+    deallocate(work,rwork)
   end if
-  deallocate(work,rwork)
 
   eigvectors = (0.d0,0.d0)
   eigvalues = 0.d0
