@@ -649,7 +649,7 @@ subroutine lapack_diagd_diag_z(eigvalues,eigvectors,H,nmax,n)
     print *, irp_here, ': ZHEEVD: the ',-info,'-th argument had an illegal value'
     stop 2
   endif
-  lwork  = int( work( 1 ) )
+  lwork  = int( real(work(1)))
   liwork = iwork(1)
   lrwork = int(rwork(1))
   deallocate (work,iwork,rwork)
