@@ -41,9 +41,9 @@ let run ?(sym="None") ezfio_filename =
   (* Compute the relative weight of each MO on the px, py, pz spaces *)
   let compute_weight mo_i list_aos =
     let num =
-       List.fold_left ~f:(fun s i -> s +. (MO_coef.to_float @@ mos.Input.Mo_basis.mo_coef.(mo_i).(i)) ** 2.) ~init:0. list_aos
+       List.fold_left ~f:(fun s i -> s +. (MO_coef.to_float @@ mos.Input.Mo_basis.mo_coef_real.(mo_i).(i)) ** 2.) ~init:0. list_aos
     and denom =
-       Array.fold ~f:(fun s x -> s +. (MO_coef.to_float x) ** 2.) ~init:0. mos.Input.Mo_basis.mo_coef.(mo_i) 
+       Array.fold ~f:(fun s x -> s +. (MO_coef.to_float x) ** 2.) ~init:0. mos.Input.Mo_basis.mo_coef_real.(mo_i) 
     in
     num /. denom
   in

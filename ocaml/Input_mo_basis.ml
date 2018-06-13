@@ -9,7 +9,7 @@ module Mo_basis : sig
         mo_label        : MO_label.t;
         mo_class        : MO_class.t array;
         mo_occ          : MO_occ.t array;
-        mo_coef         : (MO_coef.t array) array;
+        mo_coef_real    : (MO_coef.t array) array;
         ao_md5          : MD5.t;
       } [@@deriving sexp]
   val read : unit -> t option
@@ -21,7 +21,7 @@ end = struct
         mo_label        : MO_label.t;
         mo_class        : MO_class.t array;
         mo_occ          : MO_occ.t array;
-        mo_coef         : (MO_coef.t array) array;
+        mo_coef_real    : (MO_coef.t array) array;
         ao_md5          : MD5.t;
       } [@@deriving sexp]
   let get_default = Qpackage.get_ezfio_default "mo_basis"
@@ -93,8 +93,8 @@ end = struct
     |> Array.map ~f:MO_occ.of_float
 
 
-  let read_mo_coef () =
-    let a = Ezfio.get_mo_basis_mo_coef () 
+  let read_mo_coef_real () =
+    let a = Ezfio.get_mo_basis_mo_coef_real () 
             |> Ezfio.flattened_ezfio
             |> Array.map ~f:MO_coef.of_float
     in
@@ -112,16 +112,16 @@ end = struct
           mo_label        = read_mo_label () ;
           mo_class        = read_mo_class ();
           mo_occ          = read_mo_occ ();
-          mo_coef         = read_mo_coef ();
+          mo_coef_real    = read_mo_coef_real ();
           ao_md5          = read_ao_md5 ();
         }
     else
       None
 
 
-  let mo_coef_to_string mo_coef =
-    let ao_num = Array.length mo_coef.(0) 
-    and mo_tot_num = Array.length mo_coef in
+  let mo_coef_real_to_string mo_coef_real =
+    let ao_num = Array.length mo_coef_real.(0) 
+    and mo_tot_num = Array.length mo_coef_real in
     let rec print_five imin imax =
       match (imax-imin+1) with 
       | 1 ->
@@ -129,15 +129,15 @@ end = struct
         let new_lines = 
           List.init ao_num ~f:(fun i ->
               Printf.sprintf "  %3d %15.10f " (i+1)
-                (MO_coef.to_float mo_coef.(imin  ).(i)) )
+                (MO_coef.to_float mo_coef_real.(imin  ).(i)) )
         in header @ new_lines
       | 2 ->
         let header = [ Printf.sprintf "  #%15d %15d" (imin+1) (imin+2) ; ] in
         let new_lines = 
           List.init ao_num ~f:(fun i ->
               Printf.sprintf "  %3d %15.10f %15.10f" (i+1)
-                (MO_coef.to_float mo_coef.(imin  ).(i))
-                (MO_coef.to_float mo_coef.(imin+1).(i)) )
+                (MO_coef.to_float mo_coef_real.(imin  ).(i))
+                (MO_coef.to_float mo_coef_real.(imin+1).(i)) )
         in header @ new_lines
       | 3 ->
         let header = [ Printf.sprintf "  #%15d %15d %15d"
@@ -145,9 +145,9 @@ end = struct
         let new_lines = 
           List.init ao_num ~f:(fun i ->
               Printf.sprintf "  %3d %15.10f %15.10f %15.10f" (i+1)
-                (MO_coef.to_float mo_coef.(imin  ).(i))
-                (MO_coef.to_float mo_coef.(imin+1).(i))
-                (MO_coef.to_float mo_coef.(imin+2).(i)) )
+                (MO_coef.to_float mo_coef_real.(imin  ).(i))
+                (MO_coef.to_float mo_coef_real.(imin+1).(i))
+                (MO_coef.to_float mo_coef_real.(imin+2).(i)) )
         in header @ new_lines
       | 4 ->
         let header = [ Printf.sprintf "  #%15d %15d %15d %15d"
@@ -155,10 +155,10 @@ end = struct
         let new_lines = 
           List.init ao_num ~f:(fun i ->
               Printf.sprintf "  %3d %15.10f %15.10f %15.10f %15.10f" (i+1)
-                (MO_coef.to_float mo_coef.(imin  ).(i))
-                (MO_coef.to_float mo_coef.(imin+1).(i))
-                (MO_coef.to_float mo_coef.(imin+2).(i))
-                (MO_coef.to_float mo_coef.(imin+3).(i)) )
+                (MO_coef.to_float mo_coef_real.(imin  ).(i))
+                (MO_coef.to_float mo_coef_real.(imin+1).(i))
+                (MO_coef.to_float mo_coef_real.(imin+2).(i))
+                (MO_coef.to_float mo_coef_real.(imin+3).(i)) )
         in header @ new_lines
       | 5 ->
         let header = [ Printf.sprintf "  #%15d %15d %15d %15d %15d"
@@ -166,11 +166,11 @@ end = struct
         let new_lines = 
           List.init ao_num ~f:(fun i ->
               Printf.sprintf "  %3d %15.10f %15.10f %15.10f %15.10f %15.10f" (i+1)
-                (MO_coef.to_float mo_coef.(imin  ).(i))
-                (MO_coef.to_float mo_coef.(imin+1).(i))
-                (MO_coef.to_float mo_coef.(imin+2).(i))
-                (MO_coef.to_float mo_coef.(imin+3).(i))
-                (MO_coef.to_float mo_coef.(imin+4).(i)) )
+                (MO_coef.to_float mo_coef_real.(imin  ).(i))
+                (MO_coef.to_float mo_coef_real.(imin+1).(i))
+                (MO_coef.to_float mo_coef_real.(imin+2).(i))
+                (MO_coef.to_float mo_coef_real.(imin+3).(i))
+                (MO_coef.to_float mo_coef_real.(imin+4).(i)) )
         in header @ new_lines 
       | _ -> assert false
     in
@@ -199,7 +199,7 @@ MO coefficients ::
 "
       (MO_label.to_string b.mo_label)
       (MO_number.to_string b.mo_tot_num)
-      (mo_coef_to_string b.mo_coef)
+      (mo_coef_real_to_string b.mo_coef_real)
     |> Rst_string.of_string
 
 
@@ -210,7 +210,7 @@ mo_label        = %s
 mo_tot_num      = \"%s\"
 mo_clas         = %s
 mo_occ          = %s
-mo_coef         = %s
+mo_coef_real    = %s
 "
       (MO_label.to_string b.mo_label)
       (MO_number.to_string b.mo_tot_num)
@@ -218,7 +218,7 @@ mo_coef         = %s
          ~f:(MO_class.to_string) |> String.concat ~sep:", " )
       (b.mo_occ |> Array.to_list |> List.map
          ~f:(MO_occ.to_string) |> String.concat ~sep:", " )
-      (b.mo_coef |> Array.map
+      (b.mo_coef_real |> Array.map
          ~f:(fun x-> Array.map ~f:MO_coef.to_string x |> String.concat_array
                        ~sep:"," ) |>
        String.concat_array ~sep:"\n" )

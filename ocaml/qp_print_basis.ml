@@ -25,12 +25,12 @@ let mo () =
   if (not (Sys.file_exists_exn ezfio_filename)) then
     failwith "Error reading EZFIO file";
   Ezfio.set_file ezfio_filename;
-  let mo_coef =
+  let mo_coef_real =
     match Input.Mo_basis.read () with
-    | Some mo_coef -> mo_coef
+    | Some mo_coef_real -> mo_coef_real
     | _ -> failwith "Error reading the mo set"
   in
-  Input.Mo_basis.to_rst mo_coef 
+  Input.Mo_basis.to_rst mo_coef_real 
   |> Rst_string.to_string
   |> print_endline
 
