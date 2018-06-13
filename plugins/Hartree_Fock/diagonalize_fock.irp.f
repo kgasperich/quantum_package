@@ -54,8 +54,8 @@
    
    n = mo_tot_num
    !call lapack_diagd_diag_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
-   !call lapack_diagd_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
-   call lapack_diag_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
+   call lapack_diagd_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
+   !call lapack_diag_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
 
    call zgemm('N','N',ao_num,mo_tot_num,mo_tot_num, (1.d0,0.d0),     &
        mo_coef, size(mo_coef,1), eigvecs_tmp, size(eigvecs_tmp,1),   &
