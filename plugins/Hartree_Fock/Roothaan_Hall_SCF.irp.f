@@ -184,8 +184,11 @@ END_DOC
 
 ! Compute product of two errors vectors
 
-     ! should this use the complex conjugate/transpose of error(j)?
-     ! error matrix should be anti-hermitian
+     ! B(i,j) should be sum of element-wise product of error(i) and conj(error(j))
+     ! this is equivalent to trace of dot product of error(i) and conj(transpose(error(j)))
+     ! error matrices are anti-hermitian, so e(i).e(j) is -1*[ e(i).conj(transp(e(j))) ]
+     ! multiplying all B(i,j) by -1 will only change the sign of the lagrange multiplier
+
       call zgemm('N','N',ao_num,ao_num,ao_num,                      &
            (1.d0,0.d0),                                             &
            error_matrix_DIIS(1,1,i_DIIS),size(error_matrix_DIIS,1), &
