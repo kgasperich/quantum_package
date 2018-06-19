@@ -1,5 +1,5 @@
- BEGIN_PROVIDER [ double precision, one_body_dm_mo_alpha_average, (mo_tot_num,mo_tot_num) ]
-&BEGIN_PROVIDER [ double precision, one_body_dm_mo_beta_average, (mo_tot_num,mo_tot_num) ]
+ BEGIN_PROVIDER [ complex*16, one_body_dm_mo_alpha_average, (mo_tot_num,mo_tot_num) ]
+&BEGIN_PROVIDER [ complex*16, one_body_dm_mo_beta_average, (mo_tot_num,mo_tot_num) ]
    implicit none
    BEGIN_DOC
    ! Alpha and beta one-body density matrix for each state
@@ -7,15 +7,15 @@
 
    integer                        :: i
 
-   one_body_dm_mo_alpha_average = 0.d0
-   one_body_dm_mo_beta_average = 0.d0
+   one_body_dm_mo_alpha_average = (0.d0,0.d0)
+   one_body_dm_mo_beta_average = (0.d0,0.d0)
    do i = 1,N_states
     one_body_dm_mo_alpha_average(:,:) += one_body_dm_mo_alpha(:,:,i) * state_average_weight(i)
     one_body_dm_mo_beta_average(:,:) += one_body_dm_mo_beta(:,:,i) * state_average_weight(i)
    enddo
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, one_body_dm_mo_diff, (mo_tot_num,mo_tot_num,2:N_states) ]
+BEGIN_PROVIDER [ complex*16, one_body_dm_mo_diff, (mo_tot_num,mo_tot_num,2:N_states) ]
  implicit none
  BEGIN_DOC
  ! Difference of the one-body density matrix with respect to the ground state
@@ -30,8 +30,8 @@ BEGIN_PROVIDER [ double precision, one_body_dm_mo_diff, (mo_tot_num,mo_tot_num,2
         one_body_dm_mo_beta (i,j,istate) - one_body_dm_mo_beta (i,j,1) 
     enddo
   enddo
-  double precision :: trace
-  trace = 0.d0
+  complex*16 :: trace
+  trace = (0.d0,0.d0)
   do i=1,mo_tot_num
     trace += one_body_dm_mo_diff(i,i,istate)
   enddo
@@ -41,7 +41,7 @@ BEGIN_PROVIDER [ double precision, one_body_dm_mo_diff, (mo_tot_num,mo_tot_num,2
 END_PROVIDER
 
 
- BEGIN_PROVIDER [ double precision, one_body_dm_mo_spin_index, (mo_tot_num,mo_tot_num,N_states,2) ]
+ BEGIN_PROVIDER [ complex*16, one_body_dm_mo_spin_index, (mo_tot_num,mo_tot_num,N_states,2) ]
  implicit none 
  integer :: i,j,ispin,istate
  ispin = 1
@@ -65,7 +65,7 @@ END_PROVIDER
  END_PROVIDER
 
 
- BEGIN_PROVIDER [ double precision, one_body_dm_dagger_mo_spin_index, (mo_tot_num,mo_tot_num,N_states,2) ]
+ BEGIN_PROVIDER [ complex*16, one_body_dm_dagger_mo_spin_index, (mo_tot_num,mo_tot_num,N_states,2) ]
  implicit none 
  integer :: i,j,ispin,istate
  ispin = 1
@@ -74,7 +74,7 @@ END_PROVIDER
     one_body_dm_dagger_mo_spin_index(j,j,istate,ispin) = 1 - one_body_dm_mo_alpha(j,j,istate)
     do i = j+1, mo_tot_num
      one_body_dm_dagger_mo_spin_index(i,j,istate,ispin) = -one_body_dm_mo_alpha(i,j,istate)
-     one_body_dm_dagger_mo_spin_index(j,i,istate,ispin) = -one_body_dm_mo_alpha(i,j,istate)
+     one_body_dm_dagger_mo_spin_index(j,i,istate,ispin) = -conjg(one_body_dm_mo_alpha(i,j,istate))
     enddo
    enddo
   enddo
@@ -85,7 +85,7 @@ END_PROVIDER
     one_body_dm_dagger_mo_spin_index(j,j,istate,ispin) = 1 - one_body_dm_mo_beta(j,j,istate)
     do i = j+1, mo_tot_num
      one_body_dm_dagger_mo_spin_index(i,j,istate,ispin) = -one_body_dm_mo_beta(i,j,istate)
-     one_body_dm_dagger_mo_spin_index(j,i,istate,ispin) = -one_body_dm_mo_beta(i,j,istate)
+     one_body_dm_dagger_mo_spin_index(j,i,istate,ispin) = -conjg(one_body_dm_mo_beta(i,j,istate))
     enddo
    enddo
   enddo

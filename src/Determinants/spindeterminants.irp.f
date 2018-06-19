@@ -367,7 +367,7 @@ end
    j = psi_bilinear_matrix_columns(k)
    f = 0.d0
    do l=1,N_states
-    f += psi_bilinear_matrix_values(k,l)*psi_bilinear_matrix_values(k,l)
+    f += cdabs(psi_bilinear_matrix_values(k,l)*conjg(psi_bilinear_matrix_values(k,l)))
    enddo
    det_alpha_norm(i) += f
    det_beta_norm(j)  += f
@@ -384,7 +384,8 @@ END_PROVIDER
 !                                                                              !
 !==============================================================================!
 
-BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_values, (N_det,N_states) ]
+!BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_values, (N_det,N_states) ]
+BEGIN_PROVIDER  [ complex*16, psi_bilinear_matrix_values, (N_det,N_states) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_rows   , (N_det) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_columns, (N_det) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_order  , (N_det) ]
@@ -433,7 +434,7 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_values, (N_det,N_states)
   call iset_order(psi_bilinear_matrix_rows,psi_bilinear_matrix_order,N_det)
   call iset_order(psi_bilinear_matrix_columns,psi_bilinear_matrix_order,N_det)
   do l=1,N_states
-    call dset_order(psi_bilinear_matrix_values(1,l),psi_bilinear_matrix_order,N_det)
+    call cdset_order(psi_bilinear_matrix_values(1,l),psi_bilinear_matrix_order,N_det)
   enddo
   deallocate(to_sort)
   ASSERT (minval(psi_bilinear_matrix_rows) == 1)
@@ -493,7 +494,7 @@ BEGIN_PROVIDER [ integer, psi_bilinear_matrix_columns_loc, (N_det_beta_unique+1)
   ASSERT (maxval(psi_bilinear_matrix_columns_loc) == N_det+1)
 END_PROVIDER
 
-BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_transp_values, (N_det,N_states) ]
+BEGIN_PROVIDER  [ complex*16, psi_bilinear_matrix_transp_values, (N_det,N_states) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_transp_rows   , (N_det) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_transp_columns, (N_det) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_transp_order  , (N_det) ]
@@ -517,7 +518,7 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_transp_values, (N_det,N_
   do l=1,N_states
     !$OMP DO
     do k=1,N_det
-      psi_bilinear_matrix_transp_values (k,l) = psi_bilinear_matrix_values (k,l)
+      psi_bilinear_matrix_transp_values (k,l) = conjg(psi_bilinear_matrix_values (k,l))
     enddo
     !$OMP ENDDO
   enddo
@@ -543,7 +544,7 @@ BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_transp_values, (N_det,N_
   call iset_order(psi_bilinear_matrix_transp_rows,psi_bilinear_matrix_transp_order,N_det)
   call iset_order(psi_bilinear_matrix_transp_columns,psi_bilinear_matrix_transp_order,N_det)
   do l=1,N_states
-    call dset_order(psi_bilinear_matrix_transp_values(1,l),psi_bilinear_matrix_transp_order,N_det)
+    call cdset_order(psi_bilinear_matrix_transp_values(1,l),psi_bilinear_matrix_transp_order,N_det)
   enddo
   deallocate(to_sort)
   ASSERT (minval(psi_bilinear_matrix_transp_columns) == 1)
@@ -596,14 +597,14 @@ BEGIN_PROVIDER [ integer, psi_bilinear_matrix_order_transp_reverse , (N_det) ]
 END_PROVIDER
 
 
-BEGIN_PROVIDER [ double precision, psi_bilinear_matrix, (N_det_alpha_unique,N_det_beta_unique,N_states) ]
+BEGIN_PROVIDER [ complex*16, psi_bilinear_matrix, (N_det_alpha_unique,N_det_beta_unique,N_states) ]
   implicit none
   BEGIN_DOC
 ! Coefficient matrix if the wave function is expressed in a bilinear form :
 !  D_a^t C D_b
   END_DOC
   integer :: i,j,k,istate
-  psi_bilinear_matrix = 0.d0
+  psi_bilinear_matrix = (0.d0,0.d0)
   do k=1,N_det
     i = psi_bilinear_matrix_rows(k)
     j = psi_bilinear_matrix_columns(k)
