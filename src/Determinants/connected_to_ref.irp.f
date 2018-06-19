@@ -253,7 +253,7 @@ integer function connected_to_ref(key,keys,Nint,N_past_in,Ndet)
   integer                        :: i, l
   integer                        :: degree_x2
   logical                        :: t
-  double precision               :: hij_elec
+!  double precision               :: hij_elec
   
   ! output :   0 : not connected
   !            i : connected to determinant i of the past
@@ -353,7 +353,7 @@ integer function connected_to_ref_by_mono(key,keys,Nint,N_past_in,Ndet)
   integer                        :: i, l
   integer                        :: degree_x2
   logical                        :: t
-  double precision               :: hij_elec
+!  double precision               :: hij_elec
   
   ! output :   0 : not connected
   !            i : connected to determinant i of the past
