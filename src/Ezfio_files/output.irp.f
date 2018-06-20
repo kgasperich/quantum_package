@@ -45,6 +45,23 @@ subroutine write_double(iunit,value,label)
   write(iunit,f) newlabel, value
 end
 
+subroutine write_complex_double(iunit,value,label)
+  implicit none
+  BEGIN_DOC
+  ! Write a double precision value in output
+  END_DOC
+  if (.not.mpi_master) then
+    return
+  endif
+  integer, intent(in)            :: iunit
+  complex*16                     :: value
+  character*(*)                  :: label
+  character*(64), parameter      :: f = '(A50,G24.16,SP,G24.16,"i")'
+  character*(50)                 :: newlabel
+  write(newlabel,'(A,A)') '* ',trim(label)
+  write(iunit,f) newlabel, value
+end
+
 
 subroutine write_int(iunit,value,label)
   implicit none
