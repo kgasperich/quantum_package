@@ -8,7 +8,7 @@ end
 subroutine routine
  implicit none
  integer :: igood_state_1,igood_state_2
- double precision, allocatable :: psi_coef_tmp(:,:)
+ complex*16, allocatable :: psi_coef_tmp(:,:)
  integer :: i
  print*,'N_det = ',N_det
 !call diagonalize_CI
