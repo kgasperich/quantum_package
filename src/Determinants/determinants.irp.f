@@ -168,7 +168,7 @@ END_PROVIDER
 
 
 
-BEGIN_PROVIDER [ double precision, psi_coef, (psi_det_size,N_states) ]
+BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
   implicit none
   BEGIN_DOC
   ! The wave function coefficients. Initialized with Hartree-Fock if the EZFIO file
@@ -180,9 +180,9 @@ BEGIN_PROVIDER [ double precision, psi_coef, (psi_det_size,N_states) ]
   character*(64)                 :: label
 
   PROVIDE read_wf N_det mo_label ezfio_filename
-  psi_coef = 0.d0
+  psi_coef = (0.d0,0.d0)
   do i=1,min(N_states,psi_det_size)
-    psi_coef(i,i) = 1.d0
+    psi_coef(i,i) = (1.d0,0.d0)
   enddo
 
   if (mpi_master) then
@@ -198,7 +198,7 @@ BEGIN_PROVIDER [ double precision, psi_coef, (psi_det_size,N_states) ]
 
       if (exists) then
         
-        double precision, allocatable  :: psi_coef_read(:,:)
+        complex*16, allocatable  :: psi_coef_read(:,:)
         allocate (psi_coef_read(N_det,N_states))
         print *,  'Read psi_coef', N_det, N_states
         call ezfio_get_determinants_psi_coef(psi_coef_read)
@@ -215,7 +215,7 @@ BEGIN_PROVIDER [ double precision, psi_coef, (psi_det_size,N_states) ]
   IRP_IF MPI
     include 'mpif.h'
     integer                        :: ierr
-    call     MPI_BCAST( psi_coef, size(psi_coef), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    call     MPI_BCAST( psi_coef, size(psi_coef), MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD, ierr)
     if (ierr /= MPI_SUCCESS) then
       stop 'Unable to read psi_coef with MPI'
     endif
@@ -231,13 +231,14 @@ BEGIN_PROVIDER [ double precision, psi_average_norm_contrib, (psi_det_size) ]
   ! Contribution of determinants to the state-averaged density
   END_DOC
   integer                        :: i,j,k
-  double precision               :: f
+  double precision               :: f,c
 
   psi_average_norm_contrib(:) = 0.d0
   do k=1,N_states
     do i=1,N_det
+      c = cdabs(psi_coef(i,k))
       psi_average_norm_contrib(i) = psi_average_norm_contrib(i) +    &
-          psi_coef(i,k)*psi_coef(i,k)*state_average_weight(k)
+          c*c*state_average_weight(k)
     enddo
   enddo
   f = 1.d0/sum(psi_average_norm_contrib(1:N_det))
@@ -256,7 +257,7 @@ END_PROVIDER
 
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_det_sorted, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_coef_sorted, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_coef_sorted, (psi_det_size,N_states) ]
 &BEGIN_PROVIDER [ double precision, psi_average_norm_contrib_sorted, (psi_det_size) ]
 &BEGIN_PROVIDER [ integer, psi_det_sorted_order, (psi_det_size) ]
    implicit none
@@ -295,7 +296,7 @@ END_PROVIDER
 subroutine flip_generators()
    integer                        :: i,j,k
    integer(bit_kind)              :: detmp(N_int,2)
-   double precision               :: tmp(N_states)
+   complex*16                     :: tmp(N_states)
    
    do i=1,N_det_generators/2
      detmp(:,:) = psi_det_sorted(:,:,i)
@@ -311,7 +312,7 @@ subroutine flip_generators()
 end subroutine
  
  BEGIN_PROVIDER [ integer(bit_kind), psi_det_sorted_bit, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_coef_sorted_bit, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_coef_sorted_bit, (psi_det_size,N_states) ]
    implicit none
    BEGIN_DOC
    ! Determinants on which we apply <i|H|psi> for perturbation.
@@ -329,9 +330,9 @@ subroutine sort_dets_by_det_search_key(Ndet, det_in, coef_in, det_out, coef_out)
    implicit none
    integer, intent(in)            :: Ndet
    integer(bit_kind), intent(in)  :: det_in  (N_int,2,psi_det_size)
-   double precision , intent(in)  :: coef_in(psi_det_size,N_states)
+   complex*16 , intent(in)  :: coef_in(psi_det_size,N_states)
    integer(bit_kind), intent(out) :: det_out (N_int,2,psi_det_size)
-   double precision , intent(out) :: coef_out(psi_det_size,N_states)
+   complex*16 , intent(out) :: coef_out(psi_det_size,N_states)
    BEGIN_DOC
    ! Determinants are sorted are sorted according to their det_search_key.
    ! Useful to accelerate the search of a random determinant in the wave
@@ -367,24 +368,38 @@ end
  
  
  
- BEGIN_PROVIDER [ double precision, psi_coef_max, (N_states) ]
-&BEGIN_PROVIDER [ double precision, psi_coef_min, (N_states) ]
-&BEGIN_PROVIDER [ double precision, abs_psi_coef_max, (N_states) ]
-&BEGIN_PROVIDER [ double precision, abs_psi_coef_min, (N_states) ]
+ BEGIN_PROVIDER [ complex*16, psi_coef_re_max, (N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_coef_re_min, (N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_coef_im_max, (N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_coef_im_min, (N_states) ]
+&BEGIN_PROVIDER [ complex*16, abs_psi_coef_max, (N_states) ]
+&BEGIN_PROVIDER [ complex*16, abs_psi_coef_min, (N_states) ]
    implicit none
    BEGIN_DOC
    ! Max and min values of the coefficients
    END_DOC
-   integer                        :: i
+   integer                        :: i,idx
    do i=1,N_states
-     psi_coef_min(i) = minval(psi_coef(:,i))
-     psi_coef_max(i) = maxval(psi_coef(:,i))
-     abs_psi_coef_min(i) = minval( dabs(psi_coef(:,i)) )
-     abs_psi_coef_max(i) = maxval( dabs(psi_coef(:,i)) )
-     call write_double(6,psi_coef_max(i), 'Max coef')
-     call write_double(6,psi_coef_min(i), 'Min coef')
-     call write_double(6,abs_psi_coef_max(i), 'Max abs coef')
-     call write_double(6,abs_psi_coef_min(i), 'Min abs coef')
+     idx = minloc(real(psi_coef(:,i)))
+     psi_coef_re_min(i) = psi_coef(idx,i)
+     idx = maxloc(real(psi_coef(:,i)))
+     psi_coef_re_max(i) = psi_coef(idx,i)
+     idx = minloc(imag(psi_coef(:,i)))
+     psi_coef_im_min(i) = psi_coef(idx,i)
+     idx = maxloc(imag(psi_coef(:,i)))
+     psi_coef_im_max(i) = psi_coef(idx,i)
+
+     idx = minloc( cdabs(psi_coef(:,i)) )
+     abs_psi_coef_min(i) = psi_coef(idx,i)
+     idx = maxloc( cdabs(psi_coef(:,i)) )
+     abs_psi_coef_max(i) = psi_coef(idx,i)
+     
+     call write_complex_double(6,psi_coef_re_max(i), 'Max re coef')
+     call write_complex_double(6,psi_coef_re_min(i), 'Min re coef')
+     call write_complex_double(6,psi_coef_im_max(i), 'Max im coef')
+     call write_complex_double(6,psi_coef_im_min(i), 'Min im coef')
+     call write_complex_double(6,abs_psi_coef_max(i), 'Max abs coef')
+     call write_complex_double(6,abs_psi_coef_min(i), 'Min abs coef')
    enddo
    
 END_PROVIDER
@@ -406,7 +421,6 @@ subroutine read_dets(det,Nint,Ndet)
   integer, intent(in)            :: Nint,Ndet
   integer(bit_kind), intent(out) :: det(Nint,2,Ndet)
   integer*8, allocatable         :: psi_det_read(:,:,:)
-  double precision, allocatable  :: psi_coef_read(:,:)
   integer*8                      :: det_8(100)
   integer(bit_kind)              :: det_bk((100*8)/bit_kind)
   integer                        :: N_int2
@@ -442,9 +456,9 @@ end
 subroutine save_ref_determinant
   implicit none
   use bitmasks
-  double precision               :: buffer(1,N_states)
-  buffer = 0.d0
-  buffer(1,1) = 1.d0
+  complex*16               :: buffer(1,N_states)
+  buffer = (0.d0,0.d0)
+  buffer(1,1) = (1.d0,0.d0)
   call save_wavefunction_general(1,N_states,ref_bitmask,1,buffer)
 end
 
@@ -483,9 +497,9 @@ subroutine save_wavefunction_general(ndet,nstates,psidet,dim_psicoef,psicoef)
   include 'constants.include.F'
   integer, intent(in)            :: ndet,nstates,dim_psicoef
   integer(bit_kind), intent(in)  :: psidet(N_int,2,ndet)
-  double precision, intent(in)   :: psicoef(dim_psicoef,nstates)
+  complex*16, intent(in)   :: psicoef(dim_psicoef,nstates)
   integer*8, allocatable         :: psi_det_save(:,:,:)
-  double precision, allocatable  :: psi_coef_save(:,:)
+  complex*16, allocatable  :: psi_coef_save(:,:)
   
   integer                        :: i,j,k
   
@@ -514,11 +528,11 @@ subroutine save_wavefunction_general(ndet,nstates,psidet,dim_psicoef,psicoef)
     accu_norm = 0.d0
     do k=1,nstates
       do i=1,ndet
-        accu_norm(k) = accu_norm(k) + psicoef(i,k) * psicoef(i,k)
+        accu_norm(k) = accu_norm(k) + cdabs(psicoef(i,k)) * cdabs(psicoef(i,k))
         psi_coef_save(i,k) = psicoef(i,k)
       enddo
       if (accu_norm(k) == 0.d0) then
-        accu_norm(k) = 1.e-12
+        accu_norm(k) = 1.e-12 ! why not double?
       endif
     enddo
     do k = 1, nstates
@@ -546,11 +560,11 @@ subroutine save_wavefunction_specified(ndet,nstates,psidet,psicoef,ndetsave,inde
   use bitmasks
   integer, intent(in)            :: ndet,nstates
   integer(bit_kind), intent(in)  :: psidet(N_int,2,ndet)
-  double precision, intent(in)   :: psicoef(ndet,nstates)
+  complex*16, intent(in)   :: psicoef(ndet,nstates)
   integer, intent(in)            :: index_det_save(ndet)
   integer, intent(in)            :: ndetsave
   integer*8, allocatable         :: psi_det_save(:,:,:)
-  double precision, allocatable  :: psi_coef_save(:,:)
+  complex*16, allocatable  :: psi_coef_save(:,:)
   integer*8                      :: det_8(100)
   integer(bit_kind)              :: det_bk((100*8)/bit_kind)
   integer                        :: N_int2
@@ -590,7 +604,7 @@ subroutine save_wavefunction_specified(ndet,nstates,psidet,psicoef,ndetsave,inde
   accu_norm = 0.d0
   do k=1,nstates
     do i=1,ndetsave
-      accu_norm(k) = accu_norm(k) + psicoef(index_det_save(i),k) * psicoef(index_det_save(i),k)
+      accu_norm(k) = accu_norm(k) + cdabs(psicoef(index_det_save(i),k)) * cdabs(psicoef(index_det_save(i),k))
       psi_coef_save(i,k) = psicoef(index_det_save(i),k)
     enddo
   enddo
