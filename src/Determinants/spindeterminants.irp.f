@@ -627,12 +627,13 @@ subroutine create_wf_of_psi_bilinear_matrix(truncate)
   integer                        :: idx
   integer, external              :: get_index_in_psi_det_sorted_bit
   double precision               :: norm(N_states)
+  double precision               :: c
   PROVIDE psi_bilinear_matrix
 
   call generate_all_alpha_beta_det_products
   norm = 0.d0
   !$OMP PARALLEL DO DEFAULT(NONE)                                    &
-      !$OMP PRIVATE(i,j,k,idx,tmp_det)                               &
+      !$OMP PRIVATE(i,j,k,idx,tmp_det,c)                             &
       !$OMP SHARED(N_det_alpha_unique, N_det_beta_unique, N_det,     &
       !$OMP N_int, N_states, norm, psi_det_beta_unique,              &
       !$OMP psi_det_alpha_unique, psi_bilinear_matrix,               &
@@ -649,8 +650,9 @@ subroutine create_wf_of_psi_bilinear_matrix(truncate)
       if (idx > 0) then
         do k=1,N_states
           psi_coef_sorted_bit(idx,k) = psi_bilinear_matrix(i,j,k) 
+          c = cdabs(psi_bilinear_matrix(i,j,k))
           !$OMP ATOMIC
-          norm(k) += psi_bilinear_matrix(i,j,k)
+          norm(k) += c*c
         enddo
       endif
     enddo
@@ -1204,7 +1206,6 @@ subroutine wf_of_psi_bilinear_matrix(truncate)
   integer(bit_kind)              :: tmp_det(N_int,2)
   integer                        :: idx
   integer, external              :: get_index_in_psi_det_sorted_bit
-  double precision               :: norm(N_states)
 
   do k=1,N_det
    i = psi_bilinear_matrix_rows(k)
@@ -1217,7 +1218,7 @@ subroutine wf_of_psi_bilinear_matrix(truncate)
 
   psi_det   = psi_det_sorted
   psi_coef  = psi_coef_sorted
-  do while (sum( dabs(psi_coef(N_det,1:N_states)) ) == 0.d0)
+  do while (sum( cdabs(psi_coef(N_det,1:N_states)) ) == 0.d0)
     N_det -= 1
   enddo
   SOFT_TOUCH psi_det psi_coef N_det
