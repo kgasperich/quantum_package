@@ -1,11 +1,12 @@
 program put_gess
  use bitmasks
  implicit none
- integer :: i,j,N_det_tmp,N_states_tmp
+ integer :: i,j
+! integer :: N_det_tmp,N_states_tmp
  integer :: list(N_int*bit_kind_size,2)
  integer(bit_kind) :: string(N_int,2)
- integer(bit_kind) :: psi_det_tmp(N_int,2,3)
- double precision :: psi_coef_tmp(3,1)
+! integer(bit_kind) :: psi_det_tmp(N_int,2,3)
+! double precision :: psi_coef_tmp(3,1)
 
  integer :: iorb,jorb,korb
  print*,'which open shells ?'
@@ -34,7 +35,7 @@ program put_gess
    psi_det(i,j,1) = string(i,j)
   enddo
  enddo
- psi_coef(1,1) = 1.d0/dsqrt(3.d0)
+ psi_coef(1,1) = dcmplx(1.d0/dsqrt(3.d0),0.d0)
 
  print*,'passed 1'
  list = 0
@@ -53,7 +54,7 @@ program put_gess
    psi_det(i,j,2) = string(i,j)
   enddo
  enddo
- psi_coef(2,1) = 1.d0/dsqrt(3.d0)
+ psi_coef(2,1) = dcmplx(1.d0/dsqrt(3.d0),0.d0)
 
  print*,'passed 2'
  list = 0
@@ -72,7 +73,7 @@ program put_gess
    psi_det(i,j,3) = string(i,j)
   enddo
  enddo
- psi_coef(3,1) = 1.d0/dsqrt(3.d0)
+ psi_coef(3,1) = dcmplx(1.d0/dsqrt(3.d0),0.d0)
  print*,'passed 3'
 
  call save_wavefunction
