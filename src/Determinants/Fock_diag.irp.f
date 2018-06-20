@@ -31,8 +31,8 @@ subroutine build_fock_tmp(fock_diag_tmp,det_ref,Nint)
   ! Occupied MOs
   do ii=1,elec_alpha_num
     i = occ(ii,1)
-    fock_diag_tmp(1,i) = fock_diag_tmp(1,i) + mo_mono_elec_integral(i,i)
-    E0 = E0 + mo_mono_elec_integral(i,i)
+    fock_diag_tmp(1,i) = fock_diag_tmp(1,i) + real(mo_mono_elec_integral(i,i))
+    E0 = E0 + real(mo_mono_elec_integral(i,i))
     do jj=1,elec_alpha_num
       j = occ(jj,1)
       if (i==j) cycle
@@ -47,8 +47,8 @@ subroutine build_fock_tmp(fock_diag_tmp,det_ref,Nint)
   enddo
   do ii=1,elec_beta_num
     i = occ(ii,2)
-    fock_diag_tmp(2,i) = fock_diag_tmp(2,i) + mo_mono_elec_integral(i,i)
-    E0 = E0 + mo_mono_elec_integral(i,i)
+    fock_diag_tmp(2,i) = fock_diag_tmp(2,i) + real(mo_mono_elec_integral(i,i))
+    E0 = E0 + real(mo_mono_elec_integral(i,i))
     do jj=1,elec_beta_num
       j = occ(jj,2)
       if (i==j) cycle
@@ -64,7 +64,7 @@ subroutine build_fock_tmp(fock_diag_tmp,det_ref,Nint)
   ! Virtual MOs
   do i=1,mo_tot_num
     if (fock_diag_tmp(1,i) /= 0.d0) cycle
-    fock_diag_tmp(1,i) = fock_diag_tmp(1,i) + mo_mono_elec_integral(i,i)
+    fock_diag_tmp(1,i) = fock_diag_tmp(1,i) + real(mo_mono_elec_integral(i,i))
     do jj=1,elec_alpha_num
       j = occ(jj,1)
       fock_diag_tmp(1,i) = fock_diag_tmp(1,i) + mo_bielec_integral_jj_anti(i,j)
@@ -76,7 +76,7 @@ subroutine build_fock_tmp(fock_diag_tmp,det_ref,Nint)
   enddo
   do i=1,mo_tot_num
     if (fock_diag_tmp(2,i) /= 0.d0) cycle
-    fock_diag_tmp(2,i) = fock_diag_tmp(2,i) + mo_mono_elec_integral(i,i)
+    fock_diag_tmp(2,i) = fock_diag_tmp(2,i) + real(mo_mono_elec_integral(i,i))
     do jj=1,elec_beta_num
       j = occ(jj,2)
       fock_diag_tmp(2,i) = fock_diag_tmp(2,i) + mo_bielec_integral_jj_anti(i,j)
