@@ -483,11 +483,11 @@ subroutine i_H_j(key_i,key_j,Nint,hij)
   END_DOC
   integer, intent(in)            :: Nint
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
-  double precision, intent(out)  :: hij
+  complex*16, intent(out)  :: hij
   
   integer                        :: exc(0:2,2,2)
   integer                        :: degree
-  double precision               :: get_mo_bielec_integral
+  complex*16               :: get_mo_bielec_integral
   integer                        :: m,n,p,q
   integer                        :: i,j,k
   integer                        :: occ(Nint*bit_kind_size,2)
@@ -565,7 +565,7 @@ subroutine i_H_j(key_i,key_j,Nint,hij)
       call get_mono_excitation_from_fock(key_i,key_j,p,m,spin,phase,hij)
       
     case (0)
-      hij = diag_H_mat_elem(key_i,Nint)
+      hij = dcmplx(diag_H_mat_elem(key_i,Nint),0.d0)
   end select
 end
 
@@ -579,129 +579,21 @@ subroutine i_H_j_phase_out(key_i,key_j,Nint,hij,phase,exc,degree)
   END_DOC
   integer, intent(in)            :: Nint
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
-  double precision, intent(out)  :: hij, phase
+  complex*16, intent(out)  :: hij
 
+  double precision, intent(out)  :: phase
   integer,intent(out)            :: exc(0:2,2,2)
   integer,intent(out)            :: degree
-  double precision               :: get_mo_bielec_integral
-  integer                        :: m,n,p,q
-  integer                        :: i,j,k
-  integer                        :: occ(Nint*bit_kind_size,2)
-  double precision               :: diag_H_mat_elem
-  integer                        :: n_occ_ab(2)
-  logical                        :: has_mipi(Nint*bit_kind_size)
-  double precision               :: mipi(Nint*bit_kind_size), miip(Nint*bit_kind_size)
-  PROVIDE mo_bielec_integrals_in_map mo_integrals_map
 
-  ASSERT (Nint > 0)
-  ASSERT (Nint == N_int)
-  ASSERT (sum(popcnt(key_i(:,1))) == elec_alpha_num)
-  ASSERT (sum(popcnt(key_i(:,2))) == elec_beta_num)
-  ASSERT (sum(popcnt(key_j(:,1))) == elec_alpha_num)
-  ASSERT (sum(popcnt(key_j(:,2))) == elec_beta_num)
 
-  hij = 0.d0
-  !DIR$ FORCEINLINE
+  call i_H_j(key_i,key_j,Nint,hij)
   call get_excitation_degree(key_i,key_j,degree,Nint)
+
   select case (degree)
     case (2)
       call get_double_excitation(key_i,key_j,exc,phase,Nint)
-      if (exc(0,1,1) == 1) then
-        ! Mono alpha, mono beta
-        hij = phase*get_mo_bielec_integral(                          &
-            exc(1,1,1),                                              &
-            exc(1,1,2),                                              &
-            exc(1,2,1),                                              &
-            exc(1,2,2) ,mo_integrals_map)
-      else if (exc(0,1,1) == 2) then
-        ! Double alpha
-        hij = phase*(get_mo_bielec_integral(                         &
-            exc(1,1,1),                                              &
-            exc(2,1,1),                                              &
-            exc(1,2,1),                                              &
-            exc(2,2,1) ,mo_integrals_map) -                          &
-            get_mo_bielec_integral(                                  &
-            exc(1,1,1),                                              &
-            exc(2,1,1),                                              &
-            exc(2,2,1),                                              &
-            exc(1,2,1) ,mo_integrals_map) )
-      else if (exc(0,1,2) == 2) then
-        ! Double beta
-        hij = phase*(get_mo_bielec_integral(                         &
-            exc(1,1,2),                                              &
-            exc(2,1,2),                                              &
-            exc(1,2,2),                                              &
-            exc(2,2,2) ,mo_integrals_map) -                          &
-            get_mo_bielec_integral(                                  &
-            exc(1,1,2),                                              &
-            exc(2,1,2),                                              &
-            exc(2,2,2),                                              &
-            exc(1,2,2) ,mo_integrals_map) )
-      endif
     case (1)
       call get_mono_excitation(key_i,key_j,exc,phase,Nint)
-      !DIR$ FORCEINLINE
-      call bitstring_to_list_ab(key_i, occ, n_occ_ab, Nint)
-      has_mipi = .False.
-      if (exc(0,1,1) == 1) then
-        ! Mono alpha
-        m = exc(1,1,1)
-        p = exc(1,2,1)
-        do k = 1, elec_alpha_num
-          i = occ(k,1)
-          if (.not.has_mipi(i)) then
-            mipi(i) = get_mo_bielec_integral(m,i,p,i,mo_integrals_map)
-            miip(i) = get_mo_bielec_integral(m,i,i,p,mo_integrals_map)
-            has_mipi(i) = .True.
-          endif
-        enddo
-        do k = 1, elec_beta_num
-          i = occ(k,2)
-          if (.not.has_mipi(i)) then
-            mipi(i) = get_mo_bielec_integral(m,i,p,i,mo_integrals_map)
-            has_mipi(i) = .True.
-          endif
-        enddo
-
-        do k = 1, elec_alpha_num
-          hij = hij + mipi(occ(k,1)) - miip(occ(k,1))
-        enddo
-        do k = 1, elec_beta_num
-          hij = hij + mipi(occ(k,2))
-        enddo
-
-      else
-        ! Mono beta
-        m = exc(1,1,2)
-        p = exc(1,2,2)
-        do k = 1, elec_beta_num
-          i = occ(k,2)
-          if (.not.has_mipi(i)) then
-            mipi(i) = get_mo_bielec_integral(m,i,p,i,mo_integrals_map)
-            miip(i) = get_mo_bielec_integral(m,i,i,p,mo_integrals_map)
-            has_mipi(i) = .True.
-          endif
-        enddo
-        do k = 1, elec_alpha_num
-          i = occ(k,1)
-          if (.not.has_mipi(i)) then
-            mipi(i) = get_mo_bielec_integral(m,i,p,i,mo_integrals_map)
-            has_mipi(i) = .True.
-          endif
-        enddo
-
-        do k = 1, elec_alpha_num
-          hij = hij + mipi(occ(k,1))
-        enddo
-        do k = 1, elec_beta_num
-          hij = hij + mipi(occ(k,2)) - miip(occ(k,2))
-        enddo
-
-      endif
-      hij = phase*(hij + mo_mono_elec_integral(m,p))
-
-    case (0)
-      hij = diag_H_mat_elem(key_i,Nint)
   end select
 end
 
@@ -715,18 +607,18 @@ subroutine i_H_j_verbose(key_i,key_j,Nint,hij,hmono,hdouble)
   END_DOC
   integer, intent(in)            :: Nint
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
-  double precision, intent(out)  :: hij,hmono,hdouble
+  complex*16, intent(out)  :: hij,hmono,hdouble
   
   integer                        :: exc(0:2,2,2)
   integer                        :: degree
-  double precision               :: get_mo_bielec_integral
+  complex*16               :: get_mo_bielec_integral
   integer                        :: m,n,p,q
   integer                        :: i,j,k
   integer                        :: occ(Nint*bit_kind_size,2)
   double precision               :: diag_H_mat_elem, phase,phase_2
   integer                        :: n_occ_ab(2)
   logical                        :: has_mipi(Nint*bit_kind_size)
-  double precision               :: mipi(Nint*bit_kind_size), miip(Nint*bit_kind_size)
+  complex*16               :: mipi(Nint*bit_kind_size), miip(Nint*bit_kind_size)
   PROVIDE mo_bielec_integrals_in_map mo_integrals_map
   
   ASSERT (Nint > 0)
@@ -736,9 +628,9 @@ subroutine i_H_j_verbose(key_i,key_j,Nint,hij,hmono,hdouble)
   ASSERT (sum(popcnt(key_j(:,1))) == elec_alpha_num)
   ASSERT (sum(popcnt(key_j(:,2))) == elec_beta_num)
   
-  hij = 0.d0
-  hmono = 0.d0
-  hdouble = 0.d0
+  hij = (0.d0,0.d0)
+  hmono = (0.d0,0.d0)
+  hdouble = (0.d0,0.d0)
   !DIR$ FORCEINLINE
   call get_excitation_degree(key_i,key_j,degree,Nint)
   select case (degree)
@@ -866,7 +758,7 @@ subroutine i_H_j_verbose(key_i,key_j,Nint,hij,hmono,hdouble)
       hij = phase*(hdouble + hmono)
       
     case (0)
-      hij = diag_H_mat_elem(key_i,Nint)
+      hij = dcmplx(diag_H_mat_elem(key_i,Nint),0.d0)
   end select
 end
 subroutine create_minilist(key_mask, fullList, miniList, idx_miniList, N_fullList, N_miniList, Nint)
@@ -1006,7 +898,6 @@ subroutine create_minilist_find_previous(key_mask, fullList, miniList, N_fullLis
   deallocate(sublist)
 end subroutine
 
-
 subroutine i_H_psi(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array)
   use bitmasks
   implicit none
@@ -1021,13 +912,13 @@ subroutine i_H_psi(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array)
   integer, intent(in)            :: Nint, Ndet,Ndet_max,Nstate
   integer(bit_kind), intent(in)  :: keys(Nint,2,Ndet)
   integer(bit_kind), intent(in)  :: key(Nint,2)
-  double precision, intent(in)   :: coef(Ndet_max,Nstate)
-  double precision, intent(out)  :: i_H_psi_array(Nstate)
+  complex*16, intent(in)   :: coef(Ndet_max,Nstate)
+  complex*16, intent(out)  :: i_H_psi_array(Nstate)
   
   integer                        :: i, ii,j
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
-  double precision               :: hij
+  complex*16               :: hij
   integer, allocatable           :: idx(:)
   
   ASSERT (Nint > 0)
@@ -1037,7 +928,7 @@ subroutine i_H_psi(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array)
   ASSERT (Ndet_max >= Ndet)
   allocate(idx(0:Ndet))
   
-  i_H_psi_array = 0.d0
+  i_H_psi_array = (0.d0,0.d0)
   
   call filter_connected_i_H_psi0(keys,key,Nint,Ndet,idx)
   if (Nstate == 1) then
@@ -1071,13 +962,13 @@ subroutine i_H_psi_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,Ndet_max,
   integer, intent(in)            :: Nint, Ndet,Ndet_max,Nstate,idx_key(Ndet), N_minilist
   integer(bit_kind), intent(in)  :: keys(Nint,2,Ndet)
   integer(bit_kind), intent(in)  :: key(Nint,2)
-  double precision, intent(in)   :: coef(Ndet_max,Nstate)
-  double precision, intent(out)  :: i_H_psi_array(Nstate)
+  complex*16, intent(in)   :: coef(Ndet_max,Nstate)
+  complex*16, intent(out)  :: i_H_psi_array(Nstate)
   
   integer                        :: i, ii,j, i_in_key, i_in_coef
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
-  double precision               :: hij
+  complex*16               :: hij
   integer, allocatable           :: idx(:)
   BEGIN_DOC
 ! Computes <i|H|Psi> = \sum_J c_J <i|H|J>.
@@ -1092,7 +983,7 @@ subroutine i_H_psi_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,Ndet_max,
   ASSERT (Ndet > 0)
   ASSERT (Ndet_max >= Ndet)
   allocate(idx(0:Ndet))
-  i_H_psi_array = 0.d0
+  i_H_psi_array = (0.d0,0.d0)
   
   call filter_connected_i_H_psi0(keys,key,Nint,N_minilist,idx)
   if (Nstate == 1) then
@@ -1129,15 +1020,15 @@ subroutine i_H_psi_sec_ord(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array
   integer, intent(in)            :: Nint, Ndet,Ndet_max,Nstate
   integer(bit_kind), intent(in)  :: keys(Nint,2,Ndet)
   integer(bit_kind), intent(in)  :: key(Nint,2)
-  double precision, intent(in)   :: coef(Ndet_max,Nstate)
-  double precision, intent(out)  :: i_H_psi_array(Nstate)
-  double precision, intent(out)  :: interactions(Ndet)
+  complex*16, intent(in)   :: coef(Ndet_max,Nstate)
+  complex*16, intent(out)  :: i_H_psi_array(Nstate)
+  complex*16, intent(out)  :: interactions(Ndet)
   integer,intent(out)            :: idx_interaction(0:Ndet)
   
   integer                        :: i, ii,j
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
-  double precision               :: hij
+  complex*16               :: hij
   integer,allocatable            :: idx(:)
   integer                        :: n_interact
   BEGIN_DOC
@@ -1150,14 +1041,14 @@ subroutine i_H_psi_sec_ord(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array
   ASSERT (Ndet > 0)
   ASSERT (Ndet_max >= Ndet)
   allocate(idx(0:Ndet))
-  i_H_psi_array = 0.d0
+  i_H_psi_array = (0.d0,0.d0)
   call filter_connected_i_H_psi0(keys,key,Nint,Ndet,idx)
   n_interact = 0
   do ii=1,idx(0)
     i = idx(ii)
     !DIR$ FORCEINLINE
     call i_H_j(keys(1,1,i),key,Nint,hij)
-    if(dabs(hij).ge.1.d-8)then
+    if(cdabs(hij).ge.1.d-8)then
      if(i.ne.1)then
       n_interact += 1
       interactions(n_interact) = hij
@@ -1870,6 +1761,7 @@ double precision function diag_H_mat_elem(det_in,Nint)
   implicit none
   BEGIN_DOC
   ! Computes <i|H|i>
+  ! no modification needed for complex
   END_DOC
   integer,intent(in)             :: Nint
   integer(bit_kind),intent(in)   :: det_in(Nint,2)
@@ -1933,6 +1825,7 @@ subroutine a_operator(iorb,ispin,key,hjj,Nint,na,nb)
   implicit none
   BEGIN_DOC
   ! Needed for diag_H_mat_elem
+  ! no modification needed for complex
   END_DOC
   integer, intent(in)            :: iorb, ispin, Nint
   integer, intent(inout)         :: na, nb
@@ -1979,6 +1872,7 @@ subroutine ac_operator(iorb,ispin,key,hjj,Nint,na,nb)
   implicit none
   BEGIN_DOC
   ! Needed for diag_H_mat_elem
+  ! no modification needed for complex
   END_DOC
   integer, intent(in)            :: iorb, ispin, Nint
   integer, intent(inout)         :: na, nb
