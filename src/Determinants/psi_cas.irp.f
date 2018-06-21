@@ -1,7 +1,7 @@
 use bitmasks
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_cas, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_cas_coef,  (psi_det_size,n_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_cas_coef,  (psi_det_size,n_states) ]
 &BEGIN_PROVIDER [ integer, idx_cas, (psi_det_size) ]
 &BEGIN_PROVIDER [ integer, N_det_cas ]
   implicit none
@@ -14,7 +14,7 @@ use bitmasks
   N_det_cas = 0
   do i=1,N_det
     do l = 1, N_states
-     psi_cas_coef(i,l) = 0.d0
+     psi_cas_coef(i,l) = (0.d0,0.d0)
     enddo
     do l=1,n_cas_bitmask
       good = .True.
@@ -47,7 +47,7 @@ END_PROVIDER
 
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_cas_sorted_bit, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_cas_coef_sorted_bit, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_cas_coef_sorted_bit, (psi_det_size,N_states) ]
  implicit none
  BEGIN_DOC
  ! CAS determinants sorted to accelerate the search of a random determinant in the wave
@@ -61,7 +61,7 @@ END_PROVIDER
 
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_non_cas,  (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_non_cas_coef, (psi_det_size,n_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_non_cas_coef, (psi_det_size,n_states) ]
 &BEGIN_PROVIDER [ integer, idx_non_cas,  (psi_det_size) ]
 &BEGIN_PROVIDER [ integer, N_det_non_cas ]
  implicit none
@@ -84,7 +84,7 @@ END_PROVIDER
      endif
    enddo
    if (.not.in_cas) then
-     double precision :: hij
+  !   double precision :: hij
      i_non_cas += 1
      do j=1,N_int
        psi_non_cas(j,1,i_non_cas) = psi_det(j,1,k)
@@ -100,7 +100,7 @@ END_PROVIDER
 END_PROVIDER
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_non_cas_sorted_bit, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_non_cas_coef_sorted_bit, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_non_cas_coef_sorted_bit, (psi_det_size,N_states) ]
  implicit none
  BEGIN_DOC
  ! CAS determinants sorted to accelerate the search of a random determinant in the wave
@@ -112,10 +112,10 @@ END_PROVIDER
 END_PROVIDER
 
 
-BEGIN_PROVIDER [double precision, H_matrix_cas, (N_det_cas,N_det_cas)] 
+BEGIN_PROVIDER [complex*16, H_matrix_cas, (N_det_cas,N_det_cas)] 
  implicit none
  integer :: i,j
- double precision :: hij
+ complex*16 :: hij
   do i = 1, N_det_cas
    do j = 1, N_det_cas
     call i_H_j(psi_cas(1,1,i),psi_cas(1,1,j),N_int,hij) 
@@ -124,14 +124,15 @@ BEGIN_PROVIDER [double precision, H_matrix_cas, (N_det_cas,N_det_cas)]
   enddo
 END_PROVIDER
 
- BEGIN_PROVIDER [double precision, psi_coef_cas_diagonalized, (N_det_cas,N_states)]
+ BEGIN_PROVIDER [complex*16, psi_coef_cas_diagonalized, (N_det_cas,N_states)]
 &BEGIN_PROVIDER [double precision, psi_cas_energy_diagonalized, (N_states)]
  implicit none
  integer :: i,j
-  double precision, allocatable  :: eigenvectors(:,:), eigenvalues(:)
+  complex*16, allocatable  :: eigenvectors(:,:)
+  double precision, allocatable  :: eigenvalues(:)
   allocate (eigenvectors(size(H_matrix_cas,1),N_det_cas))
   allocate (eigenvalues(N_det_cas))
-  call lapack_diag(eigenvalues,eigenvectors,                       &
+  call lapack_diag_z(eigenvalues,eigenvectors,                       &
       H_matrix_cas,size(H_matrix_cas,1),N_det_cas)
   do i = 1, N_states
    psi_cas_energy_diagonalized(i) = eigenvalues(i)
@@ -146,19 +147,21 @@ END_PROVIDER
  BEGIN_PROVIDER [double precision, psi_cas_energy, (N_states)]
  implicit none
  integer :: i,j,k
- double precision :: hij,norm,u_dot_v
+ double precision :: norm
   psi_cas_energy = 0.d0
 
 
+  print *,irp_here,' imaginary part of psi_cas_energy:'
   do k = 1, N_states
    norm = 0.d0
    do i = 1, N_det_cas
-    norm += psi_cas_coef(i,k) * psi_cas_coef(i,k)
+    norm += cdabs(psi_cas_coef(i,k) * psi_cas_coef(i,k))
     do j = 1, N_det_cas
-      psi_cas_energy(k) += psi_cas_coef(i,k) * psi_cas_coef(j,k) * H_matrix_cas(i,j)
+      psi_cas_energy(k) += conjg(psi_cas_coef(i,k)) * psi_cas_coef(j,k) * H_matrix_cas(i,j)
     enddo
    enddo
-   psi_cas_energy(k) = psi_cas_energy(k) /norm
+   print *,k,imag(psi_cas_energy(k))/norm
+   psi_cas_energy(k) = real(psi_cas_energy(k)) /norm
   enddo
 
 END_PROVIDER 
