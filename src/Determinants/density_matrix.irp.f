@@ -344,7 +344,7 @@ subroutine set_natural_mos
  ! Set natural orbitals, obtained by diagonalization of the one-body density matrix in the MO basis
  END_DOC
  character*(64) :: label
- double precision, allocatable :: tmp(:,:)
+! double precision, allocatable :: tmp(:,:)
 
  label = "Natural"
  call mo_as_svd_vectors_of_mo_matrix(one_body_dm_mo,size(one_body_dm_mo,1),mo_tot_num,mo_tot_num,label)
