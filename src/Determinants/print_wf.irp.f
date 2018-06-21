@@ -11,11 +11,11 @@ subroutine routine
  implicit none 
  integer :: i
  integer :: degree
- double precision :: hij,hii,coef_1,h00
+ complex*16 :: hij,hii,coef_1,h00
  integer          :: exc(0:2,2,2)
  double precision :: phase
  integer :: h1,p1,h2,p2,s1,s2
- double precision :: get_mo_bielec_integral
+ complex*16 :: get_mo_bielec_integral
  double precision :: norm_mono_a,norm_mono_b
  double precision :: norm_mono_a_2,norm_mono_b_2
  double precision :: norm_mono_a_pert_2,norm_mono_b_pert_2
@@ -48,18 +48,18 @@ subroutine routine
     print*,'s1',s1
     print*,'h1,p1 = ',h1,p1
     if(s1 == 1)then
-     norm_mono_a += dabs(psi_coef(i,1)/psi_coef(1,1))
-     norm_mono_a_2 += dabs(psi_coef(i,1)/psi_coef(1,1))**2
-     norm_mono_a_pert += dabs(coef_1)
-     norm_mono_a_pert_2 += dabs(coef_1)**2
+     norm_mono_a += cdabs(psi_coef(i,1)/psi_coef(1,1))
+     norm_mono_a_2 += cdabs(psi_coef(i,1)/psi_coef(1,1))**2
+     norm_mono_a_pert += cdabs(coef_1)
+     norm_mono_a_pert_2 += cdabs(coef_1)**2
     else
-     norm_mono_b += dabs(psi_coef(i,1)/psi_coef(1,1))
-     norm_mono_b_2 += dabs(psi_coef(i,1)/psi_coef(1,1))**2
-     norm_mono_b_pert += dabs(coef_1)
-     norm_mono_b_pert_2 += dabs(coef_1)**2
+     norm_mono_b += cdabs(psi_coef(i,1)/psi_coef(1,1))
+     norm_mono_b_2 += cdabs(psi_coef(i,1)/psi_coef(1,1))**2
+     norm_mono_b_pert += cdabs(coef_1)
+     norm_mono_b_pert_2 += cdabs(coef_1)**2
     endif
 !  print*,'< h | Ka| p > = ',get_mo_bielec_integral(h1,list_act(1),list_act(1),p1,mo_integrals_map)
-    double precision :: hmono,hdouble
+    complex*16 :: hmono,hdouble
     call  i_H_j_verbose(psi_det(1,1,1),psi_det(1,1,i),N_int,hij,hmono,hdouble)
     print*,'hmono         = ',hmono
     print*,'hdouble       = ',hdouble
@@ -74,7 +74,7 @@ subroutine routine
    endif
    
    print*,'<Ref| H |D_I> = ',hij
-   print*,'Delta E       = ',h00-hii
+   print*,'Delta E       = ',real(h00-hii)
    print*,'coef pert (1) = ',coef_1
   endif
    print*,'amplitude     = ',psi_coef(i,1)/psi_coef(1,1)
