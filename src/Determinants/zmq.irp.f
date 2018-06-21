@@ -191,8 +191,10 @@ integer function zmq_put_psi_coef(zmq_to_qp_run_socket,worker_id)
     return
   endif
 
-  rc8 = f77_zmq_send8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*8_8,8),0)
-  if (rc8 /= psi_det_size*N_states*8_8) then
+  !rc8 = f77_zmq_send8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*8_8,8),0)
+  rc8 = f77_zmq_send8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*16_8,8),0)
+  !if (rc8 /= psi_det_size*N_states*8_8) then
+  if (rc8 /= psi_det_size*N_states*16_8) then
     zmq_put_psi_coef = -1
     return
   endif
@@ -337,8 +339,10 @@ integer function zmq_get_psi_coef(zmq_to_qp_run_socket, worker_id)
       go to 10
     endif
 
-    rc8 = f77_zmq_recv8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*8_8,8),0)
-    if (rc8 /= psi_det_size*N_states*8_8) then
+    !rc8 = f77_zmq_recv8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*8_8,8),0)
+    rc8 = f77_zmq_recv8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*16_8,8),0)
+    !if (rc8 /= psi_det_size*N_states*8_8) then
+    if (rc8 /= psi_det_size*N_states*16_8) then
       zmq_get_psi_coef = -1
       go to 10
     endif
@@ -353,7 +357,7 @@ integer function zmq_get_psi_coef(zmq_to_qp_run_socket, worker_id)
     if (ierr /= MPI_SUCCESS) then
       stop 'Unable to broadcast zmq_get_psi_coef'
     endif
-    call broadcast_chunks_double(psi_coef,N_states*N_det)
+    call broadcast_chunks_complex_double(psi_coef,N_states*N_det)
   IRP_ENDIF
 
 end
