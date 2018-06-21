@@ -191,9 +191,7 @@ integer function zmq_put_psi_coef(zmq_to_qp_run_socket,worker_id)
     return
   endif
 
-  !rc8 = f77_zmq_send8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*8_8,8),0)
   rc8 = f77_zmq_send8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*16_8,8),0)
-  !if (rc8 /= psi_det_size*N_states*8_8) then
   if (rc8 /= psi_det_size*N_states*16_8) then
     zmq_put_psi_coef = -1
     return
@@ -339,9 +337,7 @@ integer function zmq_get_psi_coef(zmq_to_qp_run_socket, worker_id)
       go to 10
     endif
 
-    !rc8 = f77_zmq_recv8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*8_8,8),0)
     rc8 = f77_zmq_recv8(zmq_to_qp_run_socket,psi_coef,int(psi_det_size*N_states*16_8,8),0)
-    !if (rc8 /= psi_det_size*N_states*8_8) then
     if (rc8 /= psi_det_size*N_states*16_8) then
       zmq_get_psi_coef = -1
       go to 10

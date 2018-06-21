@@ -84,7 +84,6 @@ END_PROVIDER
      endif
    enddo
    if (.not.in_cas) then
-  !   double precision :: hij
      i_non_cas += 1
      do j=1,N_int
        psi_non_cas(j,1,i_non_cas) = psi_det(j,1,k)

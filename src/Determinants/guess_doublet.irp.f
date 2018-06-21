@@ -2,11 +2,8 @@ program put_gess
  use bitmasks
  implicit none
  integer :: i,j
-! integer :: N_det_tmp,N_states_tmp
  integer :: list(N_int*bit_kind_size,2)
  integer(bit_kind) :: string(N_int,2)
-! integer(bit_kind) :: psi_det_tmp(N_int,2,3)
-! double precision :: psi_coef_tmp(3,1)
 
  integer :: iorb,jorb,korb
  print*,'which open shells ?'

@@ -384,7 +384,6 @@ END_PROVIDER
 !                                                                              !
 !==============================================================================!
 
-!BEGIN_PROVIDER  [ double precision, psi_bilinear_matrix_values, (N_det,N_states) ]
 BEGIN_PROVIDER  [ complex*16, psi_bilinear_matrix_values, (N_det,N_states) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_rows   , (N_det) ]
 &BEGIN_PROVIDER [ integer, psi_bilinear_matrix_columns, (N_det) ]
