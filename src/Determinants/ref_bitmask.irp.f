@@ -23,15 +23,15 @@
   bi_elec_ref_bitmask_energy = 0.d0
   
   do i = 1, elec_beta_num
-    ref_bitmask_energy += mo_mono_elec_integral(occ(i,1),occ(i,1)) + mo_mono_elec_integral(occ(i,2),occ(i,2))
-    kinetic_ref_bitmask_energy += mo_kinetic_integral(occ(i,1),occ(i,1)) + mo_kinetic_integral(occ(i,2),occ(i,2))
-    nucl_elec_ref_bitmask_energy += mo_nucl_elec_integral(occ(i,1),occ(i,1)) + mo_nucl_elec_integral(occ(i,2),occ(i,2))
+    ref_bitmask_energy += real(mo_mono_elec_integral(occ(i,1),occ(i,1))) + real(mo_mono_elec_integral(occ(i,2),occ(i,2)))
+    kinetic_ref_bitmask_energy += real(mo_kinetic_integral(occ(i,1),occ(i,1))) + real(mo_kinetic_integral(occ(i,2),occ(i,2)))
+    nucl_elec_ref_bitmask_energy += real(mo_nucl_elec_integral(occ(i,1),occ(i,1))) + real(mo_nucl_elec_integral(occ(i,2),occ(i,2)))
   enddo
 
   do i = elec_beta_num+1,elec_alpha_num
-    ref_bitmask_energy += mo_mono_elec_integral(occ(i,1),occ(i,1))
-    kinetic_ref_bitmask_energy += mo_kinetic_integral(occ(i,1),occ(i,1)) 
-    nucl_elec_ref_bitmask_energy += mo_nucl_elec_integral(occ(i,1),occ(i,1)) 
+    ref_bitmask_energy += real(mo_mono_elec_integral(occ(i,1),occ(i,1)))
+    kinetic_ref_bitmask_energy += real(mo_kinetic_integral(occ(i,1),occ(i,1)))
+    nucl_elec_ref_bitmask_energy += real(mo_nucl_elec_integral(occ(i,1),occ(i,1)))
   enddo
   
   do j= 1, elec_alpha_num
