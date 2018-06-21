@@ -9,7 +9,7 @@ subroutine routine
  print*, 'How many determinants would you like ?'
  read(5,*)ndet_max
  integer(bit_kind), allocatable :: psi_det_tmp(:,:,:)
- double precision, allocatable :: psi_coef_tmp(:,:)
+ complex*16, allocatable :: psi_coef_tmp(:,:)
  allocate(psi_det_tmp(N_int,2,ndet_max),psi_coef_tmp(ndet_max, N_states))
  
  integer :: i,j
@@ -22,7 +22,7 @@ subroutine routine
   enddo
   do j = 1, N_states
    psi_coef_tmp(i,j) = psi_coef_sorted(i,j)
-   accu(j) += psi_coef_tmp(i,j) **2
+   accu(j) += cdabs(psi_coef_tmp(i,j)) **2
   enddo
  enddo
  do j = 1, N_states
