@@ -19,7 +19,7 @@ BEGIN_PROVIDER [integer(bit_kind), ref_closed_shell_bitmask, (N_int,2)]
 END_PROVIDER
 
 
-BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_tot_num, mo_tot_num) ]
+BEGIN_PROVIDER [complex*16, fock_operator_closed_shell_ref_bitmask, (mo_tot_num, mo_tot_num) ]
  implicit none
  integer :: i0,j0,i,j,k0,k
  integer :: n_occ_ab(2)
@@ -36,7 +36,7 @@ BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_to
   key_virt(i,1) = xor(key_virt(i,1),ref_closed_shell_bitmask(i,1))
   key_virt(i,2) = xor(key_virt(i,2),ref_closed_shell_bitmask(i,2))
  enddo
- double precision, allocatable :: array_coulomb(:),array_exchange(:)
+ complex*16, allocatable :: array_coulomb(:),array_exchange(:)
  allocate (array_coulomb(mo_tot_num),array_exchange(mo_tot_num))
  call bitstring_to_list_ab(key_virt, occ_virt, n_occ_ab_virt, N_int)
  ! docc ---> virt mono excitations
@@ -46,14 +46,14 @@ BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_to
    j = occ_virt(j0,1)
    call get_mo_bielec_integrals_coulomb_ii(i,j,mo_tot_num,array_coulomb,mo_integrals_map)
    call get_mo_bielec_integrals_exch_ii(i,j,mo_tot_num,array_exchange,mo_integrals_map)
-   double precision :: accu
-   accu = 0.d0
+   complex*16 :: accu
+   accu = (0.d0,0.d0)
    do k0 = 1, n_occ_ab(1)
     k = occ(k0,1)
     accu += 2.d0 * array_coulomb(k) - array_exchange(k)
    enddo
    fock_operator_closed_shell_ref_bitmask(i,j) = accu + mo_mono_elec_integral(i,j)
-   fock_operator_closed_shell_ref_bitmask(j,i) = accu + mo_mono_elec_integral(i,j)
+   fock_operator_closed_shell_ref_bitmask(j,i) = conjg(accu + mo_mono_elec_integral(i,j))
   enddo
  enddo
 
@@ -64,13 +64,13 @@ BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_to
    j = occ_virt(j0,1)
    call get_mo_bielec_integrals_coulomb_ii(i,j,mo_tot_num,array_coulomb,mo_integrals_map)
    call get_mo_bielec_integrals_exch_ii(i,j,mo_tot_num,array_exchange,mo_integrals_map)
-   accu = 0.d0
+   accu = (0.d0,0.d0)
    do k0 = 1, n_occ_ab(1)
     k = occ(k0,1)
     accu += 2.d0 * array_coulomb(k) - array_exchange(k)
    enddo
    fock_operator_closed_shell_ref_bitmask(i,j) = accu+ mo_mono_elec_integral(i,j)
-   fock_operator_closed_shell_ref_bitmask(j,i) = accu+ mo_mono_elec_integral(i,j)
+   fock_operator_closed_shell_ref_bitmask(j,i) = conjg(accu+ mo_mono_elec_integral(i,j))
   enddo
  enddo
 
@@ -81,13 +81,13 @@ BEGIN_PROVIDER [double precision, fock_operator_closed_shell_ref_bitmask, (mo_to
    j = occ(j0,1)
    call get_mo_bielec_integrals_coulomb_ii(i,j,mo_tot_num,array_coulomb,mo_integrals_map)
    call get_mo_bielec_integrals_exch_ii(i,j,mo_tot_num,array_exchange,mo_integrals_map)
-   accu = 0.d0
+   accu = (0.d0,0.d0)
    do k0 = 1, n_occ_ab(1)
     k = occ(k0,1)
     accu += 2.d0 * array_coulomb(k) - array_exchange(k)
    enddo
    fock_operator_closed_shell_ref_bitmask(i,j) = accu+ mo_mono_elec_integral(i,j)
-   fock_operator_closed_shell_ref_bitmask(j,i) = accu+ mo_mono_elec_integral(i,j)
+   fock_operator_closed_shell_ref_bitmask(j,i) = conjg(accu+ mo_mono_elec_integral(i,j))
   enddo
  enddo
  deallocate(array_coulomb,array_exchange)
@@ -100,7 +100,7 @@ subroutine get_mono_excitation_from_fock(det_1,det_2,h,p,spin,phase,hij)
  integer,intent(in) :: h,p,spin
  double precision, intent(in)  :: phase
  integer(bit_kind), intent(in) :: det_1(N_int,2), det_2(N_int,2)
- double precision, intent(out) :: hij
+ complex*16, intent(out) :: hij
  integer(bit_kind) :: differences(N_int,2)
  integer(bit_kind) :: hole(N_int,2)
  integer(bit_kind) :: partcl(N_int,2)
