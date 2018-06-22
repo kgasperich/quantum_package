@@ -965,7 +965,7 @@ subroutine i_H_psi_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,Ndet_max,
   complex*16, intent(in)   :: coef(Ndet_max,Nstate)
   complex*16, intent(out)  :: i_H_psi_array(Nstate)
   
-  integer                        :: i, ii,j, i_in_key, i_in_coef
+  integer                        :: j, jj,k, j_in_key, j_in_coef
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
   complex*16               :: hij
@@ -988,24 +988,24 @@ subroutine i_H_psi_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,Ndet_max,
   call filter_connected_i_H_psi0(keys,key,Nint,N_minilist,idx)
   if (Nstate == 1) then
 
-    do ii=1,idx(0)
-      i_in_key = idx(ii)
-      i_in_coef = idx_key(idx(ii))
+    do jj=1,idx(0)
+      j_in_key = idx(jj)
+      j_in_coef = idx_key(idx(jj))
       !DIR$ FORCEINLINE
-      call i_H_j(keys(1,1,i_in_key),key,Nint,hij)
+      call i_H_j(key,keys(1,1,j_in_key),Nint,hij)
       ! TODO : Cache misses
-      i_H_psi_array(1) = i_H_psi_array(1) + coef(i_in_coef,1)*hij
+      i_H_psi_array(1) = i_H_psi_array(1) + coef(j_in_coef,1)*hij
     enddo
 
   else
 
-    do ii=1,idx(0)
-      i_in_key = idx(ii)
-      i_in_coef = idx_key(idx(ii))
+    do jj=1,idx(0)
+      j_in_key = idx(jj)
+      j_in_coef = idx_key(idx(jj))
       !DIR$ FORCEINLINE
-      call i_H_j(keys(1,1,i_in_key),key,Nint,hij)
-      do j = 1, Nstate
-        i_H_psi_array(j) = i_H_psi_array(j) + coef(i_in_coef,j)*hij
+      call i_H_j(key,keys(1,1,j_in_key),Nint,hij)
+      do k = 1, Nstate
+        i_H_psi_array(k) = i_H_psi_array(k) + coef(j_in_coef,k)*hij
       enddo
     enddo
 
@@ -1025,7 +1025,7 @@ subroutine i_H_psi_sec_ord(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array
   complex*16, intent(out)  :: interactions(Ndet)
   integer,intent(out)            :: idx_interaction(0:Ndet)
   
-  integer                        :: i, ii,j
+  integer                        :: j, jj,k
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
   complex*16               :: hij
@@ -1044,19 +1044,19 @@ subroutine i_H_psi_sec_ord(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array
   i_H_psi_array = (0.d0,0.d0)
   call filter_connected_i_H_psi0(keys,key,Nint,Ndet,idx)
   n_interact = 0
-  do ii=1,idx(0)
-    i = idx(ii)
+  do jj=1,idx(0)
+    j = idx(jj)
     !DIR$ FORCEINLINE
-    call i_H_j(keys(1,1,i),key,Nint,hij)
+    call i_H_j(key,keys(1,1,j),Nint,hij)
     if(cdabs(hij).ge.1.d-8)then
-     if(i.ne.1)then
+     if(j.ne.1)then
       n_interact += 1
       interactions(n_interact) = hij
-      idx_interaction(n_interact) = i
+      idx_interaction(n_interact) = j
      endif
     endif
-    do j = 1, Nstate
-      i_H_psi_array(j) = i_H_psi_array(j) + coef(i,j)*hij
+    do k = 1, Nstate
+      i_H_psi_array(k) = i_H_psi_array(k) + coef(j,k)*hij
     enddo
   enddo
   idx_interaction(0) = n_interact
@@ -1086,7 +1086,7 @@ subroutine i_H_psi_SC2(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array,idx
   double precision, intent(out)  :: i_H_psi_array(Nstate)
   integer         , intent(out)  :: idx_repeat(0:Ndet)
   
-  integer                        :: i, ii,j
+  integer                        :: j, jj,k
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
   double precision               :: hij
@@ -1100,12 +1100,12 @@ subroutine i_H_psi_SC2(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array,idx
   i_H_psi_array = 0.d0
   allocate(idx(0:Ndet))
   call filter_connected_i_H_psi0_SC2(keys,key,Nint,Ndet,idx,idx_repeat)
-  do ii=1,idx(0)
-    i = idx(ii)
+  do jj=1,idx(0)
+    j = idx(jj)
     !DIR$ FORCEINLINE
-    call i_H_j(keys(1,1,i),key,Nint,hij)
-    do j = 1, Nstate
-      i_H_psi_array(j) = i_H_psi_array(j) + coef(i,j)*hij
+    call i_H_j(key,keys(1,1,j),Nint,hij)
+    do k = 1, Nstate
+      i_H_psi_array(k) = i_H_psi_array(k) + coef(j,k)*hij
     enddo
   enddo
 end
@@ -1130,14 +1130,14 @@ subroutine i_H_psi_SC2_verbose(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_a
   integer, intent(in)            :: Nint, Ndet,Ndet_max,Nstate
   integer(bit_kind), intent(in)  :: keys(Nint,2,Ndet)
   integer(bit_kind), intent(in)  :: key(Nint,2)
-  double precision, intent(in)   :: coef(Ndet_max,Nstate)
-  double precision, intent(out)  :: i_H_psi_array(Nstate)
+  complex*16, intent(in)   :: coef(Ndet_max,Nstate)
+  complex*16, intent(out)  :: i_H_psi_array(Nstate)
   integer         , intent(out)  :: idx_repeat(0:Ndet)
   
-  integer                        :: i, ii,j
+  integer                        :: j, jj,k
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
-  double precision               :: hij
+  complex*16               :: hij
   integer,allocatable            :: idx(:)
   
   ASSERT (Nint > 0)
@@ -1149,17 +1149,17 @@ subroutine i_H_psi_SC2_verbose(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_a
   allocate(idx(0:Ndet))
   call filter_connected_i_H_psi0_SC2(keys,key,Nint,Ndet,idx,idx_repeat)
   print*,'--------'
-  do ii=1,idx(0)
+  do jj=1,idx(0)
     print*,'--'
-    i = idx(ii)
+    j = idx(jj)
     !DIR$ FORCEINLINE
-    call i_H_j(keys(1,1,i),key,Nint,hij)
-    if (i==1)then
-     print*,'i==1 !!'
+    call i_H_j(key,keys(1,1,j),Nint,hij)
+    if (j==1)then
+     print*,'j==1 !!'
     endif
-    print*,coef(i,1) * hij,coef(i,1),hij
-    do j = 1, Nstate
-      i_H_psi_array(j) = i_H_psi_array(j) + coef(i,j)*hij
+    print*,coef(j,1) * hij,coef(j,1),hij
+    do k = 1, Nstate
+      i_H_psi_array(k) = i_H_psi_array(k) + coef(j,k)*hij
     enddo
     print*,i_H_psi_array(1)
   enddo
@@ -2161,11 +2161,11 @@ subroutine H_u_0_stored(v_0,u_0,hmatrix,sze)
   ! uses the big_matrix_stored array
   END_DOC
   integer, intent(in)            :: sze
-  double precision, intent(in)   :: hmatrix(sze,sze)
-  double precision, intent(out)  :: v_0(sze)
-  double precision, intent(in)   :: u_0(sze)
-  v_0 = 0.d0
-  call matrix_vector_product(u_0,v_0,hmatrix,sze,sze)
+  complex*16, intent(in)   :: hmatrix(sze,sze)
+  complex*16, intent(out)  :: v_0(sze)
+  complex*16, intent(in)   :: u_0(sze)
+  v_0 = (0.d0,0.d0)
+  call matrix_vector_product_complex(u_0,v_0,hmatrix,sze,sze)
 
 end
 
@@ -2180,15 +2180,20 @@ subroutine u_0_H_u_0_stored(e_0,u_0,hmatrix,sze)
   ! uses the big_matrix_stored array
   END_DOC
   integer, intent(in)            :: sze
-  double precision, intent(in)   :: hmatrix(sze,sze)
+  complex*16, intent(in)   :: hmatrix(sze,sze)
   double precision, intent(out)  :: e_0
-  double precision, intent(in)   :: u_0(sze)
-  double precision               :: v_0(sze)
-  double precision               :: u_dot_v
+  complex*16, intent(in)   :: u_0(sze)
+  complex*16               :: v_0(sze)
+  complex*16               :: u_dot_v_complex,e_0_tmp
   e_0 = 0.d0
-  v_0 = 0.d0
-  call matrix_vector_product(u_0,v_0,hmatrix,sze,sze)
-  e_0 =  u_dot_v(v_0,u_0,sze)
+  e_0_tmp = (0.d0,0.d0)
+  v_0 = (0.d0,0.d0)
+  call matrix_vector_product_complex(u_0,v_0,hmatrix,sze,sze)
+  e_0_tmp =  u_dot_v_complex(v_0,u_0,sze)
+  if (dabs(imag(e_0_tmp)) .gt. 1.d-8) then
+    print *,"error in u_0_H_u_0_stored: energy should be real"
+  endif
+  e_0 = real(e_0_tmp)
 end
 
 
@@ -2888,7 +2893,7 @@ subroutine i_H_j_mono_spin(key_i,key_j,Nint,spin,hij)
   END_DOC
   integer, intent(in)            :: Nint, spin
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
-  double precision, intent(out)  :: hij
+  complex*16, intent(out)  :: hij
   
   integer                        :: exc(0:2,2)
   double precision               :: phase
@@ -2907,11 +2912,11 @@ subroutine i_H_j_double_spin(key_i,key_j,Nint,hij)
   END_DOC
   integer, intent(in)            :: Nint
   integer(bit_kind), intent(in)  :: key_i(Nint), key_j(Nint)
-  double precision, intent(out)  :: hij
+  complex*16, intent(out)  :: hij
   
   integer                        :: exc(0:2,2)
   double precision               :: phase
-  double precision, external     :: get_mo_bielec_integral
+  complex*16, external     :: get_mo_bielec_integral
 
   PROVIDE big_array_exchange_integrals mo_bielec_integrals_in_map
 
@@ -2936,11 +2941,11 @@ subroutine i_H_j_double_alpha_beta(key_i,key_j,Nint,hij)
   END_DOC
   integer, intent(in)            :: Nint
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
-  double precision, intent(out)  :: hij
+  complex*16, intent(out)  :: hij
   
   integer                        :: exc(0:2,2,2)
   double precision               :: phase, phase2
-  double precision, external     :: get_mo_bielec_integral
+  complex*16, external     :: get_mo_bielec_integral
 
   PROVIDE big_array_exchange_integrals mo_bielec_integrals_in_map
 
