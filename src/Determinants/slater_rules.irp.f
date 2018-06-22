@@ -904,7 +904,7 @@ subroutine i_H_psi(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array)
   BEGIN_DOC
 ! Computes <i|H|Psi> = \sum_J c_J <i|H|J>.
 !
-! Uses filter_connected_i_H_psi0 to get all the |J> to which |i>
+! Uses filter_connected_i_H_psi0 to get all the |J> to which |i> (key)
 ! is connected.
 ! The i_H_psi_minilist is much faster but requires to build the
 ! minilists
@@ -915,7 +915,7 @@ subroutine i_H_psi(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array)
   complex*16, intent(in)   :: coef(Ndet_max,Nstate)
   complex*16, intent(out)  :: i_H_psi_array(Nstate)
   
-  integer                        :: i, ii,j
+  integer                        :: j,jj,k
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
   complex*16               :: hij
@@ -933,21 +933,21 @@ subroutine i_H_psi(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array)
   call filter_connected_i_H_psi0(keys,key,Nint,Ndet,idx)
   if (Nstate == 1) then
 
-    do ii=1,idx(0)
-      i = idx(ii)
+    do jj=1,idx(0)
+      j = idx(jj)
       !DIR$ FORCEINLINE
-      call i_H_j(keys(1,1,i),key,Nint,hij)
-      i_H_psi_array(1) = i_H_psi_array(1) + coef(i,1)*hij
+      call i_H_j(key,keys(1,1,j),Nint,hij)
+      i_H_psi_array(1) = i_H_psi_array(1) + coef(j,1)*hij
     enddo
 
   else
 
-    do ii=1,idx(0)
-      i = idx(ii)
+    do jj=1,idx(0)
+      j = idx(jj)
       !DIR$ FORCEINLINE
-      call i_H_j(keys(1,1,i),key,Nint,hij)
-      do j = 1, Nstate
-        i_H_psi_array(j) = i_H_psi_array(j) + coef(i,j)*hij
+      call i_H_j(key,keys(1,1,j),Nint,hij)
+      do k = 1, Nstate
+        i_H_psi_array(k) = i_H_psi_array(k) + coef(j,k)*hij
       enddo
     enddo
 
