@@ -1037,3 +1037,20 @@ subroutine matrix_vector_product(u0,u1,matrix,sze,lda)
  incy = 1
  call dsymv('U', sze, 1.d0, matrix, lda, u0, incx, 1.d0, u1, incy)
 end
+
+subroutine matrix_vector_product_complex(u0,u1,matrix,sze,lda)
+ implicit none
+ BEGIN_DOC
+! performs u1 += u0 * matrix 
+ END_DOC
+ integer, intent(in)             :: sze,lda
+ complex*16, intent(in)    :: u0(sze)
+ complex*16, intent(inout) :: u1(sze)
+ complex*16, intent(in)    :: matrix(lda,sze)
+ integer :: i,j
+ integer                        :: incx,incy
+ incx = 1
+ incy = 1
+ call dsymv('U', sze, 1.d0, matrix, lda, u0, incx, 1.d0, u1, incy)
+ call zhemv('U', sze, (1.d0,0.d0), matrix, lda, u0, incx, (1.d0,0.d0), u1, incy)
+end
