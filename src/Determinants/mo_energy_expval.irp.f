@@ -14,7 +14,7 @@ BEGIN_PROVIDER [ double precision, mo_energy_expval, (N_states,mo_tot_num,2,2)]
   double precision               :: energies(n_states)
   
   integer(bit_kind), allocatable :: psi_in_out(:,:,:)
-  double precision, allocatable  :: psi_in_out_coef(:,:)
+  complex*16, allocatable  :: psi_in_out_coef(:,:)
   double precision               :: E0(N_states), norm
   double precision, parameter    :: t=1.d-3
   
@@ -28,10 +28,10 @@ BEGIN_PROVIDER [ double precision, mo_energy_expval, (N_states,mo_tot_num,2,2)]
   do istate=1,N_states
     norm = 0.d0
     do k=1,N_det
-      if (dabs(psi_in_out_coef(k,istate)) < t) then
-        psi_in_out_coef(k,istate) = 0.d0
+      if (cdabs(psi_in_out_coef(k,istate)) < t) then
+        psi_in_out_coef(k,istate) = (0.d0,0.d0)
       endif
-      norm = norm + psi_in_out_coef(k,istate)*psi_in_out_coef(k,istate)
+      norm = norm + cdabs(psi_in_out_coef(k,istate)*psi_in_out_coef(k,istate))
     enddo
     ASSERT (norm  > 0.d0)
     norm = 1.d0/dsqrt(norm)
@@ -80,30 +80,31 @@ subroutine au0_h_au0(energies,psi_in,psi_in_coef,ndet,dim_psi_coef)
   implicit none
   integer, intent(in)            :: ndet,dim_psi_coef
   integer(bit_kind), intent(in)  :: psi_in(N_int,2,Ndet)
-  double precision,  intent(in)  :: psi_in_coef(dim_psi_coef,N_states)
+  complex*16,  intent(in)  :: psi_in_coef(dim_psi_coef,N_states)
   double precision,  intent(out) :: energies(N_states)
   
   integer                        :: i,j, istate
-  double precision               :: hij,accu
-  double precision, allocatable  :: psi_coef_tmp(:)
+  complex*16               :: hij
+  double precision               :: hii
+  double precision               :: accu
+  complex*16, allocatable  :: psi_coef_tmp(:)
   
   energies(1:N_states) = 0.d0
   do i = 1, Ndet
-    if(sum(dabs(psi_in_coef(i,1:N_states)))==0.d0) then
+    if(sum(cdabs(psi_in_coef(i,1:N_states)))==0.d0) then
       cycle
     endif
-    call diag_H_mat_elem_au0_h_au0(psi_in(1,1,i),N_int,hij)
+    call diag_H_mat_elem_au0_h_au0(psi_in(1,1,i),N_int,hii)
     do istate=1,N_states
-      energies(istate) += psi_in_coef(i,istate) * psi_in_coef(i,istate) * hij
+      energies(istate) += cdabs(psi_in_coef(i,istate) * psi_in_coef(i,istate)) * hii
     enddo
     do j = i+1, Ndet
-      if(sum(dabs(psi_in_coef(j,1:N_states)))==0.d0) then
+      if(sum(cdabs(psi_in_coef(j,1:N_states)))==0.d0) then
         cycle
       endif
       call i_H_j(psi_in(1,1,i),psi_in(1,1,j),N_int,hij)
-      hij = hij+hij
       do istate=1,N_states
-        energies(istate) = energies(istate) + psi_in_coef(i,istate) * psi_in_coef(j,istate) * hij
+        energies(istate) = energies(istate) + 2.d0*dreal(conjg(psi_in_coef(i,istate)) * psi_in_coef(j,istate) * hij)
       enddo
     enddo
   enddo
@@ -130,7 +131,7 @@ subroutine diag_H_mat_elem_au0_h_au0(det_in,Nint,hii)
   ! alpha - alpha
   do i = 1, elec_num_tab_local(1)
     iorb =  occ(i,1)
-    hii += mo_mono_elec_integral(iorb,iorb)
+    hii += real(mo_mono_elec_integral(iorb,iorb))
     do j = i+1, elec_num_tab_local(1)
       jorb = occ(j,1)
       hii +=  mo_bielec_integral_jj_anti(jorb,iorb)
@@ -140,7 +141,7 @@ subroutine diag_H_mat_elem_au0_h_au0(det_in,Nint,hii)
   ! beta - beta
   do i = 1, elec_num_tab_local(2)
     iorb =  occ(i,2)
-    hii += mo_mono_elec_integral(iorb,iorb)
+    hii += real(mo_mono_elec_integral(iorb,iorb))
     do j = i+1, elec_num_tab_local(2)
       jorb = occ(j,2)
       hii +=  mo_bielec_integral_jj_anti(jorb,iorb)
