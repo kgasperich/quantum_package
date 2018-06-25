@@ -92,8 +92,8 @@ END_PROVIDER
 
  END_PROVIDER
 
- BEGIN_PROVIDER [ double precision, one_body_dm_mo_alpha, (mo_tot_num,mo_tot_num,N_states) ]
-&BEGIN_PROVIDER [ double precision, one_body_dm_mo_beta, (mo_tot_num,mo_tot_num,N_states) ]
+ BEGIN_PROVIDER [ complex*16, one_body_dm_mo_alpha, (mo_tot_num,mo_tot_num,N_states) ]
+&BEGIN_PROVIDER [ complex*16, one_body_dm_mo_beta, (mo_tot_num,mo_tot_num,N_states) ]
    implicit none
    BEGIN_DOC
    ! Alpha and beta one-body density matrix for each state
@@ -101,18 +101,18 @@ END_PROVIDER
 
    integer                        :: j,k,l,m,k_a,k_b
    integer                        :: occ(N_int*bit_kind_size,2)
-   double precision               :: ck, cl, ckl
+   complex*16               :: ck, cl, ckl
    double precision               :: phase
    integer                        :: h1,h2,p1,p2,s1,s2, degree
    integer(bit_kind)              :: tmp_det(N_int,2), tmp_det2(N_int)
    integer                        :: exc(0:2,2),n_occ(2)
-   double precision, allocatable  :: tmp_a(:,:,:), tmp_b(:,:,:)
+   complex*16, allocatable  :: tmp_a(:,:,:), tmp_b(:,:,:)
    integer                        :: krow, kcol, lrow, lcol
 
    PROVIDE psi_det
 
-  one_body_dm_mo_alpha = 0.d0
-  one_body_dm_mo_beta  = 0.d0
+  one_body_dm_mo_alpha = (0.d0,0.d0)
+  one_body_dm_mo_beta  = (0.d0,0.d0)
   !$OMP PARALLEL DEFAULT(NONE)                                         &
     !$OMP PRIVATE(j,k,k_a,k_b,l,m,occ,ck, cl, ckl,phase,h1,h2,p1,p2,s1,s2, degree,exc, &
     !$OMP  tmp_a, tmp_b, n_occ, krow, kcol, lrow, lcol, tmp_det, tmp_det2)&
@@ -124,7 +124,7 @@ END_PROVIDER
     !$OMP  psi_bilinear_matrix_values, psi_bilinear_matrix_transp_values, &
     !$OMP  N_det_alpha_unique,N_det_beta_unique,irp_here)
   allocate(tmp_a(mo_tot_num,mo_tot_num,N_states), tmp_b(mo_tot_num,mo_tot_num,N_states) )
-  tmp_a = 0.d0
+  tmp_a = (0.d0,0.d0)
   !$OMP DO SCHEDULE(dynamic,64)
   do k_a=1,N_det
     krow = psi_bilinear_matrix_rows(k_a) 
@@ -141,7 +141,7 @@ END_PROVIDER
 
     call bitstring_to_list_ab(tmp_det, occ, n_occ, N_int)
     do m=1,N_states
-      ck = psi_bilinear_matrix_values(k_a,m)*psi_bilinear_matrix_values(k_a,m)
+      ck = conjg(psi_bilinear_matrix_values(k_a,m))*psi_bilinear_matrix_values(k_a,m)
       do l=1,elec_alpha_num
         j = occ(l,1)
         tmp_a(j,j,m) += ck
@@ -161,9 +161,9 @@ END_PROVIDER
         call get_mono_excitation_spin(tmp_det(1,1),tmp_det2,exc,phase,N_int)
         call decode_exc_spin(exc,h1,p1,h2,p2)
         do m=1,N_states
-          ckl = psi_bilinear_matrix_values(k_a,m)*psi_bilinear_matrix_values(l,m) * phase
+          ckl = conjg(psi_bilinear_matrix_values(k_a,m))*psi_bilinear_matrix_values(l,m) * phase
           tmp_a(h1,p1,m) += ckl
-          tmp_a(p1,h1,m) += ckl
+          tmp_a(p1,h1,m) += conjg(ckl)
         enddo
       endif
       l = l+1
@@ -180,7 +180,7 @@ END_PROVIDER
   !$OMP END CRITICAL
   deallocate(tmp_a)
 
-  tmp_b = 0.d0
+  tmp_b = (0.d0,0.d0)
   !$OMP DO SCHEDULE(dynamic,64)
   do k_b=1,N_det
     krow = psi_bilinear_matrix_transp_rows(k_b) 
@@ -197,7 +197,7 @@ END_PROVIDER
 
     call bitstring_to_list_ab(tmp_det, occ, n_occ, N_int)
     do m=1,N_states
-      ck = psi_bilinear_matrix_transp_values(k_b,m)*psi_bilinear_matrix_transp_values(k_b,m)
+      ck = conjg(psi_bilinear_matrix_transp_values(k_b,m))*psi_bilinear_matrix_transp_values(k_b,m)
       do l=1,elec_beta_num
         j = occ(l,2)
         tmp_b(j,j,m) += ck
@@ -217,9 +217,9 @@ END_PROVIDER
         call get_mono_excitation_spin(tmp_det(1,2),tmp_det2,exc,phase,N_int)
         call decode_exc_spin(exc,h1,p1,h2,p2)
         do m=1,N_states
-          ckl = psi_bilinear_matrix_transp_values(k_b,m)*psi_bilinear_matrix_transp_values(l,m) * phase
+          ckl = conjg(psi_bilinear_matrix_transp_values(k_b,m))*psi_bilinear_matrix_transp_values(l,m) * phase
           tmp_b(h1,p1,m) += ckl
-          tmp_b(p1,h1,m) += ckl
+          tmp_b(p1,h1,m) += conjg(ckl)
         enddo
       endif
       l = l+1
@@ -239,8 +239,8 @@ END_PROVIDER
 
 END_PROVIDER
 
- BEGIN_PROVIDER [ double precision, one_body_single_double_dm_mo_alpha, (mo_tot_num,mo_tot_num) ]
-&BEGIN_PROVIDER [ double precision, one_body_single_double_dm_mo_beta, (mo_tot_num,mo_tot_num) ]
+ BEGIN_PROVIDER [ complex*16, one_body_single_double_dm_mo_alpha, (mo_tot_num,mo_tot_num) ]
+&BEGIN_PROVIDER [ complex*16, one_body_single_double_dm_mo_beta, (mo_tot_num,mo_tot_num) ]
    implicit none
    BEGIN_DOC
    ! Alpha and beta one-body density matrix for each state
@@ -248,18 +248,18 @@ END_PROVIDER
 
    integer                        :: j,k,l,m
    integer                        :: occ(N_int*bit_kind_size,2)
-   double precision               :: ck, cl, ckl
+   complex*16               :: ck, cl, ckl
    double precision               :: phase
    integer                        :: h1,h2,p1,p2,s1,s2, degree
    integer                        :: exc(0:2,2,2),n_occ_alpha
-   double precision, allocatable  :: tmp_a(:,:), tmp_b(:,:)
+   complex*16, allocatable  :: tmp_a(:,:), tmp_b(:,:)
    integer :: degree_respect_to_HF_k
    integer :: degree_respect_to_HF_l
 
    PROVIDE elec_alpha_num elec_beta_num
 
-   one_body_single_double_dm_mo_alpha = 0.d0
-   one_body_single_double_dm_mo_beta  = 0.d0
+   one_body_single_double_dm_mo_alpha = (0.d0,0.d0)
+   one_body_single_double_dm_mo_beta  = (0.d0,0.d0)
    !$OMP PARALLEL DEFAULT(NONE)                                         &
       !$OMP PRIVATE(j,k,l,m,occ,ck, cl, ckl,phase,h1,h2,p1,p2,s1,s2, degree,exc, &
       !$OMP  tmp_a, tmp_b, n_occ_alpha,degree_respect_to_HF_k,degree_respect_to_HF_l)&
@@ -267,8 +267,8 @@ END_PROVIDER
       !$OMP  elec_beta_num,one_body_single_double_dm_mo_alpha,one_body_single_double_dm_mo_beta,N_det,&
       !$OMP  mo_tot_num)
    allocate(tmp_a(mo_tot_num,mo_tot_num), tmp_b(mo_tot_num,mo_tot_num) )
-   tmp_a = 0.d0
-   tmp_b = 0.d0
+   tmp_a = (0.d0,0.d0)
+   tmp_b = (0.d0,0.d0)
    !$OMP DO SCHEDULE(dynamic)
    do k=1,N_det
      call bitstring_to_list(psi_det(1,1,k), occ(1,1), n_occ_alpha, N_int)
@@ -276,7 +276,7 @@ END_PROVIDER
      call get_excitation_degree(ref_bitmask,psi_det(1,1,k),degree_respect_to_HF_k,N_int)
      
      do m=1,N_states
-       ck = psi_coef(k,m)*psi_coef(k,m) * state_average_weight(m)
+       ck = conjg(psi_coef(k,m))*psi_coef(k,m) * state_average_weight(m)
        call get_excitation_degree(ref_bitmask,psi_det(1,1,k),degree_respect_to_HF_l,N_int)
        if(degree_respect_to_HF_l.le.0)then
          do l=1,elec_alpha_num
@@ -300,13 +300,13 @@ END_PROVIDER
        call get_mono_excitation(psi_det(1,1,k),psi_det(1,1,l),exc,phase,N_int)
        call decode_exc(exc,degree,h1,p1,h2,p2,s1,s2)
        do m=1,N_states
-         ckl = psi_coef(k,m) * psi_coef(l,m) * phase * state_average_weight(m)
+         ckl = conjg(psi_coef(k,m)) * psi_coef(l,m) * phase * state_average_weight(m)
          if (s1==1) then
            tmp_a(h1,p1) += ckl
-           tmp_a(p1,h1) += ckl
+           tmp_a(p1,h1) += conjg(ckl)
          else
            tmp_b(h1,p1) += ckl
-           tmp_b(p1,h1) += ckl
+           tmp_b(p1,h1) += conjg(ckl)
          endif
        enddo
        enddo
@@ -322,7 +322,7 @@ END_PROVIDER
    !$OMP END PARALLEL
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, one_body_dm_mo, (mo_tot_num,mo_tot_num) ]
+BEGIN_PROVIDER [ complex*16, one_body_dm_mo, (mo_tot_num,mo_tot_num) ]
  implicit none
  BEGIN_DOC
  ! One-body density matrix
@@ -330,7 +330,7 @@ BEGIN_PROVIDER [ double precision, one_body_dm_mo, (mo_tot_num,mo_tot_num) ]
  one_body_dm_mo = one_body_dm_mo_alpha_average + one_body_dm_mo_beta_average
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, one_body_spin_density_mo, (mo_tot_num,mo_tot_num) ]
+BEGIN_PROVIDER [ complex*16, one_body_spin_density_mo, (mo_tot_num,mo_tot_num) ]
  implicit none
  BEGIN_DOC
  ! rho(alpha) - rho(beta)
@@ -344,7 +344,6 @@ subroutine set_natural_mos
  ! Set natural orbitals, obtained by diagonalization of the one-body density matrix in the MO basis
  END_DOC
  character*(64) :: label
-! double precision, allocatable :: tmp(:,:)
 
  label = "Natural"
  call mo_as_svd_vectors_of_mo_matrix(one_body_dm_mo,size(one_body_dm_mo,1),mo_tot_num,mo_tot_num,label)
@@ -378,22 +377,22 @@ BEGIN_PROVIDER [ double precision, state_average_weight, (N_states) ]
 END_PROVIDER
 
 
-BEGIN_PROVIDER [ double precision, one_body_spin_density_ao, (ao_num,ao_num) ]
+BEGIN_PROVIDER [ complex*16, one_body_spin_density_ao, (ao_num,ao_num) ]
  BEGIN_DOC
 ! one body spin density matrix on the AO basis : rho_AO(alpha) - rho_AO(beta)
  END_DOC
  implicit none
  integer :: i,j,k,l
- double precision :: dm_mo
+ complex*16 :: dm_mo
 
- one_body_spin_density_ao = 0.d0
+ one_body_spin_density_ao = (0.d0,0.d0)
  do k = 1, ao_num
   do l = 1, ao_num
    do i = 1, mo_tot_num
     do j = 1, mo_tot_num
-     dm_mo = one_body_spin_density_mo(j,i)
+     dm_mo = one_body_spin_density_mo(i,j)
 !    if(dabs(dm_mo).le.1.d-10)cycle
-     one_body_spin_density_ao(l,k) += mo_coef(k,i) * mo_coef(l,j) * dm_mo
+     one_body_spin_density_ao(k,l) += mo_coef(k,i) * conjg(mo_coef(l,j)) * dm_mo
 
     enddo
    enddo
@@ -402,26 +401,26 @@ BEGIN_PROVIDER [ double precision, one_body_spin_density_ao, (ao_num,ao_num) ]
 
 END_PROVIDER
 
- BEGIN_PROVIDER [ double precision, one_body_dm_ao_alpha, (ao_num,ao_num) ]
-&BEGIN_PROVIDER [ double precision, one_body_dm_ao_beta, (ao_num,ao_num) ]
+ BEGIN_PROVIDER [ complex*16, one_body_dm_ao_alpha, (ao_num,ao_num) ]
+&BEGIN_PROVIDER [ complex*16, one_body_dm_ao_beta, (ao_num,ao_num) ]
  BEGIN_DOC
 ! one body density matrix on the AO basis : rho_AO(alpha) , rho_AO(beta)
  END_DOC
  implicit none
  integer :: i,j,k,l
- double precision :: mo_alpha,mo_beta
+ complex*16 :: mo_alpha,mo_beta
 
- one_body_dm_ao_alpha = 0.d0
- one_body_dm_ao_beta = 0.d0
+ one_body_dm_ao_alpha = (0.d0,0.d0)
+ one_body_dm_ao_beta = (0.d0,0.d0)
  do k = 1, ao_num
   do l = 1, ao_num
    do i = 1, mo_tot_num
     do j = 1, mo_tot_num
-     mo_alpha = one_body_dm_mo_alpha_average(j,i)
-     mo_beta = one_body_dm_mo_beta_average(j,i)
+     mo_alpha = one_body_dm_mo_alpha_average(i,j)
+     mo_beta = one_body_dm_mo_beta_average(i,j)
 !    if(dabs(dm_mo).le.1.d-10)cycle
-     one_body_dm_ao_alpha(l,k) += mo_coef(k,i) * mo_coef(l,j) *  mo_alpha
-     one_body_dm_ao_beta(l,k) += mo_coef(k,i) * mo_coef(l,j)  *  mo_beta        
+     one_body_dm_ao_alpha(k,l) += mo_coef(k,i) * conjg(mo_coef(l,j)) *  mo_alpha
+     one_body_dm_ao_beta(k,l) += mo_coef(k,i) * conjg(mo_coef(l,j))  *  mo_beta        
     enddo
    enddo
   enddo
@@ -430,73 +429,3 @@ END_PROVIDER
 END_PROVIDER
 
 
- BEGIN_PROVIDER [ double precision, one_body_dm_mo_alpha_old, (mo_tot_num,mo_tot_num,N_states) ]
-&BEGIN_PROVIDER [ double precision, one_body_dm_mo_beta_old, (mo_tot_num,mo_tot_num,N_states) ]
-   implicit none
-   BEGIN_DOC
-   ! Alpha and beta one-body density matrix for each state
-   END_DOC
-
-   integer                        :: j,k,l,m
-   integer                        :: occ(N_int*bit_kind_size,2)
-   double precision               :: ck, cl, ckl
-   double precision               :: phase
-   integer                        :: h1,h2,p1,p2,s1,s2, degree
-   integer                        :: exc(0:2,2,2),n_occ(2)
-   double precision, allocatable  :: tmp_a(:,:,:), tmp_b(:,:,:)
-
-     one_body_dm_mo_alpha_old = 0.d0
-     one_body_dm_mo_beta_old  = 0.d0
-     !$OMP PARALLEL DEFAULT(NONE)                                         &
-        !$OMP PRIVATE(j,k,l,m,occ,ck, cl, ckl,phase,h1,h2,p1,p2,s1,s2, degree,exc, &
-        !$OMP  tmp_a, tmp_b, n_occ)&
-        !$OMP SHARED(psi_det,psi_coef,N_int,N_states,elec_alpha_num,&
-        !$OMP  elec_beta_num,one_body_dm_mo_alpha_old,one_body_dm_mo_beta_old,N_det,&
-        !$OMP  mo_tot_num)
-     allocate(tmp_a(mo_tot_num,mo_tot_num,N_states), tmp_b(mo_tot_num,mo_tot_num,N_states) )
-     tmp_a = 0.d0
-     tmp_b = 0.d0
-     !$OMP DO SCHEDULE(dynamic)
-     do k=1,N_det
-       call bitstring_to_list_ab(psi_det(1,1,k), occ, n_occ, N_int)
-       do m=1,N_states
-         ck = psi_coef(k,m)*psi_coef(k,m) 
-         do l=1,elec_alpha_num
-           j = occ(l,1)
-           tmp_a(j,j,m) += ck
-         enddo
-         do l=1,elec_beta_num
-           j = occ(l,2)
-           tmp_b(j,j,m) += ck
-         enddo
-       enddo
-       do l=1,k-1
-         call get_excitation_degree(psi_det(1,1,k),psi_det(1,1,l),degree,N_int)
-         if (degree /= 1) then
-           cycle
-         endif
-         call get_mono_excitation(psi_det(1,1,k),psi_det(1,1,l),exc,phase,N_int)
-         call decode_exc(exc,degree,h1,p1,h2,p2,s1,s2)
-         do m=1,N_states
-           ckl = psi_coef(k,m) * psi_coef(l,m) * phase 
-           if (s1==1) then
-             tmp_a(h1,p1,m) += ckl
-             tmp_a(p1,h1,m) += ckl
-           else
-             tmp_b(h1,p1,m) += ckl
-             tmp_b(p1,h1,m) += ckl
-           endif
-         enddo
-       enddo
-     enddo
-     !$OMP END DO NOWAIT
-     !$OMP CRITICAL
-     one_body_dm_mo_alpha_old(:,:,:) = one_body_dm_mo_alpha_old(:,:,:) + tmp_a(:,:,:)
-     !$OMP END CRITICAL
-     !$OMP CRITICAL
-     one_body_dm_mo_beta_old(:,:,:)  = one_body_dm_mo_beta_old(:,:,:)  + tmp_b(:,:,:)
-     !$OMP END CRITICAL
-     deallocate(tmp_a,tmp_b)
-     !$OMP END PARALLEL
-
-END_PROVIDER
