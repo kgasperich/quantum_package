@@ -5,7 +5,7 @@ BEGIN_PROVIDER [ integer, psi_selectors_size ]
  psi_selectors_size = psi_det_size
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, psi_selectors_coef_transp, (N_states,psi_selectors_size) ]
+BEGIN_PROVIDER [ complex*16, psi_selectors_coef_transp, (N_states,psi_selectors_size) ]
   implicit none
   BEGIN_DOC
   ! Transposed psi_selectors
@@ -14,7 +14,7 @@ BEGIN_PROVIDER [ double precision, psi_selectors_coef_transp, (N_states,psi_sele
 
   do i=1,N_det_selectors
     do k=1,N_states
-      psi_selectors_coef_transp(k,i) = psi_selectors_coef(i,k) 
+      psi_selectors_coef_transp(k,i) = conjg(psi_selectors_coef(i,k) )
     enddo
   enddo
 END_PROVIDER
