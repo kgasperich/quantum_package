@@ -133,7 +133,7 @@ subroutine $subroutine_diexcOrg(key_in,key_mask,hole_1,particl_1,hole_2, particl
   integer                        :: N_elec_in_key_hole_1(2),N_elec_in_key_part_1(2)
   integer                        :: N_elec_in_key_hole_2(2),N_elec_in_key_part_2(2)
   
-  double precision               :: mo_bielec_integral
+  complex*16               :: mo_bielec_integral
   logical                        :: is_a_two_holes_two_particles
   integer, allocatable           :: ia_ja_pairs(:,:,:)
   integer, allocatable           :: ib_jb_pairs(:,:)

@@ -19,7 +19,7 @@ END_PROVIDER
 
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_det_generators, (N_int,2,N_det_generators) ]
-&BEGIN_PROVIDER [ double precision, psi_coef_generators, (N_det_generators,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_coef_generators, (N_det_generators,N_states) ]
  implicit none
  BEGIN_DOC
  ! read wf
@@ -27,7 +27,7 @@ END_PROVIDER
  END_DOC
  integer                        :: i, k
  integer, save :: ifirst = 0
- double precision, allocatable  :: psi_coef_read(:,:)
+ complex*16, allocatable  :: psi_coef_read(:,:)
  if(ifirst == 0)then
   call read_dets(psi_det_generators,N_int,N_det_generators)
    allocate (psi_coef_read(N_det_generators,N_states))

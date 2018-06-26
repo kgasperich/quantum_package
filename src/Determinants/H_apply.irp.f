@@ -5,7 +5,7 @@ type H_apply_buffer_type
   integer                        :: N_det
   integer                        :: sze
   integer(bit_kind), pointer     :: det(:,:,:)
-  double precision , pointer     :: coef(:,:)
+  complex*16 , pointer     :: coef(:,:)
   double precision , pointer     :: e2(:,:)
 end type H_apply_buffer_type
 
@@ -36,7 +36,7 @@ type(H_apply_buffer_type), pointer :: H_apply_buffer(:)
         H_apply_buffer(iproc)%e2(sze,N_states)                       &
         )
     H_apply_buffer(iproc)%det  = 0_bit_kind
-    H_apply_buffer(iproc)%coef = 0.d0
+    H_apply_buffer(iproc)%coef = (0.d0,0.d0)
     H_apply_buffer(iproc)%e2   = 0.d0
     call omp_init_lock(H_apply_buffer_lock(1,iproc))
     !$OMP END PARALLEL
@@ -58,7 +58,7 @@ subroutine resize_H_apply_buffer(new_size,iproc)
   implicit none
   integer, intent(in)            :: new_size, iproc
   integer(bit_kind), pointer     :: buffer_det(:,:,:)
-  double precision,  pointer     :: buffer_coef(:,:)
+  complex*16,  pointer     :: buffer_coef(:,:)
   double precision,  pointer     :: buffer_e2(:,:)
   integer                        :: i,j,k
   integer                        :: Ndet
@@ -76,7 +76,7 @@ subroutine resize_H_apply_buffer(new_size,iproc)
   allocate ( buffer_det(N_int,2,new_size),                           &
       buffer_coef(new_size,N_states),                                &
       buffer_e2(new_size,N_states) )
-  buffer_coef = 0.d0 
+  buffer_coef = (0.d0,0.d0)
   buffer_e2 = 0.d0 
   do i=1,min(new_size,H_apply_buffer(iproc)%N_det)
     do k=1,N_int
@@ -118,7 +118,7 @@ subroutine copy_H_apply_buffer_to_wf
 ! After calling this subroutine, N_det, psi_det and psi_coef need to be touched
   END_DOC
   integer(bit_kind), allocatable :: buffer_det(:,:,:)
-  double precision, allocatable  :: buffer_coef(:,:)
+  complex*16, allocatable  :: buffer_coef(:,:)
   integer                        :: i,j,k
   integer                        :: N_det_old
   
@@ -189,7 +189,8 @@ subroutine copy_H_apply_buffer_to_wf
   !$OMP BARRIER
   H_apply_buffer(j)%N_det = 0
   !$OMP END PARALLEL
-  call normalize(psi_coef,N_det)
+  ! this only normalizes the first state?
+  call normalize_complex(psi_coef,N_det)
   SOFT_TOUCH N_det psi_det psi_coef
   
 !  logical :: found_duplicates
@@ -303,7 +304,7 @@ subroutine fill_H_apply_buffer_no_selection(n_selected,det_buffer,Nint,iproc)
   enddo
   do j=1,N_states
     do i=1,N_selected
-      H_apply_buffer(iproc)%coef(i+H_apply_buffer(iproc)%N_det,j) = 0.d0
+      H_apply_buffer(iproc)%coef(i+H_apply_buffer(iproc)%N_det,j) = (0.d0,0.d0)
     enddo
   enddo
   H_apply_buffer(iproc)%N_det = new_size
