@@ -20,19 +20,21 @@ BEGIN_PROVIDER [ double precision, CI_energy, (N_states_diag) ]
 END_PROVIDER
 
  BEGIN_PROVIDER [ double precision, CI_electronic_energy, (N_states_diag) ]
-&BEGIN_PROVIDER [ double precision, CI_eigenvectors, (N_det,N_states_diag) ]
+&BEGIN_PROVIDER [ complex*16, CI_eigenvectors, (N_det,N_states_diag) ]
 &BEGIN_PROVIDER [ double precision, CI_eigenvectors_s2, (N_states_diag) ]
    BEGIN_DOC
    ! Eigenvectors/values of the CI matrix
    END_DOC
    implicit none
-   double precision               :: ovrlp,u_dot_v
+   double precision               :: ovrlp
+   complex*16               :: u_dot_v_complex
    integer                        :: i_good_state
    integer, allocatable           :: index_good_state_array(:)
    logical, allocatable           :: good_state_array(:)
    double precision, allocatable  :: s2_values_tmp(:)
    integer                        :: i_other_state
-   double precision, allocatable  :: eigenvectors(:,:), eigenvalues(:)
+   double precision, allocatable  :: eigenvalues(:)
+   complex*16, allocatable  :: eigenvectors(:,:)
    integer                        :: i_state
    double precision               :: e_0
    integer                        :: i,j,k
@@ -50,7 +52,7 @@ END_PROVIDER
    
    do j=min(N_states,N_det)+1,N_states_diag
      do i=1,N_det
-       CI_eigenvectors(i,j) = 0.d0
+       CI_eigenvectors(i,j) = (0.d0,0.d0)
      enddo
    enddo
    
@@ -71,7 +73,7 @@ END_PROVIDER
      
      allocate (eigenvectors(size(H_matrix_all_dets,1),N_det))
      allocate (eigenvalues(N_det))
-     call lapack_diag(eigenvalues,eigenvectors,                      &
+     call lapack_diag_z(eigenvalues,eigenvectors,                      &
          H_matrix_all_dets,size(H_matrix_all_dets,1),N_det)
      CI_electronic_energy(:) = 0.d0
      if (s2_eig) then
