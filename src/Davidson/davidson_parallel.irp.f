@@ -80,7 +80,7 @@ subroutine davidson_slave_work(zmq_to_qp_run_socket, zmq_socket_push, N_st, sze,
   integer                        :: N_det_selectors_read, N_det_generators_read
   double precision, allocatable  :: energy(:)
 
-  integer, external :: zmq_get_cdvector
+  integer, external :: zmq_get_cdvector, zmq_get_dvector
 
   allocate(u_t(N_st,N_det))
   allocate (energy(N_st))
@@ -117,8 +117,8 @@ subroutine davidson_slave_work(zmq_to_qp_run_socket, zmq_socket_push, N_st, sze,
     endif
     if(task_id == 0) exit
     read (msg,*) imin, imax, ishift, istep
-    v_t = 0.d0
-    s_t = 0.d0
+    v_t = (0.d0,0.d0)
+    s_t = (0.d0,0.d0)
     call H_S2_u_0_nstates_openmp_work(v_t,s_t,u_t,N_st,N_det,imin,imax,ishift,istep)
     if (task_done_to_taskserver(zmq_to_qp_run_socket,worker_id,task_id) == -1) then
         print *,  irp_here, 'Unable to send task_done'
@@ -287,9 +287,9 @@ subroutine H_S2_u_0_nstates_zmq(v_0,s_0,u_0,N_st,sze)
 
   allocate(u_t(N_st,N_det))
   do k=1,N_st
-    call dset_order(u_0(1,k),psi_bilinear_matrix_order,N_det)
+    call cdset_order(u_0(1,k),psi_bilinear_matrix_order,N_det)
   enddo
-  call dtranspose(                                                   &
+  call cdtranspose(                                                  &
       u_0,                                                           &
       size(u_0, 1),                                                  &
       u_t,                                                           &
@@ -309,7 +309,7 @@ subroutine H_S2_u_0_nstates_zmq(v_0,s_0,u_0,N_st,sze)
   integer*8 :: rc8
   double precision :: energy(N_st)
 
-  integer, external :: zmq_put_dvector, zmq_put_psi, zmq_put_N_states_diag
+  integer, external :: zmq_put_dvector, zmq_put_psi, zmq_put_N_states_diag, zmq_put_cdvector
 
   energy = 0.d0
 
@@ -322,7 +322,7 @@ subroutine H_S2_u_0_nstates_zmq(v_0,s_0,u_0,N_st,sze)
   if (zmq_put_dvector(zmq_to_qp_run_socket,1,'energy',energy,size(energy)) == -1) then
     stop 'Unable to put energy on ZMQ server'
   endif
-  if (zmq_put_dvector(zmq_to_qp_run_socket, 1, 'u_t', u_t, size(u_t)) == -1) then
+  if (zmq_put_cdvector(zmq_to_qp_run_socket, 1, 'u_t', u_t, size(u_t)) == -1) then
     stop 'Unable to put u_t on ZMQ server'
   endif
 
@@ -366,8 +366,8 @@ subroutine H_S2_u_0_nstates_zmq(v_0,s_0,u_0,N_st,sze)
   endif
     
 
-  v_0 = 0.d0
-  s_0 = 0.d0
+  v_0 = (0.d0,0.d0)
+  s_0 = (0.d0,0.d0)
 
   integer, external :: zmq_set_running
   if (zmq_set_running(zmq_to_qp_run_socket) == -1) then
@@ -386,9 +386,9 @@ subroutine H_S2_u_0_nstates_zmq(v_0,s_0,u_0,N_st,sze)
   call end_parallel_job(zmq_to_qp_run_socket, zmq_socket_pull, 'davidson')
 
   do k=1,N_st
-    call dset_order(v_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
-    call dset_order(s_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
-    call dset_order(u_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
+    call cdset_order(v_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
+    call cdset_order(s_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
+    call cdset_order(u_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
   enddo
 end
 

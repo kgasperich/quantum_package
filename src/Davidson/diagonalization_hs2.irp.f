@@ -21,7 +21,7 @@ subroutine davidson_diag_hs2(dets_in,u_in,s2_out,dim_in,energies,sze,N_st,N_st_d
   END_DOC
   integer, intent(in)            :: dim_in, sze, N_st, N_st_diag, Nint, iunit
   integer(bit_kind), intent(in)  :: dets_in(Nint,2,sze)
-  double precision, intent(inout) :: u_in(dim_in,N_st_diag)
+  complex*16, intent(inout) :: u_in(dim_in,N_st_diag)
   double precision, intent(out)  :: energies(N_st_diag), s2_out(N_st_diag)
   double precision, allocatable  :: H_jj(:)
   
@@ -81,21 +81,27 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
   double precision,  intent(in)  :: H_jj(sze)
   double precision,  intent(inout) :: s2_out(N_st_diag)
   integer,  intent(in)           :: iunit
-  double precision, intent(inout) :: u_in(dim_in,N_st_diag)
+  complex*16, intent(inout) :: u_in(dim_in,N_st_diag)
   double precision, intent(out)  :: energies(N_st_diag)
   
   integer                        :: iter
   integer                        :: i,j,k,l,m
   logical                        :: converged
   
-  double precision               :: u_dot_v, u_dot_u
+  double precision               :: u_dot_u_complex
+  complex*16               :: u_dot_v_complex
   
   integer                        :: k_pairs, kl
   
   integer                        :: iter2
-  double precision, allocatable  :: W(:,:),  U(:,:), S(:,:), overlap(:,:)
-  double precision, allocatable  :: y(:,:), h(:,:), lambda(:), s2(:)
-  double precision, allocatable  :: c(:), s_(:,:), s_tmp(:,:)
+!  double precision, allocatable  :: overlap(:,:)
+!  complex*16, allocatable  :: overlap(:,:)
+  complex*16, allocatable   :: W(:,:), U(:,:), S(:,:)
+  double precision, allocatable  :: lambda(:), s2(:)
+  complex*16, allocatable  :: y(:,:), h(:,:), y_tmp(:,:)
+!  double precision, allocatable  :: c(:)
+!  complex*16, allocatable  :: c(:)
+  complex*16, allocatable  :: s_(:,:), s_tmp(:,:)
   double precision               :: diag_h_mat_elem
   double precision, allocatable  :: residual_norm(:)
   character*(16384)              :: write_buffer
@@ -157,6 +163,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       ! Small
       h(N_st_diag*itermax,N_st_diag*itermax),                        &
       y(N_st_diag*itermax,N_st_diag*itermax),                        &
+      y_tmp(N_st_diag*itermax,N_st_diag*itermax),                    &
       s_(N_st_diag*itermax,N_st_diag*itermax),                       &
       s_tmp(N_st_diag*itermax,N_st_diag*itermax),                    &
       residual_norm(N_st_diag),                                      &
@@ -165,13 +172,14 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       overlap(N_st_diag*itermax, N_st_diag*itermax),                 &
       lambda(N_st_diag*itermax))
   
-  h = 0.d0
-  U = 0.d0
-  W = 0.d0
-  S = 0.d0
-  y = 0.d0
-  s_ = 0.d0
-  s_tmp = 0.d0
+  h = (0.d0,0.d0)
+  U = (0.d0,0.d0)
+  W = (0.d0,0.d0)
+  S = (0.d0,0.d0)
+  y = (0.d0,0.d0)
+  s_ = (0.d0,0.d0)
+  s_tmp = (0.d0,0.d0)
+  y_tmp = (0.d0,0.d0)
 
 
   ASSERT (N_st > 0)
@@ -186,17 +194,17 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
   converged = .False.
   
   do k=N_st+1,N_st_diag
-    u_in(k,k) = 10.d0
+    u_in(k,k) = (10.d0,0.d0)
     do i=1,sze
       call random_number(r1)
       call random_number(r2)
       r1 = dsqrt(-2.d0*dlog(r1))
       r2 = dtwo_pi*r2
-      u_in(i,k) = r1*dcos(r2)
+      u_in(i,k) = dcmplx(r1*dcos(r2),r1*dsin(r2))
     enddo
   enddo
   do k=1,N_st_diag
-    call normalize(u_in(1,k),sze)
+    call normalize_complex(u_in(1,k),sze)
   enddo
 
   
@@ -213,7 +221,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       shift  = N_st_diag*(iter-1)
       shift2 = N_st_diag*iter
       
-      call ortho_qr(U,size(U,1),sze,shift2)
+      call ortho_qr_complex(U,size(U,1),sze,shift2)
 
       ! Compute |W_k> = \sum_i |i><i|H|u_k>
       ! -----------------------------------------
@@ -229,13 +237,13 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       ! Compute h_kl = <u_k | W_l> = <u_k| H |u_l>
       ! -------------------------------------------
 
-      call dgemm('T','N', shift2, shift2, sze,                       &
-          1.d0, U, size(U,1), W, size(W,1),                          &
-          0.d0, h, size(h,1))
+      call zgemm('C','N', shift2, shift2, sze,                       &
+          (1.d0,0.d0), U, size(U,1), W, size(W,1),                   &
+          (0.d0,0.d0), h, size(h,1))
       
-      call dgemm('T','N', shift2, shift2, sze,                       &
-          1.d0, U, size(U,1), S, size(S,1),                          &
-          0.d0, s_, size(s_,1))
+      call zgemm('C','N', shift2, shift2, sze,                       &
+          (1.d0,0.d0), U, size(U,1), S, size(S,1),                   &
+          (0.d0,0.d0), s_, size(s_,1))
 
 
 !      ! Diagonalize S^2
@@ -281,23 +289,23 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       ! Diagonalize h
       ! -------------
 
-      call lapack_diag(lambda,y,h,size(h,1),shift2)
+      call lapack_diag_z(lambda,y,h,size(h,1),shift2)
       
       ! Compute S2 for each eigenvector
       ! -------------------------------
 
-      call dgemm('N','N',shift2,shift2,shift2,                       &
-          1.d0, s_, size(s_,1), y, size(y,1),                        &
-          0.d0, s_tmp, size(s_tmp,1))
+      call zgemm('N','N',shift2,shift2,shift2,                       &
+          (1.d0,0.d0), s_, size(s_,1), y, size(y,1),                        &
+          (0.d0,0.d0), s_tmp, size(s_tmp,1))
       
-      call dgemm('T','N',shift2,shift2,shift2,                       &
-          1.d0, y, size(y,1), s_tmp, size(s_tmp,1),                  &
-          0.d0, s_, size(s_,1))
+      call zgemm('C','N',shift2,shift2,shift2,                       &
+          (1.d0,0.d0), y, size(y,1), s_tmp, size(s_tmp,1),                  &
+          (0.d0,0.d0), s_, size(s_,1))
 
 
       
       do k=1,shift2
-        s2(k) = s_(k,k) + S_z2_Sz
+        s2(k) = real(s_(k,k)) + S_z2_Sz
       enddo
 
       if (s2_eig) then
@@ -314,7 +322,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
         if (.not. state_ok(k)) then
           do l=k+1,shift2
             if (state_ok(l)) then
-              call dswap(shift2, y(1,k), 1, y(1,l), 1)
+              call zswap(shift2, y(1,k), 1, y(1,l), 1)
               call dswap(1, s2(k), 1, s2(l), 1)
               call dswap(1, lambda(k), 1, lambda(l), 1)
               state_ok(k) = .True.
@@ -333,7 +341,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
         overlap = -1.d0
         do k=1,shift2
           do i=1,shift2
-            overlap(k,i) = dabs(y(k,i))
+            overlap(k,i) = cdabs(y(k,i))
           enddo
         enddo
         do k=1,N_st
@@ -348,11 +356,12 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
             overlap(order(k),i) = -1.d0
           enddo
         enddo
-        overlap = y
+!        overlap = y
+        y_tmp = y
         do k=1,N_st
           l = order(k)
           if (k /= l) then
-            y(1:shift2,k) = overlap(1:shift2,l)
+            y(1:shift2,k) = y_tmp(1:shift2,l)
           endif
         enddo
         do k=1,N_st
@@ -373,12 +382,15 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       ! Express eigenvectors of h in the determinant basis
       ! --------------------------------------------------
       
-      call dgemm('N','N', sze, N_st_diag, shift2,                    &
-          1.d0, U, size(U,1), y, size(y,1), 0.d0, U(1,shift2+1), size(U,1))
-      call dgemm('N','N', sze, N_st_diag, shift2,                    &
-          1.d0, W, size(W,1), y, size(y,1), 0.d0, W(1,shift2+1), size(W,1))
-      call dgemm('N','N', sze, N_st_diag, shift2,                    &
-          1.d0, S, size(S,1), y, size(y,1), 0.d0, S(1,shift2+1), size(S,1))
+      call zgemm('N','N', sze, N_st_diag, shift2,                    &
+         (1.d0,0.d0), U, size(U,1), y, size(y,1), &
+         (0.d0,0.d0), U(1,shift2+1), size(U,1))
+      call zgemm('N','N', sze, N_st_diag, shift2,                    &
+          (1.d0,0.d0), W, size(W,1), y, size(y,1), &
+          (0.d0,0.d0), W(1,shift2+1), size(W,1))
+      call zgemm('N','N', sze, N_st_diag, shift2,                    &
+          (1.d0,0.d0), S, size(S,1), y, size(y,1), &
+          (0.d0,0.d0), S(1,shift2+1), size(S,1))
 
       ! Compute residual vector and davidson step
       ! -----------------------------------------
@@ -392,7 +404,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
         enddo
 
         if (k <= N_st) then
-          residual_norm(k) = u_dot_u(U(1,shift2+k),sze)
+          residual_norm(k) = u_dot_u_complex(U(1,shift2+k),sze)
           to_print(1,k) = lambda(k) + nuclear_repulsion
           to_print(2,k) = s2(k)
           to_print(3,k) = residual_norm(k)
@@ -416,8 +428,9 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
     ! Re-contract to u_in
     ! -----------
     
-    call dgemm('N','N', sze, N_st_diag, shift2, 1.d0,      &
-        U, size(U,1), y, size(y,1), 0.d0, u_in, size(u_in,1))
+    call zgemm('N','N', sze, N_st_diag, shift2, &
+              (1.d0,0.d0), U, size(U,1), y, size(y,1), &
+              (0.d0,0.d0), u_in, size(u_in,1))
 
   enddo
 
@@ -438,7 +451,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       U, overlap,                                                    &
       c, S,                                                          &
       h,                                                             &
-      y, s_, s_tmp,                                                  &
+      y, s_, s_tmp, y_tmp,                                           &
       lambda                                                         &
       )
 end
@@ -454,11 +467,12 @@ subroutine u_0_H_u_0(e_0,u_0,n,keys_tmp,Nint,N_st,sze)
   END_DOC
   integer, intent(in)            :: n,Nint, N_st, sze
   double precision, intent(out)  :: e_0(N_st)
-  double precision, intent(inout) :: u_0(sze,N_st)
+  complex*16, intent(inout) :: u_0(sze,N_st)
   integer(bit_kind),intent(in)   :: keys_tmp(Nint,2,n)
   
-  double precision, allocatable  :: v_0(:,:), s_0(:,:), u_1(:,:)
-  double precision               :: u_dot_u,u_dot_v,diag_H_mat_elem
+  complex*16, allocatable  :: v_0(:,:), s_0(:,:), u_1(:,:)
+  double precision               :: u_dot_u_complex,diag_H_mat_elem
+  complex*16               :: u_dot_v_complex
   integer                        :: i,j
 
   if ((sze > 100000).and.distributed_davidson) then
@@ -473,9 +487,9 @@ subroutine u_0_H_u_0(e_0,u_0,n,keys_tmp,Nint,N_st,sze)
   endif
   double precision :: norm
   do i=1,N_st
-    norm = u_dot_u(u_0(1,i),n)
+    norm = u_dot_u_complex(u_0(1,i),n)
     if (norm /= 0.d0) then
-      e_0(i) = u_dot_v(v_0(1,i),u_0(1,i),n)
+      e_0(i) = real(u_dot_v_complex(v_0(1,i),u_0(1,i),n))
     else
       e_0(i) = 0.d0
     endif
