@@ -1,0 +1,431 @@
+ BEGIN_PROVIDER [ complex*16, one_body_dm_mo_alpha_average, (mo_tot_num,mo_tot_num) ]
+&BEGIN_PROVIDER [ complex*16, one_body_dm_mo_beta_average, (mo_tot_num,mo_tot_num) ]
+   implicit none
+   BEGIN_DOC
+   ! Alpha and beta one-body density matrix for each state
+   END_DOC
+
+   integer                        :: i
+
+   one_body_dm_mo_alpha_average = (0.d0,0.d0)
+   one_body_dm_mo_beta_average = (0.d0,0.d0)
+   do i = 1,N_states
+    one_body_dm_mo_alpha_average(:,:) += one_body_dm_mo_alpha(:,:,i) * state_average_weight(i)
+    one_body_dm_mo_beta_average(:,:) += one_body_dm_mo_beta(:,:,i) * state_average_weight(i)
+   enddo
+END_PROVIDER
+
+BEGIN_PROVIDER [ complex*16, one_body_dm_mo_diff, (mo_tot_num,mo_tot_num,2:N_states) ]
+ implicit none
+ BEGIN_DOC
+ ! Difference of the one-body density matrix with respect to the ground state
+ END_DOC
+ integer :: i,j, istate
+
+ do istate=2,N_states
+  do j=1,mo_tot_num
+    do i=1,mo_tot_num
+      one_body_dm_mo_diff(i,j,istate) = &
+        one_body_dm_mo_alpha(i,j,istate) - one_body_dm_mo_alpha(i,j,1) + &
+        one_body_dm_mo_beta (i,j,istate) - one_body_dm_mo_beta (i,j,1) 
+    enddo
+  enddo
+  complex*16 :: trace
+  trace = (0.d0,0.d0)
+  do i=1,mo_tot_num
+    trace += one_body_dm_mo_diff(i,i,istate)
+  enddo
+  print *, irp_here, trace
+ enddo
+ 
+END_PROVIDER
+
+
+ BEGIN_PROVIDER [ complex*16, one_body_dm_mo_spin_index, (mo_tot_num,mo_tot_num,N_states,2) ]
+ implicit none 
+ integer :: i,j,ispin,istate
+ ispin = 1
+  do istate = 1, N_states
+   do j = 1, mo_tot_num
+    do i = 1, mo_tot_num
+     one_body_dm_mo_spin_index(i,j,istate,ispin) = one_body_dm_mo_alpha(i,j,istate)
+    enddo
+   enddo
+  enddo
+
+ ispin = 2
+  do istate = 1, N_states
+   do j = 1, mo_tot_num
+    do i = 1, mo_tot_num
+     one_body_dm_mo_spin_index(i,j,istate,ispin) = one_body_dm_mo_beta(i,j,istate)
+    enddo
+   enddo
+  enddo
+
+ END_PROVIDER
+
+
+ BEGIN_PROVIDER [ complex*16, one_body_dm_dagger_mo_spin_index, (mo_tot_num,mo_tot_num,N_states,2) ]
+ implicit none 
+ integer :: i,j,ispin,istate
+ ispin = 1
+  do istate = 1, N_states
+   do j = 1, mo_tot_num
+    one_body_dm_dagger_mo_spin_index(j,j,istate,ispin) = 1 - one_body_dm_mo_alpha(j,j,istate)
+    do i = j+1, mo_tot_num
+     one_body_dm_dagger_mo_spin_index(i,j,istate,ispin) = -one_body_dm_mo_alpha(i,j,istate)
+     one_body_dm_dagger_mo_spin_index(j,i,istate,ispin) = -conjg(one_body_dm_mo_alpha(i,j,istate))
+    enddo
+   enddo
+  enddo
+
+ ispin = 2
+  do istate = 1, N_states
+   do j = 1, mo_tot_num
+    one_body_dm_dagger_mo_spin_index(j,j,istate,ispin) = 1 - one_body_dm_mo_beta(j,j,istate)
+    do i = j+1, mo_tot_num
+     one_body_dm_dagger_mo_spin_index(i,j,istate,ispin) = -one_body_dm_mo_beta(i,j,istate)
+     one_body_dm_dagger_mo_spin_index(j,i,istate,ispin) = -conjg(one_body_dm_mo_beta(i,j,istate))
+    enddo
+   enddo
+  enddo
+
+ END_PROVIDER
+
+ BEGIN_PROVIDER [ complex*16, one_body_dm_mo_alpha, (mo_tot_num,mo_tot_num,N_states) ]
+&BEGIN_PROVIDER [ complex*16, one_body_dm_mo_beta, (mo_tot_num,mo_tot_num,N_states) ]
+   implicit none
+   BEGIN_DOC
+   ! Alpha and beta one-body density matrix for each state
+   END_DOC
+
+   integer                        :: j,k,l,m,k_a,k_b
+   integer                        :: occ(N_int*bit_kind_size,2)
+   complex*16               :: ck, cl, ckl
+   double precision               :: phase
+   integer                        :: h1,h2,p1,p2,s1,s2, degree
+   integer(bit_kind)              :: tmp_det(N_int,2), tmp_det2(N_int)
+   integer                        :: exc(0:2,2),n_occ(2)
+   complex*16, allocatable  :: tmp_a(:,:,:), tmp_b(:,:,:)
+   integer                        :: krow, kcol, lrow, lcol
+
+   PROVIDE psi_det
+
+  one_body_dm_mo_alpha = (0.d0,0.d0)
+  one_body_dm_mo_beta  = (0.d0,0.d0)
+  !$OMP PARALLEL DEFAULT(NONE)                                         &
+    !$OMP PRIVATE(j,k,k_a,k_b,l,m,occ,ck, cl, ckl,phase,h1,h2,p1,p2,s1,s2, degree,exc, &
+    !$OMP  tmp_a, tmp_b, n_occ, krow, kcol, lrow, lcol, tmp_det, tmp_det2)&
+    !$OMP SHARED(psi_det,psi_coef,N_int,N_states,elec_alpha_num,&
+    !$OMP  elec_beta_num,one_body_dm_mo_alpha,one_body_dm_mo_beta,N_det,&
+    !$OMP  mo_tot_num,psi_bilinear_matrix_rows,psi_bilinear_matrix_columns, &
+    !$OMP  psi_bilinear_matrix_transp_rows, psi_bilinear_matrix_transp_columns, &
+    !$OMP  psi_bilinear_matrix_order_reverse, psi_det_alpha_unique, psi_det_beta_unique, &
+    !$OMP  psi_bilinear_matrix_values, psi_bilinear_matrix_transp_values, &
+    !$OMP  N_det_alpha_unique,N_det_beta_unique,irp_here)
+  allocate(tmp_a(mo_tot_num,mo_tot_num,N_states), tmp_b(mo_tot_num,mo_tot_num,N_states) )
+  tmp_a = (0.d0,0.d0)
+  !$OMP DO SCHEDULE(dynamic,64)
+  do k_a=1,N_det
+    krow = psi_bilinear_matrix_rows(k_a) 
+    ASSERT (krow <= N_det_alpha_unique)
+
+    kcol = psi_bilinear_matrix_columns(k_a) 
+    ASSERT (kcol <= N_det_beta_unique)
+
+    tmp_det(1:N_int,1) = psi_det_alpha_unique(1:N_int,krow)
+    tmp_det(1:N_int,2) = psi_det_beta_unique (1:N_int,kcol)
+
+    ! Diagonal part
+    ! -------------
+
+    call bitstring_to_list_ab(tmp_det, occ, n_occ, N_int)
+    do m=1,N_states
+      ck = conjg(psi_bilinear_matrix_values(k_a,m))*psi_bilinear_matrix_values(k_a,m)
+      do l=1,elec_alpha_num
+        j = occ(l,1)
+        tmp_a(j,j,m) += ck
+      enddo
+    enddo
+
+    if (k_a == N_det) cycle
+    l = k_a+1
+    lrow = psi_bilinear_matrix_rows(l) 
+    lcol = psi_bilinear_matrix_columns(l) 
+    ! Fix beta determinant, loop over alphas
+    do while ( lcol == kcol )
+      tmp_det2(:) = psi_det_alpha_unique(:, lrow)
+      call get_excitation_degree_spin(tmp_det(1,1),tmp_det2,degree,N_int)
+      if (degree == 1) then
+        exc = 0
+        call get_mono_excitation_spin(tmp_det(1,1),tmp_det2,exc,phase,N_int)
+        call decode_exc_spin(exc,h1,p1,h2,p2)
+        do m=1,N_states
+          ckl = conjg(psi_bilinear_matrix_values(k_a,m))*psi_bilinear_matrix_values(l,m) * phase
+          tmp_a(h1,p1,m) += ckl
+          tmp_a(p1,h1,m) += conjg(ckl)
+        enddo
+      endif
+      l = l+1
+      if (l>N_det) exit
+      lrow = psi_bilinear_matrix_rows(l) 
+      lcol = psi_bilinear_matrix_columns(l) 
+    enddo
+
+  enddo
+  !$OMP END DO NOWAIT
+
+  !$OMP CRITICAL
+  one_body_dm_mo_alpha(:,:,:) = one_body_dm_mo_alpha(:,:,:) + tmp_a(:,:,:)
+  !$OMP END CRITICAL
+  deallocate(tmp_a)
+
+  tmp_b = (0.d0,0.d0)
+  !$OMP DO SCHEDULE(dynamic,64)
+  do k_b=1,N_det
+    krow = psi_bilinear_matrix_transp_rows(k_b) 
+    ASSERT (krow <= N_det_alpha_unique)
+
+    kcol = psi_bilinear_matrix_transp_columns(k_b) 
+    ASSERT (kcol <= N_det_beta_unique)
+
+    tmp_det(1:N_int,1) = psi_det_alpha_unique(1:N_int,krow)
+    tmp_det(1:N_int,2) = psi_det_beta_unique (1:N_int,kcol)
+
+    ! Diagonal part
+    ! -------------
+
+    call bitstring_to_list_ab(tmp_det, occ, n_occ, N_int)
+    do m=1,N_states
+      ck = conjg(psi_bilinear_matrix_transp_values(k_b,m))*psi_bilinear_matrix_transp_values(k_b,m)
+      do l=1,elec_beta_num
+        j = occ(l,2)
+        tmp_b(j,j,m) += ck
+      enddo
+    enddo
+
+    if (k_b == N_det) cycle
+    l = k_b+1
+    lrow = psi_bilinear_matrix_transp_rows(l) 
+    lcol = psi_bilinear_matrix_transp_columns(l) 
+    ! Fix beta determinant, loop over alphas
+    do while ( lrow == krow )
+      tmp_det2(:) = psi_det_beta_unique(:, lcol)
+      call get_excitation_degree_spin(tmp_det(1,2),tmp_det2,degree,N_int)
+      if (degree == 1) then
+        exc = 0
+        call get_mono_excitation_spin(tmp_det(1,2),tmp_det2,exc,phase,N_int)
+        call decode_exc_spin(exc,h1,p1,h2,p2)
+        do m=1,N_states
+          ckl = conjg(psi_bilinear_matrix_transp_values(k_b,m))*psi_bilinear_matrix_transp_values(l,m) * phase
+          tmp_b(h1,p1,m) += ckl
+          tmp_b(p1,h1,m) += conjg(ckl)
+        enddo
+      endif
+      l = l+1
+      if (l>N_det) exit
+      lrow = psi_bilinear_matrix_transp_rows(l) 
+      lcol = psi_bilinear_matrix_transp_columns(l) 
+    enddo
+
+  enddo
+  !$OMP END DO NOWAIT
+  !$OMP CRITICAL
+  one_body_dm_mo_beta(:,:,:)  = one_body_dm_mo_beta(:,:,:)  + tmp_b(:,:,:)
+  !$OMP END CRITICAL
+
+  deallocate(tmp_b)
+  !$OMP END PARALLEL
+
+END_PROVIDER
+
+ BEGIN_PROVIDER [ complex*16, one_body_single_double_dm_mo_alpha, (mo_tot_num,mo_tot_num) ]
+&BEGIN_PROVIDER [ complex*16, one_body_single_double_dm_mo_beta, (mo_tot_num,mo_tot_num) ]
+   implicit none
+   BEGIN_DOC
+   ! Alpha and beta one-body density matrix for each state
+   END_DOC
+
+   integer                        :: j,k,l,m
+   integer                        :: occ(N_int*bit_kind_size,2)
+   complex*16               :: ck, cl, ckl
+   double precision               :: phase
+   integer                        :: h1,h2,p1,p2,s1,s2, degree
+   integer                        :: exc(0:2,2,2),n_occ_alpha
+   complex*16, allocatable  :: tmp_a(:,:), tmp_b(:,:)
+   integer :: degree_respect_to_HF_k
+   integer :: degree_respect_to_HF_l
+
+   PROVIDE elec_alpha_num elec_beta_num
+
+   one_body_single_double_dm_mo_alpha = (0.d0,0.d0)
+   one_body_single_double_dm_mo_beta  = (0.d0,0.d0)
+   !$OMP PARALLEL DEFAULT(NONE)                                         &
+      !$OMP PRIVATE(j,k,l,m,occ,ck, cl, ckl,phase,h1,h2,p1,p2,s1,s2, degree,exc, &
+      !$OMP  tmp_a, tmp_b, n_occ_alpha,degree_respect_to_HF_k,degree_respect_to_HF_l)&
+      !$OMP SHARED(ref_bitmask,psi_det,psi_coef,N_int,N_states,state_average_weight,elec_alpha_num,&
+      !$OMP  elec_beta_num,one_body_single_double_dm_mo_alpha,one_body_single_double_dm_mo_beta,N_det,&
+      !$OMP  mo_tot_num)
+   allocate(tmp_a(mo_tot_num,mo_tot_num), tmp_b(mo_tot_num,mo_tot_num) )
+   tmp_a = (0.d0,0.d0)
+   tmp_b = (0.d0,0.d0)
+   !$OMP DO SCHEDULE(dynamic)
+   do k=1,N_det
+     call bitstring_to_list(psi_det(1,1,k), occ(1,1), n_occ_alpha, N_int)
+     call bitstring_to_list(psi_det(1,2,k), occ(1,2), n_occ_alpha, N_int)
+     call get_excitation_degree(ref_bitmask,psi_det(1,1,k),degree_respect_to_HF_k,N_int)
+     
+     do m=1,N_states
+       ck = conjg(psi_coef(k,m))*psi_coef(k,m) * state_average_weight(m)
+       call get_excitation_degree(ref_bitmask,psi_det(1,1,k),degree_respect_to_HF_l,N_int)
+       if(degree_respect_to_HF_l.le.0)then
+         do l=1,elec_alpha_num
+           j = occ(l,1)
+           tmp_a(j,j) += ck
+         enddo
+         do l=1,elec_beta_num
+           j = occ(l,2)
+           tmp_b(j,j) += ck
+         enddo
+       endif
+     enddo
+     do l=1,k-1
+       call get_excitation_degree(ref_bitmask,psi_det(1,1,l),degree_respect_to_HF_l,N_int)
+       if(degree_respect_to_HF_k.ne.0)cycle
+       if(degree_respect_to_HF_l.eq.2.and.degree_respect_to_HF_k.ne.2)cycle
+       call get_excitation_degree(psi_det(1,1,k),psi_det(1,1,l),degree,N_int)
+       if (degree /= 1) then
+         cycle
+       endif
+       call get_mono_excitation(psi_det(1,1,k),psi_det(1,1,l),exc,phase,N_int)
+       call decode_exc(exc,degree,h1,p1,h2,p2,s1,s2)
+       do m=1,N_states
+         ckl = conjg(psi_coef(k,m)) * psi_coef(l,m) * phase * state_average_weight(m)
+         if (s1==1) then
+           tmp_a(h1,p1) += ckl
+           tmp_a(p1,h1) += conjg(ckl)
+         else
+           tmp_b(h1,p1) += ckl
+           tmp_b(p1,h1) += conjg(ckl)
+         endif
+       enddo
+       enddo
+     enddo
+   !$OMP END DO NOWAIT
+   !$OMP CRITICAL
+   one_body_single_double_dm_mo_alpha = one_body_single_double_dm_mo_alpha + tmp_a
+   !$OMP END CRITICAL
+   !$OMP CRITICAL
+   one_body_single_double_dm_mo_beta  = one_body_single_double_dm_mo_beta  + tmp_b
+   !$OMP END CRITICAL
+   deallocate(tmp_a,tmp_b)
+   !$OMP END PARALLEL
+END_PROVIDER
+
+BEGIN_PROVIDER [ complex*16, one_body_dm_mo, (mo_tot_num,mo_tot_num) ]
+ implicit none
+ BEGIN_DOC
+ ! One-body density matrix
+ END_DOC
+ one_body_dm_mo = one_body_dm_mo_alpha_average + one_body_dm_mo_beta_average
+END_PROVIDER
+
+BEGIN_PROVIDER [ complex*16, one_body_spin_density_mo, (mo_tot_num,mo_tot_num) ]
+ implicit none
+ BEGIN_DOC
+ ! rho(alpha) - rho(beta)
+ END_DOC
+ one_body_spin_density_mo = one_body_dm_mo_alpha_average - one_body_dm_mo_beta_average
+END_PROVIDER
+
+subroutine set_natural_mos
+ implicit none
+ BEGIN_DOC
+ ! Set natural orbitals, obtained by diagonalization of the one-body density matrix in the MO basis
+ END_DOC
+ character*(64) :: label
+
+ label = "Natural"
+ call mo_as_svd_vectors_of_mo_matrix(one_body_dm_mo,size(one_body_dm_mo,1),mo_tot_num,mo_tot_num,label)
+
+end
+subroutine save_natural_mos
+ implicit none
+ BEGIN_DOC
+ ! Save natural orbitals, obtained by diagonalization of the one-body density matrix in the MO basis
+ END_DOC
+ call set_natural_mos
+ call save_mos
+ 
+end
+
+
+BEGIN_PROVIDER [ double precision, state_average_weight, (N_states) ]
+ implicit none
+ BEGIN_DOC
+ ! Weights in the state-average calculation of the density matrix
+ END_DOC
+ logical :: exists
+
+ state_average_weight(:) = 1.d0
+ call ezfio_has_determinants_state_average_weight(exists)
+ if (exists) then
+  call ezfio_get_determinants_state_average_weight(state_average_weight)
+ endif
+ state_average_weight(:) = state_average_weight(:)+1.d-31
+ state_average_weight(:) = state_average_weight(:)/(sum(state_average_weight(:)))
+END_PROVIDER
+
+
+BEGIN_PROVIDER [ complex*16, one_body_spin_density_ao, (ao_num,ao_num) ]
+ BEGIN_DOC
+! one body spin density matrix on the AO basis : rho_AO(alpha) - rho_AO(beta)
+ END_DOC
+ implicit none
+ integer :: i,j,k,l
+ complex*16 :: dm_mo
+
+ one_body_spin_density_ao = (0.d0,0.d0)
+ do k = 1, ao_num
+  do l = 1, ao_num
+   do i = 1, mo_tot_num
+    do j = 1, mo_tot_num
+     dm_mo = one_body_spin_density_mo(i,j)
+!    if(dabs(dm_mo).le.1.d-10)cycle
+     one_body_spin_density_ao(k,l) += mo_coef(k,i) * conjg(mo_coef(l,j)) * dm_mo
+
+    enddo
+   enddo
+  enddo
+ enddo
+
+END_PROVIDER
+
+ BEGIN_PROVIDER [ complex*16, one_body_dm_ao_alpha, (ao_num,ao_num) ]
+&BEGIN_PROVIDER [ complex*16, one_body_dm_ao_beta, (ao_num,ao_num) ]
+ BEGIN_DOC
+! one body density matrix on the AO basis : rho_AO(alpha) , rho_AO(beta)
+ END_DOC
+ implicit none
+ integer :: i,j,k,l
+ complex*16 :: mo_alpha,mo_beta
+
+ one_body_dm_ao_alpha = (0.d0,0.d0)
+ one_body_dm_ao_beta = (0.d0,0.d0)
+ do k = 1, ao_num
+  do l = 1, ao_num
+   do i = 1, mo_tot_num
+    do j = 1, mo_tot_num
+     mo_alpha = one_body_dm_mo_alpha_average(i,j)
+     mo_beta = one_body_dm_mo_beta_average(i,j)
+!    if(dabs(dm_mo).le.1.d-10)cycle
+     one_body_dm_ao_alpha(k,l) += mo_coef(k,i) * conjg(mo_coef(l,j)) *  mo_alpha
+     one_body_dm_ao_beta(k,l) += mo_coef(k,i) * conjg(mo_coef(l,j))  *  mo_beta        
+    enddo
+   enddo
+  enddo
+ enddo
+
+END_PROVIDER
+
+
