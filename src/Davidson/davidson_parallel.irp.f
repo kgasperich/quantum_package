@@ -67,7 +67,7 @@ subroutine davidson_slave_work(zmq_to_qp_run_socket, zmq_socket_push, N_st, sze,
   integer                        :: imin, imax, ishift, istep
   
   integer, allocatable           :: psi_det_read(:,:,:)
-  double precision, allocatable  :: v_t(:,:), s_t(:,:), u_t(:,:)
+  complex*16, allocatable  :: v_t(:,:), s_t(:,:), u_t(:,:)
 
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: u_t, v_t, s_t
 
@@ -80,12 +80,12 @@ subroutine davidson_slave_work(zmq_to_qp_run_socket, zmq_socket_push, N_st, sze,
   integer                        :: N_det_selectors_read, N_det_generators_read
   double precision, allocatable  :: energy(:)
 
-  integer, external :: zmq_get_dvector
+  integer, external :: zmq_get_cdvector
 
   allocate(u_t(N_st,N_det))
   allocate (energy(N_st))
 
-  if (zmq_get_dvector(zmq_to_qp_run_socket, worker_id, 'u_t', u_t, size(u_t)) == -1) then
+  if (zmq_get_cdvector(zmq_to_qp_run_socket, worker_id, 'u_t', u_t, size(u_t)) == -1) then
     deallocate(u_t,energy)
     return
   endif
@@ -99,7 +99,7 @@ subroutine davidson_slave_work(zmq_to_qp_run_socket, zmq_socket_push, N_st, sze,
     include 'mpif.h'
     integer :: ierr
 
-    call broadcast_chunks_double(u_t,size(u_t))
+    call broadcast_chunks_complex_double(u_t,size(u_t))
     
   IRP_ENDIF
 
@@ -137,8 +137,8 @@ subroutine davidson_push_results(zmq_socket_push, v_t, s_t, imin, imax, task_id)
   
   integer(ZMQ_PTR)    ,intent(in)    :: zmq_socket_push
   integer             ,intent(in)    :: task_id, imin, imax
-  double precision    ,intent(in)    :: v_t(N_states_diag,N_det)
-  double precision    ,intent(in)    :: s_t(N_states_diag,N_det)
+  complex*16    ,intent(in)    :: v_t(N_states_diag,N_det)
+  complex*16    ,intent(in)    :: s_t(N_states_diag,N_det)
   integer                            :: rc, sz
   integer*8                          :: rc8
 
@@ -153,11 +153,11 @@ subroutine davidson_push_results(zmq_socket_push, v_t, s_t, imin, imax, task_id)
   rc = f77_zmq_send( zmq_socket_push, imax, 4, ZMQ_SNDMORE)
   if(rc /= 4) stop 'davidson_push_results failed to push imax'
 
-  rc8 = f77_zmq_send8( zmq_socket_push, v_t(1,imin), 8_8*sz, ZMQ_SNDMORE)
-  if(rc8 /= 8_8*sz) stop 'davidson_push_results failed to push vt'
+  rc8 = f77_zmq_send8( zmq_socket_push, v_t(1,imin), 16_8*sz, ZMQ_SNDMORE)
+  if(rc8 /= 16_8*sz) stop 'davidson_push_results failed to push vt'
 
-  rc8 = f77_zmq_send8( zmq_socket_push, s_t(1,imin), 8_8*sz, 0)
-  if(rc8 /= 8_8*sz) stop 'davidson_push_results failed to push st'
+  rc8 = f77_zmq_send8( zmq_socket_push, s_t(1,imin), 16_8*sz, 0)
+  if(rc8 /= 16_8*sz) stop 'davidson_push_results failed to push st'
 
 ! Activate is zmq_socket_push is a REQ
 IRP_IF ZMQ_PUSH
@@ -180,8 +180,8 @@ subroutine davidson_pull_results(zmq_socket_pull, v_t, s_t, imin, imax, task_id)
   
   integer(ZMQ_PTR)    ,intent(in)     :: zmq_socket_pull
   integer             ,intent(out)    :: task_id, imin, imax
-  double precision    ,intent(out)    :: v_t(N_states_diag,N_det)
-  double precision    ,intent(out)    :: s_t(N_states_diag,N_det)
+  complex*16    ,intent(out)    :: v_t(N_states_diag,N_det)
+  complex*16    ,intent(out)    :: s_t(N_states_diag,N_det)
 
   integer                            :: rc, sz
   integer*8                          :: rc8
@@ -197,11 +197,11 @@ subroutine davidson_pull_results(zmq_socket_pull, v_t, s_t, imin, imax, task_id)
 
   sz = (imax-imin+1)*N_states_diag
 
-  rc8 = f77_zmq_recv8( zmq_socket_pull, v_t(1,imin), 8_8*sz, 0)
-  if(rc8 /= 8*sz) stop 'davidson_pull_results failed to pull v_t'
+  rc8 = f77_zmq_recv8( zmq_socket_pull, v_t(1,imin), 16_8*sz, 0)
+  if(rc8 /= 16*sz) stop 'davidson_pull_results failed to pull v_t'
 
-  rc8 = f77_zmq_recv8( zmq_socket_pull, s_t(1,imin), 8_8*sz, 0)
-  if(rc8 /= 8*sz) stop 'davidson_pull_results failed to pull s_t'
+  rc8 = f77_zmq_recv8( zmq_socket_pull, s_t(1,imin), 16_8*sz, 0)
+  if(rc8 /= 16*sz) stop 'davidson_pull_results failed to pull s_t'
 
 ! Activate if zmq_socket_pull is a REP
 IRP_IF ZMQ_PUSH
@@ -225,17 +225,17 @@ subroutine davidson_collector(zmq_to_qp_run_socket, zmq_socket_pull, v0, s0, sze
   integer, intent(in)            :: sze, N_st
   integer(ZMQ_PTR), intent(in)   :: zmq_to_qp_run_socket
   
-  double precision    ,intent(inout) :: v0(sze, N_st)
-  double precision    ,intent(inout) :: s0(sze, N_st)
+  complex*16    ,intent(inout) :: v0(sze, N_st)
+  complex*16    ,intent(inout) :: s0(sze, N_st)
   
   integer                          :: more, task_id, imin, imax
   
-  double precision, allocatable :: v_t(:,:), s_t(:,:)
+  complex*16, allocatable :: v_t(:,:), s_t(:,:)
   integer :: i,j
 
   allocate(v_t(N_st,N_det), s_t(N_st,N_det))
-  v0 = 0.d0 
-  s0 = 0.d0 
+  v0 = (0.d0,0.d0) 
+  s0 = (0.d0,0.d0) 
   more = 1
   do while (more == 1)
     call davidson_pull_results(zmq_socket_pull, v_t, s_t, imin, imax, task_id)
@@ -272,11 +272,11 @@ subroutine H_S2_u_0_nstates_zmq(v_0,s_0,u_0,N_st,sze)
   ! S2_jj : array of <j|S^2|j>
   END_DOC
   integer, intent(in)            :: N_st, sze
-  double precision, intent(out)  :: v_0(sze,N_st), s_0(sze,N_st)
-  double precision, intent(inout):: u_0(sze,N_st)
+  complex*16, intent(out)  :: v_0(sze,N_st), s_0(sze,N_st)
+  complex*16, intent(inout):: u_0(sze,N_st)
   integer                        :: i,j,k
   integer                        :: ithread
-  double precision, allocatable  :: u_t(:,:)
+  complex*16, allocatable  :: u_t(:,:)
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: u_t
   
   PROVIDE psi_det_beta_unique psi_bilinear_matrix_order_transp_reverse psi_det_alpha_unique 

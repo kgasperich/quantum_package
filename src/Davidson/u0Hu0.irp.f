@@ -23,17 +23,17 @@ subroutine H_S2_u_0_nstates_openmp(v_0,s_0,u_0,N_st,sze)
   ! istart, iend, ishift, istep are used in ZMQ parallelization.
   END_DOC
   integer, intent(in)            :: N_st,sze
-  double precision, intent(inout)  :: v_0(sze,N_st), s_0(sze,N_st), u_0(sze,N_st)
+  complex*16, intent(inout)  :: v_0(sze,N_st), s_0(sze,N_st), u_0(sze,N_st)
   integer :: k
-  double precision, allocatable  :: u_t(:,:), v_t(:,:), s_t(:,:)
+  complex*16, allocatable  :: u_t(:,:), v_t(:,:), s_t(:,:)
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: u_t
   allocate(u_t(N_st,N_det),v_t(N_st,N_det),s_t(N_st,N_det))
   do k=1,N_st
-    call dset_order(u_0(1,k),psi_bilinear_matrix_order,N_det)
+    call cdset_order(u_0(1,k),psi_bilinear_matrix_order,N_det)
   enddo
-  v_t = 0.d0
-  s_t = 0.d0
-  call dtranspose(                                                   &
+  v_t = (0.d0,0.d0)
+  s_t = (0.d0,0.d0)
+  call cdtranspose(                                                   &
       u_0,                                                           &
       size(u_0, 1),                                                  &
       u_t,                                                           &
@@ -43,13 +43,13 @@ subroutine H_S2_u_0_nstates_openmp(v_0,s_0,u_0,N_st,sze)
   call H_S2_u_0_nstates_openmp_work(v_t,s_t,u_t,N_st,sze,1,N_det,0,1)
   deallocate(u_t)
 
-  call dtranspose(                                                   &
+  call cdtranspose(                                                   &
       v_t,                                                           &
       size(v_t, 1),                                                  &
       v_0,                                                           &
       size(v_0, 1),                                                  &
       N_st, N_det)
-  call dtranspose(                                                   &
+  call cdtranspose(                                                   &
       s_t,                                                           &
       size(s_t, 1),                                                  &
       s_0,                                                           &
@@ -58,9 +58,9 @@ subroutine H_S2_u_0_nstates_openmp(v_0,s_0,u_0,N_st,sze)
   deallocate(v_t,s_t)
 
   do k=1,N_st
-    call dset_order(v_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
-    call dset_order(s_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
-    call dset_order(u_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
+    call cdset_order(v_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
+    call cdset_order(s_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
+    call cdset_order(u_0(1,k),psi_bilinear_matrix_order_reverse,N_det)
   enddo
 
 end
@@ -75,8 +75,8 @@ subroutine H_S2_u_0_nstates_openmp_work(v_t,s_t,u_t,N_st,sze,istart,iend,ishift,
   ! Default should be 1,N_det,0,1
   END_DOC
   integer, intent(in)            :: N_st,sze,istart,iend,ishift,istep
-  double precision, intent(in)   :: u_t(N_st,N_det)
-  double precision, intent(out)  :: v_t(N_st,sze), s_t(N_st,sze) 
+  complex*16, intent(in)   :: u_t(N_st,N_det)
+  complex*16, intent(out)  :: v_t(N_st,sze), s_t(N_st,sze) 
 
   
   PROVIDE ref_bitmask_energy N_int
@@ -105,10 +105,11 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_st,sze,istart,iend,
   ! Default should be 1,N_det,0,1
   END_DOC
   integer, intent(in)            :: N_st,sze,istart,iend,ishift,istep
-  double precision, intent(in)   :: u_t(N_st,N_det)
-  double precision, intent(out)  :: v_t(N_st,sze), s_t(N_st,sze) 
+  complex*16, intent(in)   :: u_t(N_st,N_det)
+  complex*16, intent(out)  :: v_t(N_st,sze), s_t(N_st,sze) 
 
-  double precision               :: hij, sij
+  double precision               :: sij
+  complex*16               :: hij
   integer                        :: i,j,k,l
   integer                        :: k_a, k_b, l_a, l_b, m_a, m_b
   integer                        :: istate
@@ -432,11 +433,11 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_st,sze,istart,iend,
     tmp_det(1:$N_int,2) = psi_det_beta_unique (1:$N_int, kcol)
     
     double precision, external :: diag_H_mat_elem, diag_S_mat_elem
-  
-    hij = diag_H_mat_elem(tmp_det,$N_int) 
+    double precision :: hii 
+    hii = diag_H_mat_elem(tmp_det,$N_int) 
     sij = diag_S_mat_elem(tmp_det,$N_int)
     do l=1,N_st
-      v_t(l,k_a) = v_t(l,k_a) + hij * u_t(l,k_a)
+      v_t(l,k_a) = v_t(l,k_a) + hii * u_t(l,k_a)
       s_t(l,k_a) = s_t(l,k_a) + sij * u_t(l,k_a)
     enddo
 
