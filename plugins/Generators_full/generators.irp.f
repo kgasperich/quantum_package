@@ -23,7 +23,7 @@ BEGIN_PROVIDER [ integer, N_det_generators ]
 END_PROVIDER
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_det_generators, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_coef_generators, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_coef_generators, (psi_det_size,N_states) ]
  implicit none
  BEGIN_DOC
  ! For Single reference wave functions, the generator is the
