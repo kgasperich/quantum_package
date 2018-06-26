@@ -15,7 +15,7 @@ subroutine routine
  call diagonalize_CI
  integer :: igood_state
  igood_state=1
- double precision, allocatable :: psi_coef_tmp(:)
+ complex*16, allocatable :: psi_coef_tmp(:)
  allocate(psi_coef_tmp(n_det))
  integer :: i
  do i = 1, N_det

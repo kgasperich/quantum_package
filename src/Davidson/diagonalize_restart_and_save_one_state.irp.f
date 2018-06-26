@@ -12,7 +12,7 @@ subroutine routine
  write(*,*)'Which state would you like to save ?'
  integer :: igood_state
  read(5,*)igood_state
- double precision, allocatable :: psi_coef_tmp(:)
+ complex*16, allocatable :: psi_coef_tmp(:)
  allocate(psi_coef_tmp(n_det))
  integer :: i
  do i = 1, N_det
