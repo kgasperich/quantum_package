@@ -79,7 +79,7 @@ subroutine routine
 
 ! TODO: change for complex
  do i = 1, N_det
-  write(*,'(I3,X,A3,1000(F16.7))')i,' | ',H_matrix_all_dets(i,:)
+  write(*,'(I3,X,A3,2000(F16.7))')i,' | ',H_matrix_all_dets(i,:)
  enddo
 
  print*,''
