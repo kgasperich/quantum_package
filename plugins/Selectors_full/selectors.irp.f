@@ -25,7 +25,7 @@ BEGIN_PROVIDER [ integer, N_det_selectors]
 END_PROVIDER
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_selectors, (N_int,2,psi_selectors_size) ]
-&BEGIN_PROVIDER [ double precision, psi_selectors_coef, (psi_selectors_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_selectors_coef, (psi_selectors_size,N_states) ]
   implicit none
   BEGIN_DOC
   ! Determinants on which we apply <i|H|psi> for perturbation.
