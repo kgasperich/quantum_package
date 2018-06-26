@@ -8,10 +8,10 @@ end
 subroutine routine
  implicit none
  integer :: i,j
- double precision :: accu,hij
+! double precision :: accu,hij
 
  print*, 'psi_energy          = ',psi_energy + nuclear_repulsion
- accu = 0.d0
+! accu = 0.d0
 ! do i = 1,N_det
 !  do j = 1,N_det
 !   call i_H_j(psi_det(1,1,j),psi_det(1,1,i),N_int,hij)

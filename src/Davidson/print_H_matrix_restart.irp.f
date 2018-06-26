@@ -51,7 +51,8 @@ subroutine routine
   enddo
  enddo
  print*,'H matrix '
- double precision :: ref_h_matrix,s2
+ double precision :: s2
+ complex*16 :: ref_h_matrix
  ref_h_matrix = H_matrix_all_dets(1,1)
  print*,'HF like determinant energy = ',ref_bitmask_energy+nuclear_repulsion
  print*,'Ref element of H_matrix    = ',ref_h_matrix+nuclear_repulsion
@@ -76,7 +77,7 @@ subroutine routine
 
 
 
- 
+! TODO: change for complex
  do i = 1, N_det
   write(*,'(I3,X,A3,1000(F16.7))')i,' | ',H_matrix_all_dets(i,:)
  enddo
@@ -103,11 +104,12 @@ subroutine routine
  print*,''
 
 
- double precision, allocatable  :: eigenvectors(:,:), eigenvalues(:)
+ double precision, allocatable  :: eigenvalues(:)
+ complex*16, allocatable  :: eigenvectors(:,:)
  double precision, allocatable  :: s2_eigvalues(:)
  allocate (eigenvectors(size(H_matrix_all_dets,1),N_det))
  allocate (eigenvalues(N_det),s2_eigvalues(N_det))
- call lapack_diag(eigenvalues,eigenvectors,                       &
+ call lapack_diag_z(eigenvalues,eigenvectors,                       &
      H_matrix_all_dets,size(H_matrix_all_dets,1),N_det)
  print*,'Two first eigenvectors '
  call u_0_S2_u_0(s2_eigvalues,eigenvectors,n_det,keys_tmp,N_int,N_det,size(eigenvectors,1))
@@ -123,7 +125,7 @@ subroutine routine
     print*,'Delta E(eV) = ',(eigenvalues(1) - eigenvalues(j))*27.2114d0
    endif
  enddo
- double precision               :: get_mo_bielec_integral,k_a_iv,k_b_iv
+ complex*16               :: get_mo_bielec_integral,k_a_iv,k_b_iv
  integer :: h1,p1,h2,p2
  h1 = 10
  p1 = 16 
@@ -139,7 +141,7 @@ subroutine routine
  k_b_iv = get_mo_bielec_integral(h1,h2,p2,p1,mo_integrals_map)
  print*,'k_a_iv = ',k_a_iv
  print*,'k_b_iv = ',k_b_iv
- double precision :: k_av,k_bv,k_ai,k_bi
+ complex*16 :: k_av,k_bv,k_ai,k_bi
  h1 = 16
  p1 = 14 
  h2 = 14 
@@ -165,7 +167,7 @@ subroutine routine
  
  print*,'k_av, k_bv = ',k_av,k_bv
  print*,'k_ai, k_bi = ',k_ai,k_bi
- double precision :: k_iv
+ complex*16 :: k_iv
 
  h1 = 10
  p1 = 16 

@@ -22,7 +22,7 @@ program first_guess
   do i=1,mo_tot_num
     keep_char = ' '
     occ_char = '-'
-    orb_energy(i) = mo_mono_elec_integral(i,i)
+    orb_energy(i) = real(mo_mono_elec_integral(i,i))
     do j=1,elec_beta_num
       if (i==j) cycle
       orb_energy(i) += mo_bielec_integral_jj_anti(i,j)
