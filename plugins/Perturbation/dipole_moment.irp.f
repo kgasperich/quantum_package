@@ -3,9 +3,10 @@ subroutine pt2_dipole_moment_z(det_pert,c_pert,e_2_pert,H_pert_diag,Nint,ndet,n_
   implicit none
   integer, intent(in)            :: Nint,ndet,n_st
   integer(bit_kind), intent(in)  :: det_pert(Nint,2)
-  double precision , intent(out) :: c_pert(n_st),e_2_pert(n_st),H_pert_diag(N_st)
-  double precision               :: i_O1_psi_array(N_st)
-  double precision               :: i_H_psi_array(N_st)
+  double precision , intent(out) :: e_2_pert(n_st),H_pert_diag(N_st)
+  complex*16 , intent(out) :: c_pert(n_st)
+  complex*16               :: i_O1_psi_array(N_st)
+  complex*16               :: i_H_psi_array(N_st)
   
   integer, intent(in)            :: N_minilist
   integer, intent(in)            :: idx_minilist(0:N_det_selectors)
@@ -59,7 +60,7 @@ subroutine pt2_dipole_moment_z(det_pert,c_pert,e_2_pert,H_pert_diag,Nint,ndet,n_
 
   do i =1,N_st
     if(CI_electronic_energy(i)>h.and.CI_electronic_energy(i).ne.0.d0)then
-      c_pert(i) = -1.d0
+      c_pert(i) = dcmplx(-1.d0,0.d0)
       e_2_pert(i) = selection_criterion*selection_criterion_factor*2.d0
     else if  (dabs(CI_electronic_energy(i) - h) > 1.d-6) then
         c_pert(i) = i_H_psi_array(i) / (CI_electronic_energy(i) - h)
