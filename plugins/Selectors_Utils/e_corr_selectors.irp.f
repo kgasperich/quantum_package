@@ -24,11 +24,11 @@ use bitmasks
  enddo
 END_PROVIDER
 
-  BEGIN_PROVIDER[double precision, coef_hf_selector]
- &BEGIN_PROVIDER[double precision, inv_selectors_coef_hf]
+  BEGIN_PROVIDER[complex*16, coef_hf_selector]
+ &BEGIN_PROVIDER[complex*16, inv_selectors_coef_hf]
  &BEGIN_PROVIDER[double precision, inv_selectors_coef_hf_squared]
  &BEGIN_PROVIDER[double precision, E_corr_per_selectors, (N_det_selectors)]
- &BEGIN_PROVIDER[double precision, i_H_HF_per_selectors, (N_det_selectors)]
+ &BEGIN_PROVIDER[complex*16, i_H_HF_per_selectors, (N_det_selectors)]
  &BEGIN_PROVIDER[double precision, Delta_E_per_selector, (N_det_selectors)]
  &BEGIN_PROVIDER[double precision, E_corr_double_only ]
  &BEGIN_PROVIDER[double precision, E_corr_second_order ]
@@ -46,14 +46,15 @@ END_PROVIDER
  END_DOC
  PROVIDE  ref_bitmask_energy psi_selectors ref_bitmask N_int psi_selectors
  integer :: i,degree
- double precision :: hij,diag_H_mat_elem
+ double precision :: diag_H_mat_elem
+ complex*16 :: hij
  E_corr_double_only = 0.d0
  E_corr_second_order = 0.d0
  do i = 1, N_det_selectors
   if(exc_degree_per_selectors(i)==2)then
-   call i_H_j(ref_bitmask,psi_selectors(1,1,i),N_int,hij)
+   call i_H_j(psi_selectors(1,1,i),ref_bitmask,N_int,hij)
    i_H_HF_per_selectors(i) = hij
-   E_corr_per_selectors(i) = psi_selectors_coef(i,1) * hij
+   E_corr_per_selectors(i) = cdabs(psi_selectors_coef(i,1) * hij)
    E_corr_double_only += E_corr_per_selectors(i)
 !  E_corr_second_order += hij * hij /(ref_bitmask_energy - diag_H_mat_elem(psi_selectors(1,1,i),N_int))
   elseif(exc_degree_per_selectors(i) == 0)then
@@ -64,9 +65,9 @@ END_PROVIDER
    E_corr_per_selectors(i) = -1000.d0
   endif
  enddo
- if (dabs(coef_hf_selector) > 1.d-8) then
+ if (cdabs(coef_hf_selector) > 1.d-8) then
    inv_selectors_coef_hf = 1.d0/coef_hf_selector
-   inv_selectors_coef_hf_squared = inv_selectors_coef_hf * inv_selectors_coef_hf
+   inv_selectors_coef_hf_squared = cdabs(inv_selectors_coef_hf * conjg(inv_selectors_coef_hf))
  else
    inv_selectors_coef_hf = 0.d0
    inv_selectors_coef_hf_squared = 0.d0

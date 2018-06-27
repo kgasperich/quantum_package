@@ -101,160 +101,6 @@ end
 
 
 
-subroutine get_m2(gen, phasemask, bannedOrb, vect, mask, h, p, sp, coefs)
-  use bitmasks
-  implicit none
-  
-  integer(bit_kind), intent(in) :: gen(N_int, 2), mask(N_int, 2)
-  integer, intent(in) :: phasemask(2,N_int*bit_kind_size)
-  logical, intent(in) :: bannedOrb(mo_tot_num)
-  double precision, intent(in) :: coefs(N_states)
-  double precision, intent(inout) :: vect(N_states, mo_tot_num)
-  integer, intent(in) :: sp, h(0:2, 2), p(0:3, 2)
-  integer :: i, j, h1, h2, p1, p2, sfix, hfix, pfix, hmob, pmob, puti
-  double precision :: hij
-  double precision, external :: get_phase_bi, mo_bielec_integral
-  
-  integer, parameter :: turn3_2(2,3) = reshape((/2,3, 1,3, 1,2/), (/2,3/))
-  integer, parameter :: turn2(2) = (/2,1/) 
-  
-  if(h(0,sp) == 2) then
-    h1 = h(1, sp)
-    h2 = h(2, sp)
-    do i=1,3
-      puti = p(i, sp)
-      if(bannedOrb(puti)) cycle
-      p1 = p(turn3_2(1,i), sp)
-      p2 = p(turn3_2(2,i), sp)
-      hij = mo_bielec_integral(p1, p2, h1, h2) - mo_bielec_integral(p2, p1, h1, h2)
-      hij *= get_phase_bi(phasemask, sp, sp, h1, p1, h2, p2)
-      vect(:, puti) += hij * coefs
-    end do
-  else if(h(0,sp) == 1) then
-    sfix = turn2(sp)
-    hfix = h(1,sfix)
-    pfix = p(1,sfix)
-    hmob = h(1,sp)
-    do j=1,2
-      puti = p(j, sp)
-      if(bannedOrb(puti)) cycle
-      pmob = p(turn2(j), sp)
-      hij = mo_bielec_integral(pfix, pmob, hfix, hmob)
-      hij *= get_phase_bi(phasemask, sp, sfix, hmob, pmob, hfix, pfix)
-      vect(:, puti) += hij * coefs
-    end do
-  else
-    puti = p(1,sp)
-    if(.not. bannedOrb(puti)) then
-      sfix = turn2(sp)
-      p1 = p(1,sfix)
-      p2 = p(2,sfix)
-      h1 = h(1,sfix)
-      h2 = h(2,sfix)
-      hij = (mo_bielec_integral(p1,p2,h1,h2) - mo_bielec_integral(p2,p1,h1,h2))
-      hij *= get_phase_bi(phasemask, sfix, sfix, h1, p1, h2, p2)
-      vect(:, puti) += hij * coefs
-    end if
-  end if
-end 
-
-
-
-subroutine get_m1(gen, phasemask, bannedOrb, vect, mask, h, p, sp, coefs)
-  use bitmasks
-  implicit none
-  
-  integer(bit_kind), intent(in)  :: gen(N_int, 2), mask(N_int, 2)
-  integer, intent(in)         :: phasemask(2,N_int*bit_kind_size)
-  logical, intent(in)            :: bannedOrb(mo_tot_num)
-  double precision, intent(in)   :: coefs(N_states)
-  double precision, intent(inout) :: vect(N_states, mo_tot_num)
-  integer, intent(in)            :: sp, h(0:2, 2), p(0:3, 2)
-  integer                        :: i, hole, p1, p2, sh
-  logical                        :: ok
-
-  logical, allocatable           :: lbanned(:)
-  integer(bit_kind)              :: det(N_int, 2)
-  double precision               :: hij
-  double precision, external     :: get_phase_bi, mo_bielec_integral
-  
-  allocate (lbanned(mo_tot_num))
-  lbanned = bannedOrb
-  sh = 1
-  if(h(0,2) == 1) sh = 2
-  hole = h(1, sh)
-  lbanned(p(1,sp)) = .true.
-  if(p(0,sp) == 2) lbanned(p(2,sp)) = .true.
-  !print *, "SPm1", sp, sh
-  
-  p1 = p(1, sp)
-  
-  if(sp == sh) then
-    p2 = p(2, sp)
-    lbanned(p2) = .true.
-    
-    do i=1,hole-1
-      if(lbanned(i)) cycle
-      hij = (mo_bielec_integral(p1, p2, i, hole) - mo_bielec_integral(p2, p1, i, hole))
-      hij *= get_phase_bi(phasemask, sp, sp, i, p1, hole, p2)
-      vect(1:N_states,i) += hij * coefs(1:N_states)
-    end do
-    do i=hole+1,mo_tot_num
-      if(lbanned(i)) cycle
-      hij = (mo_bielec_integral(p1, p2, hole, i) - mo_bielec_integral(p2, p1, hole, i))
-      hij *= get_phase_bi(phasemask, sp, sp, hole, p1, i, p2)
-      vect(1:N_states,i) += hij * coefs(1:N_states)
-    end do
-
-    call apply_particle(mask, sp, p2, det, ok,  N_int)
-    call i_h_j(gen, det, N_int, hij)
-    vect(1:N_states, p2) += hij * coefs(1:N_states)
-  else
-    p2 = p(1, sh)
-    do i=1,mo_tot_num
-      if(lbanned(i)) cycle
-      hij = mo_bielec_integral(p1, p2, i, hole)
-      hij *= get_phase_bi(phasemask, sp, sh, i, p1, hole, p2)
-      vect(1:N_states,i) += hij * coefs(1:N_states)
-    end do
-  end if
-  deallocate(lbanned)
-
-  call apply_particle(mask, sp, p1, det, ok,  N_int)
-  call i_h_j(gen, det, N_int, hij)
-  vect(1:N_states, p1) += hij * coefs(1:N_states)
-end 
-
-
-subroutine get_m0(gen, phasemask, bannedOrb, vect, mask, h, p, sp, coefs)
-  use bitmasks
-  implicit none
-  
-  integer(bit_kind), intent(in)  :: gen(N_int, 2), mask(N_int, 2)
-  integer, intent(in)         :: phasemask(2,N_int*bit_kind_size)
-  logical, intent(in)            :: bannedOrb(mo_tot_num)
-  double precision, intent(in)   :: coefs(N_states)
-  double precision, intent(inout) :: vect(N_states, mo_tot_num)
-  integer, intent(in)            :: sp, h(0:2, 2), p(0:3, 2)
-  integer                        :: i
-  logical                        :: ok
-
-  logical, allocatable           :: lbanned(:)
-  integer(bit_kind)              :: det(N_int, 2)
-  double precision               :: hij
-  
-  allocate(lbanned(mo_tot_num))
-  lbanned = bannedOrb
-  lbanned(p(1,sp)) = .true.
-  do i=1,mo_tot_num
-    if(lbanned(i)) cycle
-    call apply_particle(mask, sp, i, det, ok, N_int)
-    call i_h_j(gen, det, N_int, hij)
-    vect(1:N_states, i) += hij * coefs(1:N_states)
-  end do
-  deallocate(lbanned)
-end 
-
 subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_diag_tmp,E0,pt2,buf,subset)
   use bitmasks
   use selection_types
@@ -279,7 +125,7 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
   integer(bit_kind), allocatable :: minilist(:, :, :), fullminilist(:, :, :)
   logical, allocatable           :: banned(:,:,:), bannedOrb(:,:)
 
-  double precision, allocatable   :: mat(:,:,:)
+  complex*16, allocatable   :: mat(:,:,:)
   
   logical :: monoAdo, monoBdo
   integer :: maskInd
@@ -585,7 +431,7 @@ subroutine fill_buffer_double(i_generator, sp, h1, h2, bannedOrb, banned, fock_d
   implicit none
   
   integer, intent(in) :: i_generator, sp, h1, h2
-  double precision, intent(in) :: mat(N_states, mo_tot_num, mo_tot_num)
+  complex*16, intent(in) :: mat(N_states, mo_tot_num, mo_tot_num)
   logical, intent(in) :: bannedOrb(mo_tot_num, 2), banned(mo_tot_num, mo_tot_num)
   double precision, intent(in)           :: fock_diag_tmp(mo_tot_num)
   double precision, intent(in)    :: E0(N_states)
@@ -626,7 +472,7 @@ subroutine fill_buffer_double(i_generator, sp, h1, h2, bannedOrb, banned, fock_d
       do istate=1,N_states
         delta_E = E0(istate) - Hii
         val = mat(istate, p1, p2) + mat(istate, p1, p2) 
-        tmp = dsqrt(delta_E * delta_E + val * val)
+        tmp = dsqrt(delta_E * delta_E + cdabs(conjg(val) * val))
         if (delta_E < 0.d0) then
             tmp = -tmp
         endif
@@ -652,7 +498,7 @@ subroutine splash_pq(mask, sp, det, i_gen, N_sel, bannedOrb, banned, mat, intere
   integer, intent(in)            :: interesting(0:N_sel)
   integer(bit_kind),intent(in)   :: mask(N_int, 2), det(N_int, 2, N_sel)
   logical, intent(inout)         :: bannedOrb(mo_tot_num, 2), banned(mo_tot_num, mo_tot_num, 2)
-  double precision, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
+  complex*16, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
   
   integer                        :: i, ii, j, k, l, h(0:2,2), p(0:4,2), nt
   integer(bit_kind)              :: perMask(N_int, 2), mobMask(N_int, 2), negMask(N_int, 2)
@@ -736,21 +582,24 @@ end
 
 
 subroutine get_d2(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
+  !TODO: make sure this is correct for 2-fold bielec symmetry (complex)
   use bitmasks
   implicit none
 
   integer(bit_kind), intent(in) :: mask(N_int, 2), gen(N_int, 2)
   integer, intent(in) :: phasemask(2,N_int*bit_kind_size)
   logical, intent(in) :: bannedOrb(mo_tot_num, 2), banned(mo_tot_num, mo_tot_num,2)
-  double precision, intent(in) :: coefs(N_states)
-  double precision, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
+  complex*16, intent(in) :: coefs(N_states)
+  complex*16, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
   integer, intent(in) :: h(0:2,2), p(0:4,2), sp
   
-  double precision, external :: get_phase_bi, mo_bielec_integral
+  double precision, external :: get_phase_bi
+  complex*16, external :: mo_bielec_integral
   
   integer :: i, j, tip, ma, mi, puti, putj
   integer :: h1, h2, p1, p2, i1, i2
-  double precision :: hij, phase
+  double precision :: phase
+  complex*16 :: hij
   
   integer, parameter:: turn2d(2,3,4) = reshape((/0,0, 0,0, 0,0,  3,4, 0,0, 0,0,  2,4, 1,4, 0,0,  2,3, 1,3, 1,2 /), (/2,3,4/))
   integer, parameter :: turn2(2) = (/2, 1/)
@@ -854,6 +703,7 @@ end
 
 
 subroutine get_d1(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
+  !TODO: make sure this is correct for 2-fold bielec symmetry (complex)
   use bitmasks
   implicit none
 
@@ -861,11 +711,12 @@ subroutine get_d1(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
   integer,intent(in)          :: phasemask(2,N_int*bit_kind_size)
   logical, intent(in)            :: bannedOrb(mo_tot_num, 2), banned(mo_tot_num, mo_tot_num,2)
   integer(bit_kind)              :: det(N_int, 2)
-  double precision, intent(in)   :: coefs(N_states)
-  double precision, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
+  complex*16, intent(in)   :: coefs(N_states)
+  complex*16, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
   integer, intent(in)            :: h(0:2,2), p(0:4,2), sp
-  double precision               :: hij, tmp_row(N_states, mo_tot_num), tmp_row2(N_states, mo_tot_num)
-  double precision, external     :: get_phase_bi, mo_bielec_integral
+  complex*16               :: hij, tmp_row(N_states, mo_tot_num), tmp_row2(N_states, mo_tot_num)
+  double precision, external     :: get_phase_bi
+  complex*16, external     :: mo_bielec_integral
   logical                        :: ok
 
   logical, allocatable           :: lbanned(:,:)
@@ -1026,6 +877,7 @@ end
 
 
 subroutine get_d0(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
+  !TODO: make sure this is correct for 2-fold bielec symmetry (complex)
   use bitmasks
   implicit none
 
@@ -1033,13 +885,15 @@ subroutine get_d0(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
   integer, intent(in) :: phasemask(2,N_int*bit_kind_size)
   logical, intent(in) :: bannedOrb(mo_tot_num, 2), banned(mo_tot_num, mo_tot_num,2)
   integer(bit_kind) :: det(N_int, 2)
-  double precision, intent(in) :: coefs(N_states)
-  double precision, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
+  complex*16, intent(in) :: coefs(N_states)
+  complex*16, intent(inout) :: mat(N_states, mo_tot_num, mo_tot_num)
   integer, intent(in) :: h(0:2,2), p(0:4,2), sp
   
   integer :: i, j, s, h1, h2, p1, p2, puti, putj
-  double precision :: hij, phase
-  double precision, external :: get_phase_bi, mo_bielec_integral
+  double precision :: phase
+  complex*16 :: hij
+  double precision, external :: get_phase_bi
+  complex*16, external :: mo_bielec_integral
   logical :: ok
   
   integer :: bant

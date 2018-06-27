@@ -8,7 +8,7 @@ program fci_zmq
   integer                        :: n_det_before, to_select
   double precision               :: threshold_davidson_in, ratio, E_ref
 
-  double precision, allocatable  :: psi_coef_ref(:,:)
+  complex*16, allocatable  :: psi_coef_ref(:,:)
   integer(bit_kind), allocatable :: psi_det_ref(:,:,:)
 
   
