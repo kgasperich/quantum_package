@@ -163,19 +163,39 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
   PROVIDE psi_bilinear_matrix_transp_rows_loc psi_bilinear_matrix_transp_columns
   PROVIDE psi_bilinear_matrix_transp_order
 
+  
+  ! S_s = selectors
+  ! S_0 = {|D_G>}                                       (i_generator determinant)
+  ! S_j = {|D_k> : |D_k> \in T_j|D_G> }                 (i.e. S_2 is all dets connected to |D_G> by a double excitation)
+  ! S_2b = S_2 \intersection {|D_k> : a_{h1}|D_k> != 0} (in S_2 and h1 is occupied)
+  ! S_2' = S_2 \ {|D_k> : a_{h1}|D_k> != 0}             (in S_2 and h1 is not occupied)
+  ! S_4b = S_4 \intersection {|D_k> : a_{h1}|D_k> != 0} (in S_4 and h1 is occupied)
+  ! S_4' = S_4 \ {|D_k> : a_{h1}|D_k> != 0}             (in S_4 and h1 is not occupied)
+
+  ! construct the following sets of determinants:
+  !   preinteresting: S_pi = (U_{j=0..4} S_j) \intersection S_s
+  !   prefullinteresting: S_pfi = (U_{j=0..2} S_j) \ S_s
+  !   interesting: S_i = S_pi \ S_4b = ( (U_{j=0..3} S_j) U S_4' ) \intersection S_s
+  !   fullinteresting: S_fi = S_i U (S_pfi \ S_2b) = (S_0 U S_1 U S_2') 
+  !     (in order, first elements are in S_s, later elements are not in S_s) 
+
+
+  ! get indices of all unique dets for which total excitation degree (relative to i_generator) is <= 4
   k=1
+  ! get exc_degree(i) for each unique alpha det(i) from i_generator(alpha)
   do i=1,N_det_alpha_unique
     call get_excitation_degree_spin(psi_det_alpha_unique(1,i), &
       psi_det_generators(1,1,i_generator), exc_degree(i), N_int)
   enddo
 
+  ! get exc_degree (= nt) for each unique beta det(j) from i_generator(beta)
   do j=1,N_det_beta_unique
     call get_excitation_degree_spin(psi_det_beta_unique(1,j), &
       psi_det_generators(1,2,i_generator), nt, N_int)
-    if (nt > 2) cycle
+    if (nt > 2) cycle ! don't keep anything more than double beta exc
     do l_a=psi_bilinear_matrix_columns_loc(j), psi_bilinear_matrix_columns_loc(j+1)-1
       i = psi_bilinear_matrix_rows(l_a)
-      if (nt + exc_degree(i) <= 4) then
+      if (nt + exc_degree(i) <= 4) then ! don't keep anything more than 4-fold total exc
         indices(k) = psi_det_sorted_order(psi_bilinear_matrix_order(l_a))
         k=k+1
       endif
@@ -216,7 +236,7 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
             interesting(0:N_det_selectors), fullinteresting(0:N_det))
   preinteresting(0) = 0
   prefullinteresting(0) = 0
-  
+ 
   do i=1,N_int
     negMask(i,1) = not(psi_det_generators(i,1,i_generator))
     negMask(i,2) = not(psi_det_generators(i,2,i_generator))
@@ -224,6 +244,8 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
   
   do k=1,nmax
     i = indices(k)
+    ! mobMask in psi_det(i) but not in i_generator
+    ! nt = popcnt(mobMask)
     mobMask(1,1) = iand(negMask(1,1), psi_det_sorted(1,1,i))
     mobMask(1,2) = iand(negMask(1,2), psi_det_sorted(1,2,i))
     nt = popcnt(mobMask(1, 1)) + popcnt(mobMask(1, 2)) 
@@ -232,6 +254,9 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
       mobMask(j,2) = iand(negMask(j,2), psi_det_sorted(j,2,i))
       nt = nt + popcnt(mobMask(j, 1)) + popcnt(mobMask(j, 2)) 
     end do
+
+    ! preinteresting:     within a 4-fold excitation from i_generator; in selectors
+    ! prefullinteresting: within a double excitation from i_generator; not in selectors
 
     if(nt <= 4) then
       if(i <= N_det_selectors) then
@@ -258,13 +283,14 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
   do s1=1,2
     do i1=N_holes(s1),1,-1   ! Generate low excitations first
       h1 = hole_list(i1,s1)
+      ! pmask is i_generator det with bit at h1 set to zero
       call apply_hole(psi_det_generators(1,1,i_generator), s1,h1, pmask, ok, N_int)
       
       negMask = not(pmask)
       
+      ! see set definitions above 
       interesting(0) = 0
       fullinteresting(0) = 0
-      
       do ii=1,preinteresting(0)
         select case (N_int)
           case (1)
@@ -320,6 +346,7 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
             end do
         end select
         
+        ! nt = ( orbs occupied in preinteresting(ii) and not occupied in i_gen(after removing elec from h1) )
         if(nt <= 4) then
           i = preinteresting(ii)
           interesting(0) += 1
@@ -391,21 +418,21 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
           enddo
           do s3=1,2
             do i=1,N_particles(s3)
-              bannedOrb(particle_list(i,s3), s3) = .false.
+              bannedOrb(particle_list(i,s3), s3) = .false. ! allow excitation into orbitals in particle_list
             enddo
           enddo
           if(s1 /= s2) then
             if(monoBdo) then
-              bannedOrb(h1,s1) = .false.
+              bannedOrb(h1,s1) = .false. ! allow alpha elec to go back into alpha hole
             end if
             if(monoAdo) then
-              bannedOrb(h2,s2) = .false.
+              bannedOrb(h2,s2) = .false. ! allow beta elec to go back into beta hole
               monoAdo = .false.
             end if
           end if
 
           maskInd += 1
-          if(subset == 0 .or. mod(maskInd, fragment_count) == (subset-1)) then  
+          if(subset == 0 .or. mod(maskInd, fragment_count) == (subset0)) then  
             
             call spot_isinwf(mask, fullminilist, i_generator, fullinteresting(0), banned, fullMatch, fullinteresting)
             if(fullMatch) cycle
@@ -414,11 +441,11 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
 
             call fill_buffer_double(i_generator, sp, h1, h2, bannedOrb, banned, fock_diag_tmp, E0, pt2, mat, buf)
           end if
-        enddo
+        enddo ! i2
         if(s1 /= s2) monoBdo = .false.
-      enddo
-    enddo
-  enddo
+      enddo !s2
+    enddo !i1
+  enddo !s1
   deallocate(preinteresting, prefullinteresting, interesting, fullinteresting)
   deallocate(minilist, fullminilist, banned, bannedOrb,mat)
 end subroutine
@@ -1003,21 +1030,24 @@ subroutine spot_isinwf(mask, det, i_gen, N, banned, fullMatch, interesting)
   end do
 
   genl : do i=1, N
-    do j=1, N_int
+    do j=1, N_int  ! if all occupied orbs in mask are not also occupied in det(i), go to next det
       if(iand(det(j,1,i), mask(j,1)) /= mask(j, 1)) cycle genl
       if(iand(det(j,2,i), mask(j,2)) /= mask(j, 2)) cycle genl
     end do
 
-    if(interesting(i) < i_gen) then
+    if(interesting(i) < i_gen) then ! ??
       fullMatch = .true.
       return
     end if
 
-    do j=1, N_int
+    do j=1, N_int ! if electrons are excited into the orbs given by myMask, resulting determinant will be det(i)
       myMask(j, 1) = iand(det(j, 1, i), negMask(j, 1))
       myMask(j, 2) = iand(det(j, 2, i), negMask(j, 2))
     end do
 
+    ! don't allow excitations into this pair of orbitals?
+    ! should 'banned' have dimensions (mo_num,mo_num,2)?
+    ! is it always true that popcnt(myMask) = 2 ? (sum over N_int and alpha/beta spins)
     call bitstring_to_list_in_selection(myMask(1,1), list(1), na, N_int)
     call bitstring_to_list_in_selection(myMask(1,2), list(na+1), nb, N_int)
     banned(list(1), list(2)) = .true.
