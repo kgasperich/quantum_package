@@ -295,8 +295,16 @@ subroutine add_integrals_to_map(mask_ijkl)
     ! loop over unique 4-fold (including only one of each pair of complex conjugates)
     ! required conditions are:
     ! j <= l
-    ! i <= k
+    ! .not.((j==l).and.(i>k))
     ! ik <= jl (where ik and jl are triangular compound indices)
+    ! 
+    ! l=1,n
+    !   j=1,l
+    !     k=1,l
+    !       i=1,l
+    !         if ( (j.eq.l) .and. (i.gt.k) ) exit
+    !         if ( ik.gt.jl ) exit
+    !
     do l0 = 1,n_l
       l = list_ijkl(l0,4)
       cz = mo_coef_transp(l,s1)
