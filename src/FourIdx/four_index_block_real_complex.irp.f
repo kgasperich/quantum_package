@@ -169,7 +169,9 @@ subroutine four_index_transform_block(map_a,map_c,matrix_B,LDB,            &
         if (cdabs(matrix_B(l,d)) < 1.d-10) then
           cycle
         endif
-        
+
+!        T2d(ik,j) = (ik|jl)_{AO}
+
         ii=l_pointer(l)
         do j=j_start,j_end
           !DIR$ VECTOR NONTEMPORAL
@@ -181,24 +183,33 @@ subroutine four_index_transform_block(map_a,map_c,matrix_B,LDB,            &
           enddo
         enddo ! j
 
-        call ZGEMM('C','T', &
-            (b_end-b_start+1),                                             &
-            ishft( (i_end-i_start+1)*(i_end-i_start+2), -1),&
-            (j_end-j_start+1), (1.d0,0.d0)                               &
-            matrix_B(j_start,b_start), size(matrix_B,1),          &
-            T2d(1,j_start), size(T2d,1),                               &
-            (0.d0,0.d0), &
+
+!        V2d = (0.d0,0.d0)
+!        do b = b_start, b_end
+!          do ik = 1, (i_end-i_start+1)*(i_end-i_start+2)/2
+!            do j = j_start, j_end
+!              V2d(b,ik) = conjg(B(j,b)) * T2d(ik,j)
+!            enddo
+!          enddo
+!        enddo
+
+!        V2d(b,ik) = \sum_{j} (ik|jl)_{AO} * conjg(B_{j,b})
+
+        call ZGEMM('C','T',                                          &
+            (b_end-b_start+1),                                       &
+            ishft( (i_end-i_start+1)*(i_end-i_start+2), -1),         &
+            (j_end-j_start+1),                                       &
+            (1.d0,0.d0),                                             &
+            matrix_B(j_start,b_start), size(matrix_B,1),             &
+            T2d(1,j_start), size(T2d,1),                             &
+            (0.d0,0.d0),                                             &
             V2d(b_start,1), size(V2d,1) )
-!        call DGEMM('N','N', ishft( (i_end-i_start+1)*(i_end-i_start+2), -1),&
-!            (b_end-b_start+1),                                             &
-!            (j_end-j_start+1), 1.d0,                                   &
-!            T2d(1,j_start), size(T2d,1),                               &
-!            matrix_B(j_start,b_start), size(matrix_B,1),0.d0,          &
-!            V2d(1,b_start), size(V2d,1) )
 
 ! V2d is unrolled the wrong way now 
 ! (can't take conjugate of B without transposing in ZGEMM, so needed to also transpose T2d and V2d)
-        do b=b_start,b_end
+
+        !do b=b_start,b_end
+        do b=b_start,d
           ik = 0
           do k=k_start,k_end
             do i=i_start,k
@@ -206,50 +217,55 @@ subroutine four_index_transform_block(map_a,map_c,matrix_B,LDB,            &
               V(i,k) = V2d(b,ik)
             enddo ! i
           enddo ! k
+!       V(i,k) = \sum_{j} (ik|jl)_{AO} * conjg(B_{j,b})
+!       i <= k (i.e. upper triangle only)
+!       for complex AOs, this will not be symmetric, so need to populate all elements instead of just upper triangle
+!       also need to use ZGEMM instead of ZSYMM
 
-  !        T = 0.d0
-  !        do a=a_start,b
+  !        T = (0.d0,0.d0)
+  !        do c=c_start,d
   !          do k=k_start,k_end
   !            do i=i_start,k
-  !              T(k,a) = T(k,a) + V(i,k)*matrix_B(i,a)
+  !              T(i,c) = T(i,c) + V(i,k)*matrix_B(k,c)
   !            enddo
   !            do i=k+1,i_end
-  !              T(k,a) = T(k,a) + V(k,i)*matrix_B(i,a)
+  !              T(i,c) = T(i,c) + V(k,i)*matrix_B(k,c)
   !            enddo
   !          enddo
   !        enddo
-          call DSYMM('L','U', (k_end-k_start+1), (b-a_start+1),        &
-              1.d0,                                                    &
-              V(i_start,k_start), size(V,1),                           &
-              matrix_B(i_start,a_start), size(matrix_B,1),0.d0,        &
-              T(k_start,a_start), size(T,1) )
 
-  !        do c=c_start,b
-  !          do a=a_start,c
-  !            do k=k_start,k_end
-  !              U(a,c,b) = U(a,c,b) + T(k,a)*matrix_B(k,c)*matrix_B(l,d)
+!         T(i,c) = \sum_{j,k} (ik|jl)_{AO} * conjg(B_{j,b}) * B_{k,c}
+!             i \in {1...N}
+!             c \in {1...d}
+
+          call ZSYMM('L','U',                                          &
+              (i_end-i_start+1),                                       &
+              (d-c_start+1),                                           &
+              (1.d0,0.d0)                                              &
+              V(i_start,k_start), size(V,1),                           &
+              matrix_B(k_start,c_start), size(matrix_B,1),             &
+              (0.d0,0.d0),                                             &
+              T(i_start,c_start), size(T,1) )
+
+
+  !        do c=c_start,d
+  !          do a=a_start,d
+  !            do i=i_start,i_end
+  !              U(a,c,b) = U(a,c,b) + conjg(B(i,a))*T(i,c)*matrix_B(l,d)
   !            enddo
   !          enddo
   !        enddo
-          call DGEMM('T','N', (b-a_start+1), (b-c_start+1),            &
-              (k_end-k_start+1), matrix_B(l, d),                       &
-              T(k_start,a_start), size(T,1),                           &
-              matrix_B(k_start,c_start), size(matrix_B,1), 1.d0,       &
+
+          call ZGEMM('C','N',                                           &
+              (d-a_start+1),                                            &
+              (d-c_start+1),                                            &
+              (i_end-i_start+1),                                        &
+              matrix_B(l, d),                                           &
+              matrix_B(i_start,a_start), size(matrix_B,1),              &
+              T(i_start,c_start), size(T,1),                            &
+              (1.d0,0.d0)                                               &
               U(a_start,c_start,b), size(U,1) )
-  !        do c=b+1,c_end
-  !          do a=a_start,b
-  !            do k=k_start,k_end
-  !              U(a,c,b) = U(a,c,b) + T(k,a)*matrix_B(k,c)*matrix_B(l,d)
-  !            enddo
-  !          enddo
-  !        enddo
-          if (b < b_end) then
-            call DGEMM('T','N', (b-a_start+1), (c_end-b),              &
-                (k_end-k_start+1), matrix_B(l, d),                     &
-                T(k_start,a_start), size(T,1),                         &
-                matrix_B(k_start,b+1), size(matrix_B,1), 1.d0,         &
-                U(a_start,b+1,b), size(U,1) )
-          endif
+
         enddo ! b
 
       enddo ! l
