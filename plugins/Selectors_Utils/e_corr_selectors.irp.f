@@ -54,7 +54,7 @@ END_PROVIDER
   if(exc_degree_per_selectors(i)==2)then
    call i_H_j(psi_selectors(1,1,i),ref_bitmask,N_int,hij)
    i_H_HF_per_selectors(i) = hij
-   E_corr_per_selectors(i) = cdabs(psi_selectors_coef(i,1) * hij)
+   E_corr_per_selectors(i) = real(psi_selectors_coef(i,1) * hij)
    E_corr_double_only += E_corr_per_selectors(i)
 !  E_corr_second_order += hij * hij /(ref_bitmask_energy - diag_H_mat_elem(psi_selectors(1,1,i),N_int))
   elseif(exc_degree_per_selectors(i) == 0)then
