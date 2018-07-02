@@ -410,7 +410,7 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
         do i2=N_holes(s2),ib,-1   ! Generate low excitations first
           
           h2 = hole_list(i2,s2)
-          call apply_hole(pmask, s2,h2, mask, ok, N_int)
+          call apply_hole(pmask, s2,h2, mask, ok, N_int) ! remove h2 (spin s2) from pmask and return as mask
           banned = .false.
           do j=1,mo_tot_num
             bannedOrb(j, 1) = .true.
@@ -467,7 +467,8 @@ subroutine fill_buffer_double(i_generator, sp, h1, h2, bannedOrb, banned, fock_d
   logical :: ok
   integer :: s1, s2, p1, p2, ib, j, istate
   integer(bit_kind) :: mask(N_int, 2), det(N_int, 2)
-  double precision :: e_pert, delta_E, val, Hii, min_e_pert,tmp
+  double precision :: e_pert, delta_E, Hii, min_e_pert,tmp
+  complex*16 :: val
   double precision, external :: diag_H_mat_elem_fock
   
   logical, external :: detEq
@@ -490,7 +491,7 @@ subroutine fill_buffer_double(i_generator, sp, h1, h2, bannedOrb, banned, fock_d
     do p2=ib,mo_tot_num
       if(bannedOrb(p2, s2)) cycle
       if(banned(p1,p2)) cycle
-      if( sum(abs(mat(1:N_states, p1, p2))) == 0d0) cycle
+      if( sum(cdabs(mat(1:N_states, p1, p2))) == 0d0) cycle
       call apply_particles(mask, s1, p1, s2, p2, det, ok, N_int)
       
       Hii = diag_H_mat_elem_fock(psi_det_generators(1,1,i_generator),det,fock_diag_tmp,N_int)
@@ -635,19 +636,20 @@ subroutine get_d2(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
   integer :: bant
   bant = 1
 
-  tip = p(0,1) * p(0,2)
+  tip = p(0,1) * p(0,2) ! number of alpha particles times number of beta particles
   
-  ma = sp
-  if(p(0,1) > p(0,2)) ma = 1
-  if(p(0,1) < p(0,2)) ma = 2
+  ma = sp !1:(alpha,alpha); 
+  if(p(0,1) > p(0,2)) ma = 1 ! more alpha particles than beta particles
+  if(p(0,1) < p(0,2)) ma = 2 ! fewer alpha particles than beta particles
   mi = mod(ma, 2) + 1
   
-  if(sp == 3) then
-    if(ma == 2) bant = 2
+  if(sp == 3) then ! if one alpha and one beta xhole 
+    !(where xholes refer to the ionizations from the generator, not the holes occupied in the ionized generator)
+    if(ma == 2) bant = 2 ! if more beta particles than alpha particles
     
-    if(tip == 3) then
+    if(tip == 3) then ! if 3 of one particle spin and 1 of the other particle spin
       puti = p(1, mi)
-      do i = 1, 3
+      do i = 1, 3    ! loop over all 3 combinations of 2 particles with spin ma
         putj = p(i, ma)
         if(banned(putj,puti,bant)) cycle
         i1 = turn3(1,i)
@@ -656,18 +658,23 @@ subroutine get_d2(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
         p2 = p(i2, ma)
         h1 = h(1, ma)
         h2 = h(2, ma)
-        
+     ! |G> = |psi_{gen,i}>
+     ! |G'> = a_{x1} a_{x2} |G>
+     ! |alpha> = a_{puti}^{\dagger} a_{putj}^{\dagger} |G'>
+     ! |alpha> = t_{x1,x2}^{puti,putj} |G>
+     ! hij = <psi_{selectors,i}|H|alpha>
+     ! |alpha> = t_{p1,p2}^{h1,h2}|psi_{selectors,i}>
         hij = (mo_bielec_integral(p1, p2, h1, h2) - mo_bielec_integral(p2,p1, h1, h2)) * get_phase_bi(phasemask, ma, ma, h1, p1, h2, p2)
-        if(ma == 1) then
+        if(ma == 1) then ! if particle spins are (alpha,alpha,alpha,beta), then puti is beta and putj is alpha
           mat(:, putj, puti) += coefs(:) * hij
-        else
+        else            ! if particle spins are (beta,beta,beta,alpha), then puti is alpha and putj is beta
           mat(:, puti, putj) += coefs(:) * hij
         end if
       end do
-    else
+    else ! if 2 alpha and 2 beta particles
       h1 = h(1,1)
       h2 = h(1,2)
-      do j = 1,2
+      do j = 1,2 ! loop over all 4 combinations of one alpha and one beta particle
         putj = p(j, 2)
         p2 = p(turn2(j), 2)
         do i = 1,2
@@ -675,15 +682,15 @@ subroutine get_d2(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
           
           if(banned(puti,putj,bant)) cycle
           p1 = p(turn2(i), 1)
-          
+    ! hij = <psi_{selectors,i}|H|alpha> 
           hij = mo_bielec_integral(p1, p2, h1, h2) * get_phase_bi(phasemask, 1, 2, h1, p1, h2, p2)
           mat(:, puti, putj) += coefs(:) * hij
         end do
       end do
     end if
 
-  else
-    if(tip == 0) then
+  else ! if holes are (a,a) or (b,b)
+    if(tip == 0) then ! if particles are (a,a,a,a) or (b,b,b,b)
       h1 = h(1, ma)
       h2 = h(2, ma)
       do i=1,3
@@ -700,7 +707,7 @@ subroutine get_d2(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
         mat(:, puti, putj) += coefs(:) * hij
       end do
       end do
-    else if(tip == 3) then
+    else if(tip == 3) then ! if particles are (a,a,a,b) (ma=1,mi=2) or (a,b,b,b) (ma=2,mi=1)
       h1 = h(1, mi)
       h2 = h(1, ma)
       p1 = p(1, mi)
@@ -713,7 +720,7 @@ subroutine get_d2(gen, phasemask, bannedOrb, banned, mat, mask, h, p, sp, coefs)
         hij = mo_bielec_integral(p1, p2, h1, h2) * get_phase_bi(phasemask, mi, ma, h1, p1, h2, p2)
         mat(:, min(puti, putj), max(puti, putj)) += coefs(:) * hij
       end do
-    else ! tip == 4
+    else ! tip == 4  (a,a,b,b)
       puti = p(1, sp)
       putj = p(2, sp)
       if(.not. banned(puti,putj,1)) then
