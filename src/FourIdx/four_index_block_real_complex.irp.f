@@ -1,4 +1,4 @@
-subroutine four_index_transform_block(map_a,map_c,matrix_B,LDB,            &
+subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,            &
       i_start, j_start, k_start, l_start,                            &
       i_end  , j_end  , k_end  , l_end  ,                            &
       a_start, b_start, c_start, d_start,                            &
@@ -6,6 +6,7 @@ subroutine four_index_transform_block(map_a,map_c,matrix_B,LDB,            &
   implicit none
   use map_module
   use mmap_module
+  !TODO: calculate space correctly for complex
   BEGIN_DOC
 ! Performs a four-index transformation of map_a(N^4) into map_c(M^4) using b(NxM)
 ! C_{abcd} = \sum_{ijkl} A_{ijkl}.B_{ia}.B_{jb}.B_{kc}.B_{ld}
