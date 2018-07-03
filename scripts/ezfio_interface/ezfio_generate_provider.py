@@ -22,6 +22,8 @@ BEGIN_PROVIDER [ %(type)s, %(name)s %(size)s ]
 
   logical                        :: has
   PROVIDE ezfio_filename
+
+  write(%(output)s,*) 'Reading %(name)s'
   if (mpi_master) then
     %(test_null_size)s
     call ezfio_has_%(ezfio_dir)s_%(ezfio_name)s(has)
