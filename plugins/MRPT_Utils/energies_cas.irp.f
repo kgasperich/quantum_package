@@ -556,7 +556,8 @@ END_PROVIDER
       do j = 1, n_states
         double precision ::  coef,contrib
         coef = psi_coef(i,j) !* psi_coef(i,j)
-        psi_in_out_coef(i,j) = sign(coef,psi_coef(i,j)) * hij 
+        !psi_in_out_coef(i,j) = sign(coef,psi_coef(i,j)) * hij 
+        psi_in_out_coef(i,j) = psi_coef(i,j) * hij 
         norm(j,ispin) += psi_in_out_coef(i,j) * psi_in_out_coef(i,j) 
       enddo
      enddo
@@ -660,7 +661,8 @@ BEGIN_PROVIDER [ double precision, one_anhil_inact, (n_inact_orb,n_act_orb,N_Sta
        do j = 1, n_states
          double precision ::  coef,contrib
          coef = psi_coef(i,j) !* psi_coef(i,j)
-         psi_in_out_coef(i,j) = sign(coef,psi_coef(i,j)) * hij 
+         !psi_in_out_coef(i,j) = sign(coef,psi_coef(i,j)) * hij 
+         psi_in_out_coef(i,j) = psi_coef(i,j) * hij 
          norm(j,ispin) += psi_in_out_coef(i,j) * psi_in_out_coef(i,j) 
        enddo
       endif
@@ -758,7 +760,8 @@ BEGIN_PROVIDER [ double precision, one_creat_virt, (n_act_orb,n_virt_orb,N_State
        do j = 1, n_states
          double precision ::  coef,contrib
          coef = psi_coef(i,j) !* psi_coef(i,j)
-         psi_in_out_coef(i,j) = sign(coef,psi_coef(i,j)) * hij 
+         !psi_in_out_coef(i,j) = sign(coef,psi_coef(i,j)) * hij 
+         psi_in_out_coef(i,j) = psi_coef(i,j) * hij 
          norm(j,ispin) += psi_in_out_coef(i,j) * psi_in_out_coef(i,j) 
        enddo
       endif

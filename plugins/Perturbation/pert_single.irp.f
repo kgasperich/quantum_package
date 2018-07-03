@@ -48,6 +48,6 @@ subroutine pt2_h_core(det_pert,c_pert,e_2_pert,H_pert_diag,Nint,ndet,N_st,minili
  integer :: h1,p1,h2,p2,s1,s2
  call decode_exc(exc,degree,h1,p1,h2,p2,s1,s2)
  c_pert = phase * mo_mono_elec_integral(h1,p1)
- e_2_pert = -dabs(mo_mono_elec_integral(h1,p1)+1.d0)
+ e_2_pert = -cdabs(mo_mono_elec_integral(h1,p1)+1.d0)
   
 end

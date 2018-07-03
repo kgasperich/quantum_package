@@ -99,7 +99,7 @@ subroutine remove_small_contributions
     call i_H_psi(psi_det_sorted(1,1,i),psi_det_sorted,psi_coef_sorted,N_int,min(N_det,2*N_det_generators),psi_det_size,N_states,i_H_psi_array)
     keep(i) = .False.
     do j=1,N_states
-      keep(i) = keep(i) .or. (-(psi_coef_sorted(i,j)*i_H_psi_array(j)) > selection_criterion_min)
+      keep(i) = keep(i) .or. (-real(psi_coef_sorted(i,j)*i_H_psi_array(j)) > selection_criterion_min)
     enddo
   enddo
   !$OMP END DO
