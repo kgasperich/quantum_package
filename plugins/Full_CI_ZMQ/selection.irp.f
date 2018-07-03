@@ -432,7 +432,7 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
           end if
 
           maskInd += 1
-          if(subset == 0 .or. mod(maskInd, fragment_count) == (subset0)) then  
+          if(subset == 0 .or. mod(maskInd, fragment_count) == (subset-1)) then  
             
             call spot_isinwf(mask, fullminilist, i_generator, fullinteresting(0), banned, fullMatch, fullinteresting)
             if(fullMatch) cycle
