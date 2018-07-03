@@ -378,21 +378,21 @@ end
    BEGIN_DOC
    ! Max and min values of the coefficients
    END_DOC
-   integer                        :: i,idx
+   integer                        :: i,idx(1)
    do i=1,N_states
      idx = minloc(real(psi_coef(:,i)))
-     psi_coef_re_min(i) = psi_coef(idx,i)
+     psi_coef_re_min(i) = psi_coef(idx(1),i)
      idx = maxloc(real(psi_coef(:,i)))
-     psi_coef_re_max(i) = psi_coef(idx,i)
+     psi_coef_re_max(i) = psi_coef(idx(1),i)
      idx = minloc(imag(psi_coef(:,i)))
-     psi_coef_im_min(i) = psi_coef(idx,i)
+     psi_coef_im_min(i) = psi_coef(idx(1),i)
      idx = maxloc(imag(psi_coef(:,i)))
-     psi_coef_im_max(i) = psi_coef(idx,i)
+     psi_coef_im_max(i) = psi_coef(idx(1),i)
 
      idx = minloc( cdabs(psi_coef(:,i)) )
-     abs_psi_coef_min(i) = psi_coef(idx,i)
+     abs_psi_coef_min(i) = psi_coef(idx(1),i)
      idx = maxloc( cdabs(psi_coef(:,i)) )
-     abs_psi_coef_max(i) = psi_coef(idx,i)
+     abs_psi_coef_max(i) = psi_coef(idx(1),i)
      
      call write_complex_double(6,psi_coef_re_max(i), 'Max re coef')
      call write_complex_double(6,psi_coef_re_min(i), 'Min re coef')
