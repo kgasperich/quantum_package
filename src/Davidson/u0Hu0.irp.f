@@ -110,6 +110,7 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_st,sze,istart,iend,
 
   double precision               :: sij
   complex*16               :: hij
+  double precision :: hii 
   integer                        :: i,j,k,l
   integer                        :: k_a, k_b, l_a, l_b, m_a, m_b
   integer                        :: istate
@@ -156,7 +157,7 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_st,sze,istart,iend,
       !$OMP   PRIVATE(krow, kcol, tmp_det, spindet, k_a, k_b, i,     &
       !$OMP          lcol, lrow, l_a, l_b,                           &
       !$OMP          buffer, doubles, n_doubles,                     &
-      !$OMP          tmp_det2, hij, sij, idx, l, kcol_prev,          &
+      !$OMP          tmp_det2, hii, hij, sij, idx, l, kcol_prev,     &
       !$OMP          singles_a, n_singles_a, singles_b,              &
       !$OMP          n_singles_b, k8)
   
@@ -433,7 +434,6 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_st,sze,istart,iend,
     tmp_det(1:$N_int,2) = psi_det_beta_unique (1:$N_int, kcol)
     
     double precision, external :: diag_H_mat_elem, diag_S_mat_elem
-    double precision :: hii 
     hii = diag_H_mat_elem(tmp_det,$N_int) 
     sij = diag_S_mat_elem(tmp_det,$N_int)
     do l=1,N_st

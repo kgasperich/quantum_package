@@ -94,7 +94,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
   integer                        :: k_pairs, kl
   
   integer                        :: iter2
-!  double precision, allocatable  :: overlap(:,:)
+  double precision, allocatable  :: overlap(:,:)
 !  complex*16, allocatable  :: overlap(:,:)
   complex*16, allocatable   :: W(:,:), U(:,:), S(:,:)
   double precision, allocatable  :: lambda(:), s2(:)
@@ -167,7 +167,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       s_(N_st_diag*itermax,N_st_diag*itermax),                       &
       s_tmp(N_st_diag*itermax,N_st_diag*itermax),                    &
       residual_norm(N_st_diag),                                      &
-      c(N_st_diag*itermax),                                          &
+      !c(N_st_diag*itermax),                                          &
       s2(N_st_diag*itermax),                                         &
       overlap(N_st_diag*itermax, N_st_diag*itermax),                 &
       lambda(N_st_diag*itermax))
@@ -449,7 +449,8 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
   deallocate (                                                       &
       W, residual_norm,                                              &
       U, overlap,                                                    &
-      c, S,                                                          &
+!      c,                                                            &
+      S,                                                            &
       h,                                                             &
       y, s_, s_tmp, y_tmp,                                           &
       lambda                                                         &

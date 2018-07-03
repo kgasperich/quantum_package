@@ -8,7 +8,8 @@ subroutine find_reference(thresh,n_ref,result)
   complex*16 :: i_H_psi_array(1)
   double precision :: de
   integer(bit_kind), allocatable :: psi_ref_(:,:,:)
-  double precision, allocatable :: psi_ref_coef_(:,:)
+  !double precision, allocatable :: psi_ref_coef_(:,:)
+  complex*16, allocatable :: psi_ref_coef_(:,:)
 
   allocate(psi_ref_coef_(N_det,1), psi_ref_(N_int,2,N_det))
   n_ref = 1
