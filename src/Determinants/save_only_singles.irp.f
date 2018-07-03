@@ -11,7 +11,7 @@ subroutine routine
  use bitmasks
  integer :: n_det_restart,degree
  integer(bit_kind),allocatable :: psi_det_tmp(:,:,:)
- complex*16 ,allocatable :: psi_coef_tmp(:,:),
+ complex*16 ,allocatable :: psi_coef_tmp(:,:)
  double precision ,allocatable :: accu(:)
  integer, allocatable :: index_restart(:)
  allocate(index_restart(N_det))
