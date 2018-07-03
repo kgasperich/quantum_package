@@ -156,11 +156,11 @@ END_PROVIDER
    do i = 1, N_det_cas
     norm += cdabs(psi_cas_coef(i,k) * psi_cas_coef(i,k))
     do j = 1, N_det_cas
-      psi_cas_energy(k) += conjg(psi_cas_coef(i,k)) * psi_cas_coef(j,k) * H_matrix_cas(i,j)
+      psi_cas_energy(k) += real(conjg(psi_cas_coef(i,k)) * psi_cas_coef(j,k) * H_matrix_cas(i,j))
     enddo
    enddo
-   print *,k,imag(psi_cas_energy(k))/norm
-   psi_cas_energy(k) = real(psi_cas_energy(k)) /norm
+!   print *,k,imag(psi_cas_energy(k))/norm
+   psi_cas_energy(k) = psi_cas_energy(k) /norm
   enddo
 
 END_PROVIDER 
