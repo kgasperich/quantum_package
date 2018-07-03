@@ -33,7 +33,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
   integer(key_kind)              :: idx,keytmp1,keytmp2
   real(integral_kind)            :: tmp
   integer(key_kind), allocatable :: key1(:),key2(:)
-  real(integral_kind), allocatable :: value1(:),value2(:)
+  real(integral_kind), allocatable :: value1(:),value2(:),value(:)
   integer*8, allocatable         :: l_pointer(:)
   integer                        :: ac,bd
   !idx2_tri
@@ -242,7 +242,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
           call ZSYMM('L','U',                                          &
               (i_end-i_start+1),                                       &
               (d-c_start+1),                                           &
-              (1.d0,0.d0)                                              &
+              (1.d0,0.d0),                                             &
               V(i_start,k_start), size(V,1),                           &
               matrix_B(k_start,c_start), size(matrix_B,1),             &
               (0.d0,0.d0),                                             &
@@ -264,7 +264,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
               matrix_B(l, d),                                           &
               matrix_B(i_start,a_start), size(matrix_B,1),              &
               T(i_start,c_start), size(T,1),                            &
-              (1.d0,0.d0)                                               &
+              (1.d0,0.d0),                                              &
               U(a_start,c_start,b), size(U,1) )
 
         enddo ! b
@@ -305,7 +305,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
             amax=b
           endif
           do a=a_start,amax
-            if (dabs(U(a,c,b)) < 1.d-15) then
+            if (cdabs(U(a,c,b)) < 1.d-15) then
               cycle
             endif
             idx = idx+1_8
@@ -350,7 +350,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
     enddo ! d
     !$OMP END DO
 
-    deallocate(key,value,V,T,T2d,V2d,U)
+    deallocate(key1,key2,value1,value2,V,T,T2d,V2d,U)
     !$OMP END PARALLEL
     call map_merge(map_c)
 
