@@ -52,8 +52,8 @@ BEGIN_PROVIDER [ double precision, mo_energy_expval, (N_states,mo_tot_num,2,2)]
         do istate=1,N_states
           norm = 0.d0
           do k=1,N_det
-            if (dabs(psi_in_out_coef(k,istate)) < t) then
-              psi_in_out_coef(k,istate) = 0.d0
+            if (cdabs(psi_in_out_coef(k,istate)) < t) then
+              psi_in_out_coef(k,istate) = (0.d0,0.d0)
             endif
             norm = norm + psi_in_out_coef(k,istate)*psi_in_out_coef(k,istate)
           enddo
