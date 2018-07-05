@@ -108,7 +108,7 @@ let run ~multiplicity ezfio_file =
         { d with n_int ; 
           n_det = Det_number.of_int ~min:1 ~max:l  l;
           expected_s2 = Positive_float.of_float (s *. (s +. 1.)) ;
-          psi_coef = c;
+          psi_coef_real = c;
           psi_det = Array.of_list determinants;
         }
       in

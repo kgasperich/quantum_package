@@ -256,7 +256,7 @@ END_PROVIDER
         endif
       endif
 
-      if (exists_real) then
+      if (exists) then
         
         double precision, allocatable  :: psi_coef_real_read(:,:)
         allocate (psi_coef_real_read(N_det,N_states))
@@ -269,8 +269,6 @@ END_PROVIDER
         enddo
         deallocate(psi_coef_real_read)
         
-      endif
-      if (exists_imag) then
         
         double precision, allocatable  :: psi_coef_imag_read(:,:)
         allocate (psi_coef_imag_read(N_det,N_states))
@@ -313,9 +311,9 @@ BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
   PROVIDE psi_coef_real psi_coef_imag
 
   psi_coef = (0.d0,0.d0)
-  do i=1,N_states
-    do j=1,psi_det_size
-      psi_coef(i,j) = dcmplx(psi_coef_real(i,j),psi_coef_imag(i,j))
+  do j=1,N_states
+    do i=1,psi_det_size
+      psi_coef(i,j) = cmplx(psi_coef_real(i,j),psi_coef_imag(i,j))
     enddo
   enddo
   
@@ -595,7 +593,8 @@ subroutine save_wavefunction_general(ndet,nstates,psidet,dim_psicoef,psicoef)
   integer(bit_kind), intent(in)  :: psidet(N_int,2,ndet)
   complex*16, intent(in)   :: psicoef(dim_psicoef,nstates)
   integer*8, allocatable         :: psi_det_save(:,:,:)
-  complex*16, allocatable  :: psi_coef_save(:,:)
+!  complex*16, allocatable  :: psi_coef_save(:,:)
+  double precision, allocatable  :: psi_coef_real_save(:,:),psi_coef_imag_save(:,:)
   
   integer                        :: i,j,k
   
@@ -619,13 +618,14 @@ subroutine save_wavefunction_general(ndet,nstates,psidet,dim_psicoef,psicoef)
     call ezfio_set_determinants_psi_det(psi_det_save)
     deallocate (psi_det_save)
     
-    allocate (psi_coef_save(ndet,nstates))
+    allocate (psi_coef_real_save(ndet,nstates),psi_coef_imag_save(ndet,nstates))
     double precision               :: accu_norm(nstates)
     accu_norm = 0.d0
     do k=1,nstates
       do i=1,ndet
         accu_norm(k) = accu_norm(k) + cdabs(psicoef(i,k)) * cdabs(psicoef(i,k))
-        psi_coef_save(i,k) = psicoef(i,k)
+        psi_coef_real_save(i,k) = real(psicoef(i,k))
+        psi_coef_imag_save(i,k) = imag(psicoef(i,k))
       enddo
       if (accu_norm(k) == 0.d0) then
         accu_norm(k) = 1.e-12 ! why not double?
@@ -636,12 +636,14 @@ subroutine save_wavefunction_general(ndet,nstates,psidet,dim_psicoef,psicoef)
     enddo
     do k=1,nstates
       do i=1,ndet
-        psi_coef_save(i,k) = psi_coef_save(i,k) * accu_norm(k)
+        psi_coef_real_save(i,k) = psi_coef_real_save(i,k) * accu_norm(k)
+        psi_coef_imag_save(i,k) = psi_coef_imag_save(i,k) * accu_norm(k)
       enddo
     enddo
     
-    call ezfio_set_determinants_psi_coef(psi_coef_save)
-    deallocate (psi_coef_save)
+    call ezfio_set_determinants_psi_coef_real(psi_coef_real_save)
+    call ezfio_set_determinants_psi_coef_imag(psi_coef_imag_save)
+    deallocate (psi_coef_real_save,psi_coef_imag_save)
     call write_int(6,ndet,'Saved determinants')
   endif
 end
@@ -661,6 +663,7 @@ subroutine save_wavefunction_specified(ndet,nstates,psidet,psicoef,ndetsave,inde
   integer, intent(in)            :: ndetsave
   integer*8, allocatable         :: psi_det_save(:,:,:)
   complex*16, allocatable  :: psi_coef_save(:,:)
+  double precision, allocatable  :: psi_coef_real_save(:,:), psi_coef_imag_save(:,:)
   integer*8                      :: det_8(100)
   integer(bit_kind)              :: det_bk((100*8)/bit_kind)
   integer                        :: N_int2
@@ -695,13 +698,14 @@ subroutine save_wavefunction_specified(ndet,nstates,psidet,psicoef,ndetsave,inde
   
   progress_bar(1) = 7
   progress_value = dble(progress_bar(1))
-  allocate (psi_coef_save(ndetsave,nstates))
+  allocate (psi_coef_real_save(ndetsave,nstates),psi_coef_imag_save(ndetsave,nstates))
   double precision               :: accu_norm(nstates)
   accu_norm = 0.d0
   do k=1,nstates
     do i=1,ndetsave
       accu_norm(k) = accu_norm(k) + cdabs(psicoef(index_det_save(i),k)) * cdabs(psicoef(index_det_save(i),k))
-      psi_coef_save(i,k) = psicoef(index_det_save(i),k)
+      psi_coef_real_save(i,k) = real(psicoef(index_det_save(i),k))
+      psi_coef_imag_save(i,k) = imag(psicoef(index_det_save(i),k))
     enddo
   enddo
   do k = 1, nstates
@@ -709,13 +713,15 @@ subroutine save_wavefunction_specified(ndet,nstates,psidet,psicoef,ndetsave,inde
   enddo
   do k=1,nstates
     do i=1,ndetsave
-      psi_coef_save(i,k) = psi_coef_save(i,k) * accu_norm(k)
+      psi_coef_real_save(i,k) = psi_coef_real_save(i,k) * accu_norm(k)
+      psi_coef_imag_save(i,k) = psi_coef_imag_save(i,k) * accu_norm(k)
     enddo
   enddo
   
-  call ezfio_set_determinants_psi_coef(psi_coef_save)
+  call ezfio_set_determinants_psi_coef_real(psi_coef_real_save)
+  call ezfio_set_determinants_psi_coef_imag(psi_coef_imag_save)
   call write_int(6,ndet,'Saved determinants')
-  deallocate (psi_coef_save)
+  deallocate (psi_coef_real_save,psi_coef_imag_save)
 end
 
 

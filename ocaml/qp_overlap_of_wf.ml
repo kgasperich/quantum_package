@@ -37,7 +37,7 @@ let () =
         d.Determinants_by_hand.psi_det
     and values =
       Array.map Det_coef.to_float
-        d.Determinants_by_hand.psi_coef
+        d.Determinants_by_hand.psi_coef_real
     in
     let hash = 
       Hashtbl.create n_det

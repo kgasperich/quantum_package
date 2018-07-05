@@ -9,7 +9,7 @@ module Determinants_by_hand : sig
       n_det                  : Det_number.t;
       n_states               : States_number.t;
       expected_s2            : Positive_float.t;
-      psi_coef               : Det_coef.t array;
+      psi_coef_real          : Det_coef.t array;
       psi_det                : Determinant.t array;
       state_average_weight   : Positive_float.t array;
     } [@@deriving sexp]
@@ -29,7 +29,7 @@ end = struct
       n_det                  : Det_number.t;
       n_states               : States_number.t;
       expected_s2            : Positive_float.t;
-      psi_coef               : Det_coef.t array;
+      psi_coef_real          : Det_coef.t array;
       psi_det                : Determinant.t array;
       state_average_weight   : Positive_float.t array;
     } [@@deriving sexp]
@@ -148,8 +148,8 @@ end = struct
     |> Ezfio.set_determinants_expected_s2 
   ;;
 
-  let read_psi_coef () =
-    if not (Ezfio.has_determinants_psi_coef ()) then
+  let read_psi_coef_real () =
+    if not (Ezfio.has_determinants_psi_coef_real ()) then
       begin
         let n_states =
           read_n_states ()
@@ -157,14 +157,14 @@ end = struct
         in
         Ezfio.ezfio_array_of_list ~rank:2 ~dim:[| 1 ; n_states |] 
           ~data:(List.init n_states ~f:(fun i -> if (i=0) then 1. else 0. ))
-          |> Ezfio.set_determinants_psi_coef 
+          |> Ezfio.set_determinants_psi_coef_real 
       end;
-    Ezfio.get_determinants_psi_coef ()
+    Ezfio.get_determinants_psi_coef_real ()
     |> Ezfio.flattened_ezfio
     |> Array.map ~f:Det_coef.of_float
   ;;
 
-  let write_psi_coef ~n_det ~n_states c =
+  let write_psi_coef_real ~n_det ~n_states c =
     let n_det = Det_number.to_int n_det
     and c = Array.to_list c
             |> List.map ~f:Det_coef.to_float
@@ -172,7 +172,7 @@ end = struct
       States_number.to_int n_states
     in
     Ezfio.ezfio_array_of_list ~rank:2 ~dim:[| n_det ; n_states |] ~data:c
-    |> Ezfio.set_determinants_psi_coef 
+    |> Ezfio.set_determinants_psi_coef_real 
   ;;
 
 
@@ -233,7 +233,7 @@ end = struct
           bit_kind               = read_bit_kind ()             ;
           n_det                  = read_n_det ()                ;
           expected_s2            = read_expected_s2 ()          ;
-          psi_coef               = read_psi_coef ()             ;
+          psi_coef_real          = read_psi_coef_real ()        ;
           psi_det                = read_psi_det ()              ;
           n_states               = read_n_states ()             ;
           state_average_weight   = read_state_average_weight () ;
@@ -257,7 +257,7 @@ end = struct
               bit_kind             ;
               n_det                ;
               expected_s2          ;
-              psi_coef             ;
+              psi_coef_real        ;
               psi_det              ;
               n_states             ;
               state_average_weight ;
@@ -267,7 +267,7 @@ end = struct
      write_n_det n_det;
      write_n_states n_states;
      write_expected_s2 expected_s2;
-     write_psi_coef ~n_det:n_det ~n_states:n_states psi_coef ;
+     write_psi_coef_real ~n_det:n_det ~n_states:n_states psi_coef_real ;
      write_psi_det ~n_int:n_int ~n_det:n_det psi_det;
      write_state_average_weight state_average_weight;
   ;;
@@ -292,8 +292,8 @@ end = struct
           let ishift = 
             j*ndet
           in
-          if (ishift < Array.length b.psi_coef) then
-            b.psi_coef.(i+ishift)
+          if (ishift < Array.length b.psi_coef_real) then
+            b.psi_coef_real.(i+ishift)
             |> Det_coef.to_float 
             |> Float.to_string
           else
@@ -347,7 +347,7 @@ n_det                  = %s
 n_states               = %s
 expected_s2            = %s
 state_average_weight   = %s
-psi_coef               = %s
+psi_coef_real          = %s
 psi_det                = %s
 "
      (b.n_int         |> N_int_number.to_string)
@@ -356,7 +356,7 @@ psi_det                = %s
      (b.n_states      |> States_number.to_string)
      (b.expected_s2   |> Positive_float.to_string)
      (b.state_average_weight |> Array.to_list |> List.map ~f:Positive_float.to_string |> String.concat ~sep:",")
-     (b.psi_coef  |> Array.to_list |> List.map ~f:Det_coef.to_string
+     (b.psi_coef_real  |> Array.to_list |> List.map ~f:Det_coef.to_string
       |> String.concat ~sep:", ")
      (b.psi_det   |> Array.to_list |> List.map ~f:(Determinant.to_string
        ~mo_tot_num:mo_tot_num) |> String.concat ~sep:"\n\n")
@@ -399,7 +399,7 @@ psi_det                = %s
     | _ -> failwith "Error in determinants"
     in
 
-    let psi_coef = 
+    let psi_coef_real = 
       let rec read_coefs accu = function
       | [] -> List.rev accu
       | ""::""::tail -> read_coefs accu tail
@@ -433,7 +433,7 @@ psi_det                = %s
         in
         build_result nstates 
       in
-      "(psi_coef ("^a^"))"
+      "(psi_coef_real ("^a^"))"
     in
 
     (* Handle determinants *)
@@ -487,7 +487,7 @@ psi_det                = %s
       Printf.sprintf "(n_states %d)" (States_number.to_int @@ read_n_states ())
     in
     let s = 
-       String.concat [ header ; bitkind ; n_int ; n_states ; psi_coef ; psi_det]
+       String.concat [ header ; bitkind ; n_int ; n_states ; psi_coef_real ; psi_det]
     in
 
 
@@ -520,7 +520,7 @@ psi_det                = %s
         j*n_det_new
       in
       for i=0 to (n_det_new-1) do
-        det.psi_coef.(i+ishift_new) <- det.psi_coef.(i+ishift_old)
+        det.psi_coef_real.(i+ishift_new) <- det.psi_coef_real.(i+ishift_old)
       done
     done
     ;
@@ -551,7 +551,7 @@ psi_det                = %s
           j*n_det
         in
         for i=0 to (n_det-1) do
-          det.psi_coef.(i) <- det.psi_coef.(i+ishift)
+          det.psi_coef_real.(i) <- det.psi_coef_real.(i+ishift)
         done
     end;
     let new_det =
