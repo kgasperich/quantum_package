@@ -168,7 +168,65 @@ END_PROVIDER
 
 
 
-BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
+!BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
+!  implicit none
+!  BEGIN_DOC
+!  ! The wave function coefficients. Initialized with Hartree-Fock if the EZFIO file
+!  ! is empty
+!  END_DOC
+!  
+!  integer                        :: i,k, N_int2
+!  logical                        :: exists
+!  character*(64)                 :: label
+!
+!  PROVIDE read_wf N_det mo_label ezfio_filename
+!  psi_coef = (0.d0,0.d0)
+!  do i=1,min(N_states,psi_det_size)
+!    psi_coef(i,i) = (1.d0,0.d0)
+!  enddo
+!
+!  if (mpi_master) then
+!    if (read_wf) then
+!      call ezfio_has_determinants_psi_coef(exists)
+!      if (exists) then
+!        call ezfio_has_determinants_mo_label(exists)
+!        if (exists) then
+!          call ezfio_get_determinants_mo_label(label)
+!          exists = (label == mo_label)
+!        endif
+!      endif
+!
+!      if (exists) then
+!        
+!        complex*16, allocatable  :: psi_coef_read(:,:)
+!        allocate (psi_coef_read(N_det,N_states))
+!        print *,  'Read psi_coef', N_det, N_states
+!        call ezfio_get_determinants_psi_coef(psi_coef_read)
+!        do k=1,N_states
+!          do i=1,N_det
+!            psi_coef(i,k) = psi_coef_read(i,k)
+!          enddo
+!        enddo
+!        deallocate(psi_coef_read)
+!        
+!      endif
+!    endif
+!  endif
+!  IRP_IF MPI
+!    include 'mpif.h'
+!    integer                        :: ierr
+!    call     MPI_BCAST( psi_coef, size(psi_coef), MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD, ierr)
+!    if (ierr /= MPI_SUCCESS) then
+!      stop 'Unable to read psi_coef with MPI'
+!    endif
+!  IRP_ENDIF
+!  
+!  
+!  
+!END_PROVIDER
+
+ BEGIN_PROVIDER [ double precision, psi_coef_real, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ double precision, psi_coef_imag, (psi_det_size,N_states) ]
   implicit none
   BEGIN_DOC
   ! The wave function coefficients. Initialized with Hartree-Fock if the EZFIO file
@@ -176,38 +234,54 @@ BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
   END_DOC
   
   integer                        :: i,k, N_int2
-  logical                        :: exists
+  logical                        :: exists_real,exists_imag,exists_label,exists
   character*(64)                 :: label
 
   PROVIDE read_wf N_det mo_label ezfio_filename
-  psi_coef = (0.d0,0.d0)
+  psi_coef_real = 0.d0
+  psi_coef_imag = 0.d0
   do i=1,min(N_states,psi_det_size)
-    psi_coef(i,i) = (1.d0,0.d0)
+    psi_coef_real(i,i) = 1.d0
   enddo
 
   if (mpi_master) then
     if (read_wf) then
-      call ezfio_has_determinants_psi_coef(exists)
-      if (exists) then
-        call ezfio_has_determinants_mo_label(exists)
-        if (exists) then
+      call ezfio_has_determinants_psi_coef_real(exists_real)
+      call ezfio_has_determinants_psi_coef_imag(exists_imag)
+      if (exists_real.and.exists_imag) then
+        call ezfio_has_determinants_mo_label(exists_label)
+        if (exists_label) then
           call ezfio_get_determinants_mo_label(label)
           exists = (label == mo_label)
         endif
       endif
 
-      if (exists) then
+      if (exists_real) then
         
-        complex*16, allocatable  :: psi_coef_read(:,:)
-        allocate (psi_coef_read(N_det,N_states))
-        print *,  'Read psi_coef', N_det, N_states
-        call ezfio_get_determinants_psi_coef(psi_coef_read)
+        double precision, allocatable  :: psi_coef_real_read(:,:)
+        allocate (psi_coef_real_read(N_det,N_states))
+        print *,  'Read psi_coef_real', N_det, N_states
+        call ezfio_get_determinants_psi_coef_real(psi_coef_real_read)
         do k=1,N_states
           do i=1,N_det
-            psi_coef(i,k) = psi_coef_read(i,k)
+            psi_coef_real(i,k) = psi_coef_real_read(i,k)
           enddo
         enddo
-        deallocate(psi_coef_read)
+        deallocate(psi_coef_real_read)
+        
+      endif
+      if (exists_imag) then
+        
+        double precision, allocatable  :: psi_coef_imag_read(:,:)
+        allocate (psi_coef_imag_read(N_det,N_states))
+        print *,  'Read psi_coef_imag', N_det, N_states
+        call ezfio_get_determinants_psi_coef_imag(psi_coef_imag_read)
+        do k=1,N_states
+          do i=1,N_det
+            psi_coef_imag(i,k) = psi_coef_imag_read(i,k)
+          enddo
+        enddo
+        deallocate(psi_coef_imag_read)
         
       endif
     endif
@@ -215,13 +289,35 @@ BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
   IRP_IF MPI
     include 'mpif.h'
     integer                        :: ierr
-    call     MPI_BCAST( psi_coef, size(psi_coef), MPI_DOUBLE_COMPLEX, 0, MPI_COMM_WORLD, ierr)
+    call     MPI_BCAST( psi_coef_real, size(psi_coef_real), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
     if (ierr /= MPI_SUCCESS) then
-      stop 'Unable to read psi_coef with MPI'
+      stop 'Unable to read psi_coef_real with MPI'
+    endif
+    call     MPI_BCAST( psi_coef_imag, size(psi_coef_imag), MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, ierr)
+    if (ierr /= MPI_SUCCESS) then
+      stop 'Unable to read psi_coef_imag with MPI'
     endif
   IRP_ENDIF
   
+END_PROVIDER
+
+BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
+  implicit none
+  BEGIN_DOC
+  ! The wave function coefficients. Initialized with Hartree-Fock if the EZFIO file
+  ! is empty
+  END_DOC
   
+  integer                        :: i,j
+
+  PROVIDE psi_coef_real psi_coef_imag
+
+  psi_coef = (0.d0,0.d0)
+  do i=1,N_states
+    do j=1,psi_det_size
+      psi_coef(i,j) = dcmplx(psi_coef_real(i,j),psi_coef_imag(i,j))
+    enddo
+  enddo
   
 END_PROVIDER
 
