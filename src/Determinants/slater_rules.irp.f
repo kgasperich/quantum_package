@@ -1089,7 +1089,7 @@ subroutine i_H_psi_SC2(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array,idx
   integer                        :: j, jj,k
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
-  double precision               :: hij
+  complex*16                     :: hij
   integer,allocatable            :: idx(:)
   
   ASSERT (Nint > 0)

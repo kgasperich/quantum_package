@@ -1,7 +1,7 @@
 use bitmasks
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_ref, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_ref_coef,  (psi_det_size,n_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_ref_coef,  (psi_det_size,n_states) ]
 &BEGIN_PROVIDER [ integer, idx_ref, (psi_det_size) ]
 &BEGIN_PROVIDER [ integer, N_det_ref ]
   implicit none
@@ -26,7 +26,7 @@ use bitmasks
 
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, psi_ref_coef_inv, (psi_det_size,n_states) ]
+BEGIN_PROVIDER [ complex*16, psi_ref_coef_inv, (psi_det_size,n_states) ]
  implicit none
  BEGIN_DOC
  ! 1/psi_ref_coef
@@ -42,7 +42,7 @@ END_PROVIDER
 
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_ref_restart, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_ref_coef_restart,  (psi_det_size,n_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_ref_coef_restart,  (psi_det_size,n_states) ]
   implicit none
   BEGIN_DOC
   ! Projection of the CAS wave function on the restart wave function. 
@@ -74,7 +74,7 @@ END_PROVIDER
   norm_psi_ref = 0.d0
   do j = 1, N_states
    do i = 1, N_det_ref
-    norm_psi_ref(j) += psi_ref_coef(i,j) * psi_ref_coef(i,j)
+    norm_psi_ref(j) += cdabs(psi_ref_coef(i,j) * psi_ref_coef(i,j))
    enddo
    inv_norm_psi_ref(j) = 1.d0/(dsqrt(norm_psi_Ref(j)))
    print *,  inv_norm_psi_ref(j)
@@ -82,7 +82,7 @@ END_PROVIDER
 
  END_PROVIDER
 
- BEGIN_PROVIDER [double precision, psi_ref_coef_interm_norm, (N_det_ref,N_states)]
+ BEGIN_PROVIDER [complex*16, psi_ref_coef_interm_norm, (N_det_ref,N_states)]
   implicit none
   integer :: i,j
   do j = 1, N_states
@@ -92,7 +92,7 @@ END_PROVIDER
   enddo
  END_PROVIDER
 
- BEGIN_PROVIDER [double precision, psi_non_ref_coef_interm_norm, (N_det_non_ref,N_states)]
+ BEGIN_PROVIDER [complex*16, psi_non_ref_coef_interm_norm, (N_det_non_ref,N_states)]
   implicit none
   integer :: i,j
   do j = 1, N_states

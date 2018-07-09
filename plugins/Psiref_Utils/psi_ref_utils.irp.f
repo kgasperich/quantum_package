@@ -2,7 +2,7 @@ use bitmasks
 
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_ref_sorted_bit, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_ref_coef_sorted_bit, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_ref_coef_sorted_bit, (psi_det_size,N_states) ]
  implicit none
  BEGIN_DOC
  ! Reference determinants sorted to accelerate the search of a random determinant in the wave
@@ -14,7 +14,7 @@ use bitmasks
 END_PROVIDER
 
 
-BEGIN_PROVIDER [ double precision, psi_ref_coef_transp, (n_states,psi_det_size) ]
+BEGIN_PROVIDER [ complex*16, psi_ref_coef_transp, (n_states,psi_det_size) ]
  implicit none
  BEGIN_DOC
 ! Transposed psi_ref_coef
@@ -22,12 +22,12 @@ BEGIN_PROVIDER [ double precision, psi_ref_coef_transp, (n_states,psi_det_size) 
  integer :: i,j
  do j=1,N_det_ref
    do i=1, n_states
-     psi_ref_coef_transp(i,j) = psi_ref_coef(j,i)
+     psi_ref_coef_transp(i,j) = conjg(psi_ref_coef(j,i))
    enddo
  enddo
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, psi_ref_coef_normalized,  (psi_det_size,n_states) ]
+BEGIN_PROVIDER [ complex*16, psi_ref_coef_normalized,  (psi_det_size,n_states) ]
  implicit none
  BEGIN_DOC
 ! Normalized coefficients of the reference
@@ -37,13 +37,13 @@ BEGIN_PROVIDER [ double precision, psi_ref_coef_normalized,  (psi_det_size,n_sta
    do j=1,N_det_ref
      psi_ref_coef_normalized(j,k) = psi_ref_coef(j,k)
    enddo
-   call normalize(psi_ref_coef_normalized(1,k), N_det_ref)
+   call normalize_complex(psi_ref_coef_normalized(1,k), N_det_ref)
  enddo
 
 END_PROVIDER
 
 
-BEGIN_PROVIDER [ double precision, psi_non_ref_coef_transp, (n_states,psi_det_size) ]
+BEGIN_PROVIDER [ complex*16, psi_non_ref_coef_transp, (n_states,psi_det_size) ]
  implicit none
  BEGIN_DOC
 ! Transposed psi_non_ref_coef
@@ -51,13 +51,13 @@ BEGIN_PROVIDER [ double precision, psi_non_ref_coef_transp, (n_states,psi_det_si
  integer :: i,j
  do j=1,N_det_non_ref
    do i=1, n_states
-     psi_non_ref_coef_transp(i,j) = psi_non_ref_coef(j,i)
+     psi_non_ref_coef_transp(i,j) = conjg(psi_non_ref_coef(j,i))
    enddo
  enddo
 END_PROVIDER
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_non_ref,  (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_non_ref_coef, (psi_det_size,n_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_non_ref_coef, (psi_det_size,n_states) ]
 &BEGIN_PROVIDER [ integer, idx_non_ref,  (psi_det_size) ]
 &BEGIN_PROVIDER [ integer, idx_non_ref_rev,  (psi_det_size) ]
 &BEGIN_PROVIDER [ integer, N_det_non_ref ]
@@ -103,7 +103,7 @@ END_PROVIDER
 END_PROVIDER
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_non_ref_restart,  (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_non_ref_coef_restart, (psi_det_size,n_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_non_ref_coef_restart, (psi_det_size,n_states) ]
  implicit none
  BEGIN_DOC
   ! Set of determinants which are not part of the reference, defined from the application
@@ -145,7 +145,7 @@ END_PROVIDER
 
 
  BEGIN_PROVIDER [ integer(bit_kind), psi_non_ref_sorted_bit, (N_int,2,psi_det_size) ]
-&BEGIN_PROVIDER [ double precision, psi_non_ref_coef_sorted_bit, (psi_det_size,N_states) ]
+&BEGIN_PROVIDER [ complex*16, psi_non_ref_coef_sorted_bit, (psi_det_size,N_states) ]
  implicit none
  BEGIN_DOC
  ! Reference determinants sorted to accelerate the search of a random determinant in the wave
@@ -157,10 +157,10 @@ END_PROVIDER
 END_PROVIDER
 
 
-BEGIN_PROVIDER [double precision, H_matrix_ref, (N_det_ref,N_det_ref)] 
+BEGIN_PROVIDER [complex*16, H_matrix_ref, (N_det_ref,N_det_ref)] 
  implicit none
  integer :: i,j
- double precision :: hij
+ complex*16 :: hij
   do i = 1, N_det_ref
    do j = 1, N_det_ref
     call i_H_j(psi_ref(1,1,i),psi_ref(1,1,j),N_int,hij) 
@@ -169,14 +169,15 @@ BEGIN_PROVIDER [double precision, H_matrix_ref, (N_det_ref,N_det_ref)]
   enddo
 END_PROVIDER
 
- BEGIN_PROVIDER [double precision, psi_ref_coef_diagonalized, (N_det_ref,N_states)]
+ BEGIN_PROVIDER [complex*16, psi_ref_coef_diagonalized, (N_det_ref,N_states)]
 &BEGIN_PROVIDER [double precision, psi_ref_energy_diagonalized, (N_states)]
  implicit none
  integer :: i,j
-  double precision, allocatable  :: eigenvectors(:,:), eigenvalues(:)
+  complex*16, allocatable  :: eigenvectors(:,:)
+  double precision, allocatable  :: eigenvalues(:)
   allocate (eigenvectors(size(H_matrix_ref,1),N_det_ref))
   allocate (eigenvalues(N_det_ref))
-  call lapack_diag(eigenvalues,eigenvectors,                       &
+  call lapack_diag_z(eigenvalues,eigenvectors,                       &
       H_matrix_ref,size(H_matrix_ref,1),N_det_ref)
   do i = 1, N_states
    psi_ref_energy_diagonalized(i) = eigenvalues(i)
@@ -200,9 +201,9 @@ END_PROVIDER
   do k = 1, N_states
    norm = 0.d0
    do i = 1, N_det_ref
-    norm += psi_ref_coef(i,k) * psi_ref_coef(i,k)
+    norm += cdabs(psi_ref_coef(i,k) * psi_ref_coef(i,k))
     do j = 1, N_det_ref
-      psi_ref_energy(k) += psi_ref_coef(i,k) * psi_ref_coef(j,k) * H_matrix_ref(i,j)
+      psi_ref_energy(k) += real(conjg(psi_ref_coef(i,k)) * psi_ref_coef(j,k) * H_matrix_ref(i,j))
     enddo
    enddo
    psi_ref_energy(k) = psi_ref_energy(k) /norm
@@ -310,13 +311,13 @@ integer function get_index_in_psi_ref_sorted_bit(key,Nint)
 
 end
 
-BEGIN_PROVIDER [double precision, ref_hamiltonian_matrix, (n_det_ref,n_det_ref)]
+BEGIN_PROVIDER [complex*16, ref_hamiltonian_matrix, (n_det_ref,n_det_ref)]
  BEGIN_DOC
  ! H matrix in the Reference space
  END_DOC
  implicit none
  integer :: i,j
- double precision :: hij
+ complex*16 :: hij
  do i = 1, N_det_ref
   do j = 1, N_det_ref
    call i_H_j(psi_ref(1,1,i),psi_ref(1,1,j),N_int,hij)

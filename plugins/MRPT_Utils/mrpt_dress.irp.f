@@ -127,10 +127,11 @@ end
 &BEGIN_PROVIDER [ integer, gen_det_ref_shortcut, (0:N_det_generators,2) ]
 &BEGIN_PROVIDER [ integer, gen_det_ref_version, (N_int, N_det_generators,2) ]
 &BEGIN_PROVIDER [ integer, gen_det_ref_idx, (N_det_generators,2) ]
-  gen_det_ref_sorted(:,:,:,1) = psi_det_generators(:,:,:N_det_generators)
-  gen_det_ref_sorted(:,:,:,2) = psi_det_generators(:,:,:N_det_generators)
-  call sort_dets_ab_v(gen_det_ref_sorted(:,:,:,1), gen_det_ref_idx(:,1), gen_det_ref_shortcut(0:,1), gen_det_ref_version(:,:,1), N_det_generators, N_int)
-  call sort_dets_ba_v(gen_det_ref_sorted(:,:,:,2), gen_det_ref_idx(:,2), gen_det_ref_shortcut(0:,2), gen_det_ref_version(:,:,2), N_det_generators, N_int)
+  stop 'not implemented'
+!  gen_det_ref_sorted(:,:,:,1) = psi_det_generators(:,:,:N_det_generators)
+!  gen_det_ref_sorted(:,:,:,2) = psi_det_generators(:,:,:N_det_generators)
+!  call sort_dets_ab_v(gen_det_ref_sorted(:,:,:,1), gen_det_ref_idx(:,1), gen_det_ref_shortcut(0:,1), gen_det_ref_version(:,:,1), N_det_generators, N_int)
+!  call sort_dets_ba_v(gen_det_ref_sorted(:,:,:,2), gen_det_ref_idx(:,2), gen_det_ref_shortcut(0:,2), gen_det_ref_version(:,:,2), N_det_generators, N_int)
 END_PROVIDER
 
 
@@ -169,7 +170,8 @@ subroutine find_connections_previous(i_generator,n_selected,det_buffer,Nint,tq,N
       cycle
     end if
 
-    if (.not. is_in_wavefunction(det_buffer(1,1,i),Nint,N_det)) then
+!    if (.not. is_in_wavefunction(det_buffer(1,1,i),Nint,N_det)) then
+    if (.not. is_in_wavefunction(det_buffer(1,1,i),Nint)) then
       N_tq += 1
       do k=1,N_int
         tq(k,1,N_tq) = det_buffer(k,1,i)

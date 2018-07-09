@@ -130,6 +130,7 @@ subroutine selection_collector(zmq_socket_pull, b, N, pt2)
   integer(bit_kind), pointer :: det(:,:,:)
   integer, allocatable :: task_id(:)
   type(selection_buffer) :: b2
+  double precision :: tmpval
 
   zmq_to_qp_run_socket = new_zmq_to_qp_run_socket()
   call create_selection_buffer(N, N*2, b2)
@@ -138,10 +139,13 @@ subroutine selection_collector(zmq_socket_pull, b, N, pt2)
   pt2(:) = 0d0
   pt2_mwen(:) = 0.d0
   do while (more == 1)
-    call pull_selection_results(zmq_socket_pull, pt2_mwen, b2%val(1), b2%det(1,1,1), b2%cur, task_id, ntask)
+!    call pull_selection_results(zmq_socket_pull, pt2_mwen, b2%val(1), b2%det(1,1,1), b2%cur, task_id, ntask)
+    call pull_selection_results(zmq_socket_pull, pt2_mwen, b2%val(:), b2%det(1,1,1), b2%cur, task_id, ntask)
 
     pt2(:) += pt2_mwen(:)
     do i=1, b2%cur
+      !tmpval = b2%val(i)
+      !call add_to_selection_buffer(b, b2%det(1,1,i), tmpval)
       call add_to_selection_buffer(b, b2%det(1,1,i), b2%val(i))
       if (b2%val(i) > b%mini) exit
     end do

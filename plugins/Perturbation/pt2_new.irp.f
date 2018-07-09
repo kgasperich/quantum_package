@@ -45,11 +45,12 @@ subroutine i_H_psi_pert_new_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,
        coef_array(i) = coef(i_in_coef,i)
       enddo
       !get_delta_e_dyall not implemented for complex MOs
-      call get_delta_e_dyall(keys(1,1,i_in_key),key,coef_array,hij,delta_e_final)
+!      call get_delta_e_dyall(keys(1,1,i_in_key),key,coef_array,hij,delta_e_final)
+      call get_delta_e_dyall(keys(1,1,i_in_key),key,delta_e_final)
        
       coef_pert +=  coef(i_in_coef,1)*hij / delta_e_final
     enddo
-    if     (coef_pert * i_H_psi_array(1) > 0.d0)then
+    if     (real(conjg(coef_pert) * i_H_psi_array(1)) > 0.d0)then
       print*, coef_pert * i_H_psi_array(1)
     endif
 

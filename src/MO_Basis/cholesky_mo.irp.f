@@ -131,8 +131,10 @@ subroutine svd_mo(n,m,P,LDP,C,LDC)
  double precision:: tol
  double precision, allocatable :: W(:,:), work(:)
 
- allocate(W(LDC,n),work(2*n))
- call svd(P,LDP,C,LDC,W,size(W,1),m,n)
+! allocate(W(LDC,n),work(2*n))
+! call svd(P,LDP,C,LDC,W,size(W,1),m,n)
+ allocate(W(LDC,n),work(min(m,n)))
+ call svd(P,LDP,C,LDC,work,W,size(W,1),m,n)
 
  deallocate(W,work)
 end

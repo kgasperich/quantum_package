@@ -628,16 +628,17 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
   enddo
 
   logical :: integral_is_in_map
-  if (key_kind == 8) then
+!  if (key_kind == 8) then
     call i8radix_sort(hash1,iorder1,kk,-1)
     call i8radix_sort(hash2,iorder2,kk,-1)
-  else if (key_kind == 4) then
-    call iradix_sort(hash1,iorder1,kk,-1)
-    call iradix_sort(hash2,iorder2,kk,-1)
-  else if (key_kind == 2) then
-    call i2radix_sort(hash1,iorder1,kk,-1)
-    call i2radix_sort(hash2,iorder2,kk,-1)
-  endif
+!  else if (key_kind == 4) then
+!    call iradix_sort(hash1,iorder1,kk,-1)
+!    call iradix_sort(hash2,iorder2,kk,-1)
+!  else if (key_kind == 2) then
+!    call i2radix_sort(hash1,iorder1,kk,-1)
+!    call i2radix_sort(hash2,iorder2,kk,-1)
+!  endif
+
   call iradix_sort(iorder1,jorder1,kk,-1)
   call iradix_sort(iorder2,jorder2,kk,-1)
 

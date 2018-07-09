@@ -167,6 +167,7 @@ subroutine get_delta_e_dyall(det_1,det_2,delta_e_final)
  ! operator in the active space that lead from det_1 to det_2
  END_DOC
  implicit none
+ stop 'not implemented'
   use bitmasks
  double precision, intent(out) :: delta_e_final(N_states)
  integer(bit_kind), intent(in) :: det_1(N_int,2),det_2(N_int,2)

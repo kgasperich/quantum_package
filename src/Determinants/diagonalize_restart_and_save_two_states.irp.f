@@ -2,10 +2,10 @@ program diag_and_save
  implicit none
  read_wf = .True.
  touch read_wf
- call routine
+ call routine_diag_and_save
 end
 
-subroutine routine
+subroutine routine_diag_and_save
  implicit none
  integer :: igood_state_1,igood_state_2
  complex*16, allocatable :: psi_coef_tmp(:,:)

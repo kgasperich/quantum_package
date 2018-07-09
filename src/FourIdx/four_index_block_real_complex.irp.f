@@ -30,7 +30,8 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
   integer                        :: a, b, c, d
   double precision, external     :: get_ao_bielec_integral
   integer*8                      :: ii
-  integer(key_kind)              :: idx,keytmp1,keytmp2
+  integer                        :: idx
+  integer(key_kind)              :: key_i,keytmp1,keytmp2
   real(integral_kind)            :: tmp
   integer(key_kind), allocatable :: key1(:),key2(:)
   real(integral_kind), allocatable :: value1(:),value2(:),value(:)
@@ -86,7 +87,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
 
     allocate(l_pointer(l_start_block:l_end_block+1), value((i_max*k_max)) )
     ii = 1_8
-    !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(i,j,k,l,ik,idx) 
+    !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(i,j,k,l,ik,key_i) 
     do l=l_start_block,l_end_block
       !$OMP SINGLE
       l_pointer(l) = ii
@@ -96,8 +97,8 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
         do k=k_start,k_end
           do i=i_start,k
             ik = (i-i_start+1) + ishft( (k-k_start)*(k-k_start+1), -1 )
-            call bielec_integrals_index(i,j,k,l,idx)
-            call map_get(map_a,idx,value(ik))
+            call bielec_integrals_index(i,j,k,l,key_i)
+            call map_get(map_a,key_i,value(ik))
           enddo
         enddo
         !$OMP END DO
@@ -271,7 +272,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
 
       enddo ! l
 
-      idx = 0_8
+      idx = 0
 
       ! loop over unique 4-fold (including only one of each pair of complex conjugates)
       ! required conditions are:
@@ -308,7 +309,7 @@ subroutine four_index_transform_block_real_complex(map_a,map_c,matrix_B,LDB,    
             if (cdabs(U(a,c,b)) < 1.d-15) then
               cycle
             endif
-            idx = idx+1_8
+            idx = idx+1
             call bielec_integrals_index_2fold(a,b,c,d,keytmp1)
             call bielec_integrals_index_2fold(c,d,a,b,keytmp2)
             key1(idx) = min(keytmp1,keytmp2)

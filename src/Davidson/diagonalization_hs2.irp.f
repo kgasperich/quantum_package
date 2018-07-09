@@ -39,7 +39,7 @@ subroutine davidson_diag_hs2(dets_in,u_in,s2_out,dim_in,energies,sze,N_st,N_st_d
       !$OMP  PRIVATE(i)
   !$OMP DO SCHEDULE(static)
   do i=1,sze
-    H_jj(i)  = diag_H_mat_elem(dets_in(1,1,i),Nint)
+    H_jj(i)  = diag_h_mat_elem(dets_in(1,1,i),Nint)
   enddo
   !$OMP END DO 
   !$OMP END PARALLEL
@@ -200,7 +200,8 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       call random_number(r2)
       r1 = dsqrt(-2.d0*dlog(r1))
       r2 = dtwo_pi*r2
-      u_in(i,k) = dcmplx(r1*dcos(r2),r1*dsin(r2))
+      !u_in(i,k) = dcmplx(r1*dcos(r2),r1*dsin(r2))
+      u_in(i,k) = dcmplx(r1*dcos(r2),0.d0)
     enddo
   enddo
   do k=1,N_st_diag
