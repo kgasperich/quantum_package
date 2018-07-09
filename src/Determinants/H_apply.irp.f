@@ -210,7 +210,7 @@ subroutine remove_duplicates_in_psi_det(found_duplicates)
   allocate (duplicate(N_det), bit_tmp(N_det))
 
   do i=1,N_det
-    integer, external            :: det_search_key
+    integer*8, external            :: det_search_key
     !$DIR FORCEINLINE
     bit_tmp(i) = det_search_key(psi_det_sorted_bit(1,1,i),N_int)
     duplicate(i) = .False.
