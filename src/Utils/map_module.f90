@@ -526,7 +526,7 @@ end
 subroutine map_get(map, key, value)
   use map_module
   implicit none
-  type (map_type), intent(inout) :: map
+  type (map_type), intent(in) :: map
   integer(key_kind), intent(in)  :: key
   real(integral_kind), intent(out) :: value
   integer(map_size_kind)         :: idx_cache
@@ -541,7 +541,7 @@ end
 subroutine cache_map_get_interval(map, key, value, ibegin, iend, idx)
   use map_module
   implicit none
-  type (cache_map_type), intent(inout) :: map
+  type (cache_map_type), intent(in) :: map
   integer(key_kind), intent(in)  :: key
   integer(cache_map_size_kind), intent(in) :: ibegin, iend
   real(integral_kind), intent(out) :: value
