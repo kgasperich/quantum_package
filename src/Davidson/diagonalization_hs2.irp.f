@@ -229,9 +229,9 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       
        
       if ((sze > 100000).and.distributed_davidson) then
-          call H_S2_u_0_nstates_zmq   (W(1,shift+1),S(1,shift+1),U(1,shift+1),N_st_diag,sze)
+          call h_s2_u_0_nstates_zmq   (W(1,shift+1),S(1,shift+1),U(1,shift+1),N_st_diag,sze)
       else
-          call H_S2_u_0_nstates_openmp(W(1,shift+1),S(1,shift+1),U(1,shift+1),N_st_diag,sze)
+          call h_s2_u_0_nstates_openmp(W(1,shift+1),S(1,shift+1),U(1,shift+1),N_st_diag,sze)
       endif
       
       
