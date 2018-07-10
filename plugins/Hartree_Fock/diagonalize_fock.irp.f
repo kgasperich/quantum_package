@@ -7,12 +7,12 @@
    
    integer                        :: i,j
    integer                        :: n
-   complex*16, allocatable        :: eigvecs_tmp(:,:), F(:,:)
+   complex*16, allocatable        ::  F(:,:)
 
 
    
    
-   allocate( F(mo_tot_num,mo_tot_num), eigvecs_tmp(mo_tot_num,mo_tot_num))
+   allocate( F(mo_tot_num,mo_tot_num))
    do j=1,mo_tot_num
      do i=1,mo_tot_num
        F(i,j) = Fock_matrix_mo(i,j)
@@ -54,13 +54,14 @@
    
    n = mo_tot_num
    !call lapack_diagd_diag_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
-   call lapack_diagd_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
+   call lapack_diagd_diag_in_place_z(diagonal_Fock_matrix_mo,F,n,n)
+!   call lapack_diagd_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
    !call lapack_diag_z(diagonal_Fock_matrix_mo,eigvecs_tmp,F,n,n)
 
    call zgemm('N','N',ao_num,mo_tot_num,mo_tot_num, (1.d0,0.d0),     &
-       mo_coef, size(mo_coef,1), eigvecs_tmp, size(eigvecs_tmp,1),   &
+       mo_coef, size(mo_coef,1), F, size(F,1),   &
        (0.d0,0.d0), eigenvectors_Fock_matrix_mo, size(eigenvectors_Fock_matrix_mo,1))
-   deallocate( F, eigvecs_tmp)
+   deallocate( F)
    
 
 
