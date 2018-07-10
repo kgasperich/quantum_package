@@ -237,18 +237,18 @@ subroutine cache_map_sort(map)
     do i=1,map%n_elements
       iorder(i) = i
     enddo
-    if (cache_key_kind == 2) then
+!    if (cache_key_kind == 2) then
       call i2radix_sort(map%key,iorder,map%n_elements,-1)
-    else if (cache_key_kind == 4) then
-      call iradix_sort(map%key,iorder,map%n_elements,-1)
-    else if (cache_key_kind == 8) then
-      call i8radix_sort(map%key,iorder,map%n_elements,-1)
-    endif
-    if (integral_kind == 4) then
-      call set_order(map%value,iorder,map%n_elements)
-    else if (integral_kind == 8) then
+!    else if (cache_key_kind == 4) then
+!      call iradix_sort(map%key,iorder,map%n_elements,-1)
+!    else if (cache_key_kind == 8) then
+!      call i8radix_sort(map%key,iorder,map%n_elements,-1)
+!    endif
+!    if (integral_kind == 4) then
+!      call set_order(map%value,iorder,map%n_elements)
+!    else if (integral_kind == 8) then
       call dset_order(map%value,iorder,map%n_elements)
-    endif
+!    endif
     deallocate(iorder)
     map%sorted = .True.
   endif
@@ -526,7 +526,7 @@ end
 subroutine map_get(map, key, value)
   use map_module
   implicit none
-  type (map_type), intent(inout) :: map
+  type (map_type), intent(in) :: map
   integer(key_kind), intent(in)  :: key
   real(integral_kind), intent(out) :: value
   integer(map_size_kind)         :: idx_cache
@@ -541,7 +541,7 @@ end
 subroutine cache_map_get_interval(map, key, value, ibegin, iend, idx)
   use map_module
   implicit none
-  type (cache_map_type), intent(inout) :: map
+  type (cache_map_type), intent(in) :: map
   integer(key_kind), intent(in)  :: key
   integer(cache_map_size_kind), intent(in) :: ibegin, iend
   real(integral_kind), intent(out) :: value
