@@ -160,34 +160,34 @@ subroutine diagonalize_CI
 !  eigenstates of the CI matrix
   END_DOC
   integer :: i,j
-  print*,'testprintpsicoef_a'
-  do i=1,N_det
-    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef(i,:)
-  enddo
-  print*,'testprintpsicoefreal_a'
-  do i=1,N_det
-    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef_real(i,:)
-  enddo
+!  print*,'testprintpsicoef_a'
+!  do i=1,N_det
+!    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef(i,:)
+!  enddo
+!  print*,'testprintpsicoefreal_a'
+!  do i=1,N_det
+!    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef_real(i,:)
+!  enddo
   do j=1,N_states
     do i=1,N_det
       psi_coef(i,j) = CI_eigenvectors(i,j)
     enddo
   enddo
-  print*,'testprintpsicoef_b'
-  do i=1,N_det
-    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef(i,:)
-  enddo
-  print*,'testprintpsicoefreal_b'
-  do i=1,N_det
-    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef_real(i,:)
-  enddo
+!  print*,'testprintpsicoef_b'
+!  do i=1,N_det
+!    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef(i,:)
+!  enddo
+!  print*,'testprintpsicoefreal_b'
+!  do i=1,N_det
+!    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef_real(i,:)
+!  enddo
   SOFT_TOUCH psi_coef CI_electronic_energy CI_energy CI_eigenvectors CI_eigenvectors_s2
-  print*,'testprintpsicoef_c'
-  do i=1,N_det
-    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef(i,:)
-  enddo
-  print*,'testprintpsicoefreal_c'
-  do i=1,N_det
-    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef_real(i,:)
-  enddo
+!  print*,'testprintpsicoef_c'
+!  do i=1,N_det
+!    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef(i,:)
+!  enddo
+!  print*,'testprintpsicoefreal_c'
+!  do i=1,N_det
+!    write(*,'(I3,X,A3,1000(F16.7))')i,' | ',psi_coef_real(i,:)
+!  enddo
 end
