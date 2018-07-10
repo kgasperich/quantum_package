@@ -726,4 +726,5 @@ end
 SUBST [ ao_integrals_map, ao_integrals, ao_num ]
 ao_integrals_map ; ao_integrals ; ao_num ;;
 mo_integrals_map ; mo_integrals ; mo_tot_num ;;
+mo_integrals_map_2fold ; mo_integrals_2fold ; mo_tot_num ;;
 END_TEMPLATE
