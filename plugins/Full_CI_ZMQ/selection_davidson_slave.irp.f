@@ -109,11 +109,12 @@ subroutine run_wf
       call wall_time(t1)
       call write_double(6,(t1-t0),'Broadcast time')
 
-      logical :: lstop
-      lstop = .False.
+!      logical :: lstop
+!      lstop = .False.
       !$OMP PARALLEL PRIVATE(i)
       i = omp_get_thread_num()
-      call run_pt2_slave(0,i,energy,lstop)
+!      call run_pt2_slave(0,i,energy,lstop)
+      call run_pt2_slave(0,i,energy)
       !$OMP END PARALLEL
       print *,  'PT2 done'
 

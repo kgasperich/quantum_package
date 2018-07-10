@@ -72,11 +72,12 @@ subroutine run_wf
       if (zmq_get_psi(zmq_to_qp_run_socket,1) == -1) cycle
       if (zmq_get_dvector(zmq_to_qp_run_socket,1,'energy',energy,N_states) == -1) cycle
   
-      logical :: lstop
-      lstop = .False.
+!      logical :: lstop
+!      lstop = .False.
       !$OMP PARALLEL PRIVATE(i)
       i = omp_get_thread_num()
-      call run_pt2_slave(0,i,energy,lstop)
+!      call run_pt2_slave(0,i,energy,lstop)
+      call run_pt2_slave(0,i,energy)
       !$OMP END PARALLEL
       print *,  'PT2 done'
 
