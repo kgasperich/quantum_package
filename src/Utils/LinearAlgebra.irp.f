@@ -194,7 +194,7 @@ subroutine ortho_qr_complex(A,LDA,m,n)
   deallocate(WORK)
   allocate(WORK(LWORK))
   call  zgeqrf(m, n, A, LDA, TAU, WORK, LWORK, INFO )
-  call  dorgqr(m, n, n, A, LDA, tau, WORK, LWORK, INFO)
+  call  zungqr(m, n, n, A, LDA, tau, WORK, LWORK, INFO)
   deallocate(WORK,jpvt,tau)
 end
 
