@@ -4,7 +4,6 @@ BEGIN_PROVIDER [complex*16, ao_kinetic_integral, (ao_num,ao_num)]
   ! array of the priminitve basis kinetic integrals
   !  \langle \chi_i |\hat{T}| \chi_j \rangle
   END_DOC
-  integer                        :: i,j,k,l
   
   if (read_ao_one_integrals) then
     call read_one_e_integrals_complex('ao_kinetic_integral', ao_kinetic_integral,&
