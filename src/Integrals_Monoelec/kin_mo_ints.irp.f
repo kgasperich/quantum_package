@@ -9,7 +9,7 @@ BEGIN_PROVIDER [complex*16, mo_kinetic_integral, (mo_tot_num,mo_tot_num)]
         size(mo_kinetic_integral,1), size(mo_kinetic_integral,2))
     print *,  'MO kinetic integrals read from disk'
   else
-    call real_ao_to_mo(                                               &
+    call complex_ao_to_mo(                                           &
         ao_kinetic_integral,                                         &
         size(ao_kinetic_integral,1),                                 &
         mo_kinetic_integral,                                         &

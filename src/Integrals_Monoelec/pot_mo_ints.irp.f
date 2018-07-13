@@ -9,7 +9,7 @@ BEGIN_PROVIDER [complex*16, mo_nucl_elec_integral, (mo_tot_num,mo_tot_num)]
         size(mo_nucl_elec_integral,1), size(mo_nucl_elec_integral,2))
     print *,  'MO N-e integrals read from disk'
   else
-    call real_ao_to_mo(                                                   &
+    call complex_ao_to_mo(                                            &
         ao_nucl_elec_integral,                               &
         size(ao_nucl_elec_integral,1),                       &
         mo_nucl_elec_integral,                                       &
@@ -35,7 +35,7 @@ BEGIN_PROVIDER [complex*16, mo_nucl_elec_integral_per_atom, (mo_tot_num,mo_tot_n
  integer :: k
  mo_nucl_elec_integral_per_atom = 0.d0
  do k = 1, nucl_num 
-   call real_ao_to_mo(                                               &
+   call complex_ao_to_mo(                                               &
        ao_nucl_elec_integral_per_atom(1,1,k),                        &
        size(ao_nucl_elec_integral_per_atom,1),                       &
        mo_nucl_elec_integral_per_atom(1,1,k),                        &

@@ -9,7 +9,7 @@ BEGIN_PROVIDER [complex*16, mo_pseudo_integral, (mo_tot_num,mo_tot_num)]
         size(mo_pseudo_integral,1), size(mo_pseudo_integral,2))
     print *,  'MO pseudopotential integrals read from disk'
   else
-    call real_ao_to_mo(                                                   &
+    call complex_ao_to_mo(                                               &
         ao_pseudo_integral,                                 &
         size(ao_pseudo_integral,1),                         &
         mo_pseudo_integral,                                         &
