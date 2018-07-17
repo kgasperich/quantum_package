@@ -18,9 +18,7 @@ BEGIN_PROVIDER [complex*16, FPS_SPF_Matrix_AO, (AO_num, AO_num)]
   !   Commutator FPS - SPF
   END_DOC
   complex*16, allocatable  :: scratch(:,:)
-  double precision, allocatable :: rwork(:)
   allocate(                                                          &
-      rwork(2*AO_num*AO_num),                                  &
       scratch(AO_num, AO_num)                                  &
       )
   
@@ -35,18 +33,22 @@ BEGIN_PROVIDER [complex*16, FPS_SPF_Matrix_AO, (AO_num, AO_num)]
   
   ! Compute FPS
   
-  call zlacrm(AO_num,AO_num,                                         &
+  call zgemm('N','N',AO_num,AO_num,AO_num,                           &
+        (1.d0,0.d0), &
         scratch,size(scratch,1),                                     &
         AO_Overlap,size(AO_Overlap,1),                               &
-        FPS_SPF_Matrix_AO,size(FPS_SPF_Matrix_AO,1),rwork)
+        (0.d0,0.d0), &
+        FPS_SPF_Matrix_AO,size(FPS_SPF_Matrix_AO,1))
 
 
   ! Compute SP
-  
-  call zlarcm(AO_num,AO_num,                                         &
+
+  call zgemm('N','N',AO_num,AO_num,AO_num,                           &
+        (1.d0,0.d0), &
         AO_Overlap,size(AO_Overlap,1),                               &
         HF_Density_Matrix_AO,size(HF_Density_Matrix_AO,1),           &
-        scratch,size(scratch,1),rwork)
+        (0.d0,0.d0), &
+        scratch,size(scratch,1))
 
   
   ! Compute FPS - SPF
@@ -58,7 +60,7 @@ BEGIN_PROVIDER [complex*16, FPS_SPF_Matrix_AO, (AO_num, AO_num)]
       (1.d0,0.d0),                                                   &
       FPS_SPF_Matrix_AO,Size(FPS_SPF_Matrix_AO,1))
 
-  deallocate(scratch, rwork)
+  deallocate(scratch)
 
 END_PROVIDER
 
@@ -81,45 +83,33 @@ END_PROVIDER
 
    implicit none
    
-   double precision, allocatable  :: work(:),Xt(:,:)
+   double precision, allocatable  :: work(:)
    integer                        :: lwork,info,lrwork
    integer                        :: i,j
 
    double precision, allocatable :: rwork(:)
    complex*16, allocatable       :: scratch(:,:)
    
-   lrwork = 2*ao_num*ao_num
-   allocate(                                                         &
-       scratch(AO_num,AO_num),                                 &
-       rwork(lrwork),                                                  &
-       Xt(AO_num,AO_num)                                             &
-       )
+   allocate( scratch(AO_num,AO_num) )
  
-! Calculate Xt
-
-  do i=1,AO_num
-    do j=1,AO_num
-      Xt(i,j) = S_half_inv(j,i)
-    enddo
-  enddo
-
 ! Calculate Fock matrix in orthogonal basis: F' = Xt.F.X
-
-  call zlacrm(ao_num,ao_num, &
-         Fock_matrix_AO,size(Fock_matrix_AO,1), &
+  
+  call zgemm('C','N',AO_num,AO_num,AO_num,                           &
+         (1.d0,0.d0),                                                   &
          S_half_inv,size(S_half_inv,1),        &
-         eigenvectors_Fock_matrix_AO,size(eigenvectors_Fock_matrix_AO,1), &
-         rwork)
+         Fock_Matrix_AO,Size(Fock_Matrix_AO,1),                         &
+         (0.d0,0.d0),                                                   &
+         eigenvectors_Fock_matrix_AO,size(eigenvectors_Fock_matrix_AO,1))
 
-  call zlarcm(ao_num,ao_num, &
-         Xt,size(Xt,1), &
+  call zgemm('N','N',AO_num,AO_num,AO_num,                           &
+         (1.d0,0.d0),                                                   &
          eigenvectors_Fock_matrix_AO,size(eigenvectors_Fock_matrix_AO,1), &
-         scratch,size(scratch,1), &
-         rwork)
-     
+         S_half_inv,size(S_half_inv,1),        &
+         (0.d0,0.d0),                                                   &
+         scratch,size(scratch,1))
+
 ! Diagonalize F' to obtain eigenvectors in orthogonal basis C' and eigenvalues
  
-   deallocate(rwork)
    lrwork = 3*ao_num - 2
    allocate( rwork(lrwork), work(1) )
    lwork = -1
@@ -149,12 +139,15 @@ END_PROVIDER
 
   lrwork = 2*ao_num*ao_num
   allocate(rwork(lrwork))
-  call zlarcm(ao_num,ao_num,     &
-       S_half_inv,size(S_half_inv,1),        &
-       scratch,size(scratch,1),                &
-       eigenvectors_Fock_matrix_AO,size(eigenvectors_Fock_matrix_AO,1), &
-       rwork)
-  deallocate(rwork, scratch, Xt)
+  
+  call zgemm('N','N',AO_num,AO_num,AO_num,                           &
+         (1.d0,0.d0),                                                   &
+         S_half_inv,size(S_half_inv,1),        &
+         scratch,size(scratch,1),                &
+         (0.d0,0.d0),                                                   &
+         eigenvectors_Fock_matrix_AO,size(eigenvectors_Fock_matrix_AO,1))
+
+  deallocate(rwork, scratch)
    
 END_PROVIDER
 
