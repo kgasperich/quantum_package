@@ -41,8 +41,7 @@ BEGIN_PROVIDER [ complex*16, S_inv,(ao_num,ao_num) ]
  call get_pseudo_inverse_complex(ao_overlap,size(ao_overlap,1),ao_num,ao_num,S_inv,size(S_inv,1))
 END_PROVIDER
 
-!TODO: complex S_half_inv
-BEGIN_PROVIDER [ double precision, S_half_inv, (AO_num,AO_num) ]
+BEGIN_PROVIDER [ complex*16, S_half_inv, (AO_num,AO_num) ]
 
   BEGIN_DOC
 !   Matrix X = S^{-1/2} obtained by SVD
@@ -52,7 +51,8 @@ BEGIN_PROVIDER [ double precision, S_half_inv, (AO_num,AO_num) ]
 
   integer                         :: num_linear_dependencies
   integer                         :: LDA, LDC
-  double precision, allocatable   :: U(:,:),Vt(:,:), D(:)
+  double precision, allocatable   :: D(:)
+  complex*16, allocatable   :: U(:,:),Vt(:,:)
   integer                         :: info, i, j, k
   double precision, parameter     :: threshold_overlap_AO_eigenvalues = 1.d-6
  
@@ -64,7 +64,7 @@ BEGIN_PROVIDER [ double precision, S_half_inv, (AO_num,AO_num) ]
     Vt(LDA,AO_num), &
     D(AO_num))
 
-  call svd(            &
+  call svd_complex(    &
        AO_overlap,LDA, &
        U,LDC,          &
        D,              &
@@ -100,26 +100,25 @@ BEGIN_PROVIDER [ double precision, S_half_inv, (AO_num,AO_num) ]
 
 END_PROVIDER
 
-!TODO: complex S_half
-BEGIN_PROVIDER [ double precision, S_half, (ao_num,ao_num)  ]
+BEGIN_PROVIDER [ complex*16, S_half, (ao_num,ao_num)  ]
  implicit none
  BEGIN_DOC
  ! S^{1/2}
  END_DOC
 
   integer :: i,j,k
-  double precision, allocatable  :: U(:,:)
-  double precision, allocatable  :: Vt(:,:)
+  complex*16, allocatable  :: U(:,:)
+  complex*16, allocatable  :: Vt(:,:)
   double precision, allocatable  :: D(:)
   
   allocate(U(ao_num,ao_num),Vt(ao_num,ao_num),D(ao_num))
 
-  call svd(ao_overlap,size(ao_overlap,1),U,size(U,1),D,Vt,size(Vt,1),ao_num,ao_num)
+  call svd_complex(ao_overlap,size(ao_overlap,1),U,size(U,1),D,Vt,size(Vt,1),ao_num,ao_num)
 
   do i=1,ao_num
     D(i) = dsqrt(D(i))
     do j=1,ao_num
-      S_half(j,i) = 0.d0
+      S_half(j,i) = (0.d0,0.d0)
     enddo
   enddo
 
