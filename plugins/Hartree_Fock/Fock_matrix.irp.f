@@ -183,11 +183,11 @@ END_PROVIDER
                values(1) = ao_bielec_integral(k0,l0,i0,j0)
              endif
              integral = c0 * values(1)
-             ao_bi_elec_integral_alpha_tmp(i,j) += integral
-             ao_bi_elec_integral_beta_tmp (i,j) += integral
+             ao_bi_elec_integral_alpha_tmp(i,j) += integral ! c_a(i,j) = (DM_a(k,l)+DM_b(k,l))*(kl|ij)
+             ao_bi_elec_integral_beta_tmp (i,j) += integral ! c_b(i,j) = (DM_a(k,l)+DM_b(k,l))*(kl|ij)
              integral = values(1)
-             ao_bi_elec_integral_alpha_tmp(l,j) -= c1 * integral
-             ao_bi_elec_integral_beta_tmp (l,j) -= c2 * integral
+             ao_bi_elec_integral_alpha_tmp(l,j) -= c1 * integral ! c_a(l,j) = -DM_a(k,i) * (kl|ij)
+             ao_bi_elec_integral_beta_tmp (l,j) -= c2 * integral ! c_b(l,j) = -DM_b(k,i) * (kl|ij)
            enddo
    enddo
    !$OMP END DO NOWAIT

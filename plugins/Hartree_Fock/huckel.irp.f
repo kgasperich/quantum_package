@@ -7,7 +7,7 @@ subroutine huckel_guess
   double precision               :: accu
   double precision               :: c
   character*(64)                 :: label
-  double precision, allocatable  :: A(:,:)
+  complex*16, allocatable  :: A(:,:)
   label = "Guess"
   c = 0.5d0 * 1.75d0
 

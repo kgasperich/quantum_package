@@ -352,16 +352,17 @@ BEGIN_PROVIDER [ double precision, ao_bielec_integral_schwartz,(ao_num,ao_num)  
   END_DOC
   
   integer                        :: i,k
-  double precision               :: ao_bielec_integral,cpu_1,cpu_2, wall_1, wall_2
+  double precision               :: cpu_1,cpu_2, wall_1, wall_2
+  complex*16                     :: ao_bielec_integral
   
-  ao_bielec_integral_schwartz(1,1) = ao_bielec_integral(1,1,1,1)
+  ao_bielec_integral_schwartz(1,1) = real(ao_bielec_integral(1,1,1,1))
   !$OMP PARALLEL DO PRIVATE(i,k)                                     &
       !$OMP DEFAULT(NONE)                                            &
       !$OMP SHARED (ao_num,ao_bielec_integral_schwartz)              &
       !$OMP SCHEDULE(dynamic)
   do i=1,ao_num
     do k=1,i
-      ao_bielec_integral_schwartz(i,k) = dsqrt(ao_bielec_integral(i,k,i,k))
+      ao_bielec_integral_schwartz(i,k) = dsqrt(real(ao_bielec_integral(i,k,k,i)))
       ao_bielec_integral_schwartz(k,i) = ao_bielec_integral_schwartz(i,k)
     enddo
   enddo
@@ -384,8 +385,8 @@ subroutine compute_ao_integrals_jl(j,l,n_integrals,buffer_i,buffer_value)
   real(integral_kind),intent(out) :: buffer_value(ao_num*ao_num)
 
   integer                        :: i,k
-  double precision               :: ao_bielec_integral,cpu_1,cpu_2, wall_1, wall_2
-  double precision               :: integral, wall_0
+  complex*16               :: ao_bielec_integral
+  double precision               :: integral, wall_0,cpu_1,cpu_2, wall_1, wall_2
   double precision               :: thr
   integer                        :: kk, m, j1, i1
 
