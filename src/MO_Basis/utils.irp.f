@@ -83,7 +83,7 @@ subroutine mo_as_eigvectors_of_mo_matrix(matrix,n,m,label,sign,output)
   endif
   mo_coef_new = mo_coef
   
-  call lapack_diag_z(eigvalues,R,A,n,m)
+  call lapack_diag_complex(eigvalues,R,A,n,m)
   if (output) then
     write (6,'(A)')  'MOs are now **'//trim(label)//'**'
     write (6,'(A)') ''
@@ -139,7 +139,7 @@ subroutine mo_as_svd_vectors_of_mo_matrix(matrix,lda,m,n,label)
   enddo
   mo_coef_new = mo_coef
   
-  call svd_z(A,lda,U,lda,D,Vt,lda,m,n)
+  call svd_complex(A,lda,U,lda,D,Vt,lda,m,n)
 
   write (6,'(A)') 'MOs are now **'//trim(label)//'**'
   write (6,'(A)')  ''

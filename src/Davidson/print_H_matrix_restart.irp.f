@@ -109,7 +109,7 @@ subroutine routine
  double precision, allocatable  :: s2_eigvalues(:)
  allocate (eigenvectors(size(H_matrix_all_dets,1),N_det))
  allocate (eigenvalues(N_det),s2_eigvalues(N_det))
- call lapack_diag_z(eigenvalues,eigenvectors,                       &
+ call lapack_diag_complex(eigenvalues,eigenvectors,                       &
      H_matrix_all_dets,size(H_matrix_all_dets,1),N_det)
  print*,'Two first eigenvectors '
  call u_0_S2_u_0(s2_eigvalues,eigenvectors,n_det,keys_tmp,N_int,N_det,size(eigenvectors,1))

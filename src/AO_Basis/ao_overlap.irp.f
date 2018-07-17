@@ -82,7 +82,7 @@ BEGIN_PROVIDER [ double precision, S_half_inv, (AO_num,AO_num) ]
       D(i) = 1.d0/sqrt(D(i))
     endif
     do j=1,AO_num
-      S_half_inv(j,i) = 0.d0
+      S_half_inv(j,i) = (0.d0,0.d0)
     enddo
   enddo
   write(*,*) 'linear dependencies',num_linear_dependencies

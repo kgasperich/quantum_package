@@ -50,7 +50,7 @@ subroutine cholesky_mo(n,m,P,LDP,C,LDC,tol_in,rank)
  deallocate(W,work)
 end
 
-subroutine cholesky_mo_z(n,m,P,LDP,C,LDC,tol_in,rank)
+subroutine cholesky_mo_complex(n,m,P,LDP,C,LDC,tol_in,rank)
  implicit none
  BEGIN_DOC
 ! Cholesky decomposition of AO Density matrix

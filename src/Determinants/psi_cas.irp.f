@@ -131,7 +131,7 @@ END_PROVIDER
   double precision, allocatable  :: eigenvalues(:)
   allocate (eigenvectors(size(H_matrix_cas,1),N_det_cas))
   allocate (eigenvalues(N_det_cas))
-  call lapack_diag_z(eigenvalues,eigenvectors,                       &
+  call lapack_diag_complex(eigenvalues,eigenvectors,                       &
       H_matrix_cas,size(H_matrix_cas,1),N_det_cas)
   do i = 1, N_states
    psi_cas_energy_diagonalized(i) = eigenvalues(i)

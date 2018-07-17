@@ -41,14 +41,14 @@ subroutine svd(A,LDA,U,LDU,D,Vt,LDVt,m,n)
   
 end
 
-subroutine svd_z(A,LDA,U,LDU,D,Vt,LDVt,m,n)
+subroutine svd_complex(A,LDA,U,LDU,D,Vt,LDVt,m,n)
   implicit none
   BEGIN_DOC
   ! Compute A = U.D.Vt
   !
   ! LDx : leftmost dimension of x
   !
-  ! Dimsneion of A is m x n
+  ! Dimension of A is m x n
   ! A,U,Vt are complex*16
   ! D is double precision
   END_DOC
@@ -340,7 +340,7 @@ subroutine ortho_lowdin(overlap,LDA,N,C,LDC,m)
 end
 
 
-subroutine ortho_lowdin_z(overlap,LDA,N,C,LDC,m)
+subroutine ortho_lowdin_complex(overlap,LDA,N,C,LDC,m)
   implicit none
   BEGIN_DOC
   ! Compute C_new=C_old.S^-1/2 orthogonalization.
@@ -375,7 +375,7 @@ subroutine ortho_lowdin_z(overlap,LDA,N,C,LDC,m)
 
   allocate(U(ldc,n),Vt(lda,n),S(lda,n),D(n))
 
-  call svd_z(overlap,lda,U,ldc,D,Vt,lda,n,n)
+  call svd_complex(overlap,lda,U,ldc,D,Vt,lda,n,n)
 
   !$OMP PARALLEL DEFAULT(NONE) &
   !$OMP SHARED(S,U,D,Vt,n,C,m) &
@@ -506,6 +506,62 @@ subroutine get_pseudo_inverse(A,LDA,m,n,C,LDC)
   
 end
 
+
+subroutine get_pseudo_inverse_complex(A,LDA,m,n,C,LDC)
+  implicit none
+  BEGIN_DOC
+  ! Find C = A^-1
+  END_DOC
+  integer, intent(in)            :: m,n, LDA, LDC
+  complex*16, intent(in)   :: A(LDA,n)
+  complex*16, intent(out)  :: C(LDC,m)
+  
+  double precision, allocatable  :: D(:), rwork(:)
+  complex*16, allocatable  :: U(:,:), Vt(:,:), work(:), A_tmp(:,:)
+  integer                        :: info, lwork
+  integer                        :: i,j,k
+  allocate (D(n),U(m,n),Vt(n,n),work(1),A_tmp(m,n),rwork(5*n))
+  do j=1,n
+    do i=1,m
+      A_tmp(i,j) = A(i,j)
+    enddo
+  enddo
+  lwork = -1
+  call zgesvd('S','A', m, n, A_tmp, m,D,U,m,Vt,n,work,lwork,rwork,info)
+  if (info /= 0) then
+    print *,  info, ': SVD failed'
+    stop
+  endif
+  lwork = int(real(work(1)))
+  deallocate(work)
+  allocate(work(lwork))
+  call zgesvd('S','A', m, n, A_tmp, m,D,U,m,Vt,n,work,lwork,rwork,info)
+  if (info /= 0) then
+    print *,  info, ':: SVD failed'
+    stop 1
+  endif
+  
+  do i=1,n
+    if (D(i)/D(1) > 1.d-10) then
+      D(i) = 1.d0/D(i)
+    else
+      D(i) = 0.d0
+    endif
+  enddo
+  
+  C = (0.d0,0.d0)
+  do i=1,m
+    do j=1,n
+      do k=1,n
+        C(j,i) = C(j,i) + U(i,k) * D(k) * Vt(k,j)
+      enddo
+    enddo
+  enddo
+  
+  deallocate(U,D,Vt,work,A_tmp,rwork)
+  
+end
+
 subroutine find_rotation(A,LDA,B,m,C,n)
   implicit none
   BEGIN_DOC
@@ -604,7 +660,7 @@ subroutine lapack_diagd(eigvalues,eigvectors,H,nmax,n)
   deallocate(A,eigenvalues)
 end
 
-subroutine lapack_diagd_diag_in_place_z(eigvalues,eigvectors,nmax,n)
+subroutine lapack_diagd_diag_in_place_complex(eigvalues,eigvectors,nmax,n)
   implicit none
   BEGIN_DOC
   ! Diagonalize matrix H(complex)
@@ -682,7 +738,7 @@ subroutine lapack_diagd_diag_in_place_z(eigvalues,eigvectors,nmax,n)
 
 end
 
-subroutine lapack_diagd_diag_z(eigvalues,eigvectors,H,nmax,n)
+subroutine lapack_diagd_diag_complex(eigvalues,eigvectors,H,nmax,n)
   implicit none
   BEGIN_DOC
   ! Diagonalize matrix H(complex)
@@ -773,7 +829,7 @@ subroutine lapack_diagd_diag_z(eigvalues,eigvectors,H,nmax,n)
   deallocate(A,eigenvalues)
 end
 
-subroutine lapack_diagd_z(eigvalues,eigvectors,H,nmax,n)
+subroutine lapack_diagd_complex(eigvalues,eigvectors,H,nmax,n)
   implicit none
   BEGIN_DOC
   ! Diagonalize matrix H(complex)
@@ -914,7 +970,7 @@ subroutine lapack_diag(eigvalues,eigvectors,H,nmax,n)
   deallocate(A,eigenvalues)
 end
 
-subroutine lapack_diag_z(eigvalues,eigvectors,H,nmax,n)
+subroutine lapack_diag_complex(eigvalues,eigvectors,H,nmax,n)
   implicit none
   BEGIN_DOC
   ! Diagonalize matrix H (complex)

@@ -16,7 +16,7 @@ program localize_mos
 
 !  call svd_mo(ao_num,elec_beta_num,W, size(W,1), &
 !    mo_coef(1,1),size(mo_coef,1))
-  call cholesky_mo_z(ao_num,elec_beta_num,W, size(W,1), &
+  call cholesky_mo_complex(ao_num,elec_beta_num,W, size(W,1), &
     mo_coef(1,1),size(mo_coef,1),1.d-6,rank)
   print *,  rank
 
@@ -32,7 +32,7 @@ program localize_mos
 
 !    call svd_mo(ao_num,elec_alpha_num-elec_beta_num,W, size(W,1), &
 !    mo_coef(1,1),size(mo_coef,1))
-    call cholesky_mo_z(ao_num,elec_alpha_num-elec_beta_num,W, size(W,1), &
+    call cholesky_mo_complex(ao_num,elec_alpha_num-elec_beta_num,W, size(W,1), &
       mo_coef(1,elec_beta_num+1),size(mo_coef,1),1.d-6,rank)
     print *,  rank
   endif
@@ -48,7 +48,7 @@ program localize_mos
 
 !  call svd_mo(ao_num,mo_tot_num-elec_alpha_num,W, size(W,1), &
 !    mo_coef(1,1),size(mo_coef,1))
-  call cholesky_mo_z(ao_num,mo_tot_num-elec_alpha_num,W, size(W,1), &
+  call cholesky_mo_complex(ao_num,mo_tot_num-elec_alpha_num,W, size(W,1), &
     mo_coef(1,elec_alpha_num+1),size(mo_coef,1),1.d-6,rank)
   print *,  rank
   mo_label = "Localized"

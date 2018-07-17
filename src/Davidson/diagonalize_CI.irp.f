@@ -73,7 +73,7 @@ END_PROVIDER
      
      allocate (eigenvectors(size(H_matrix_all_dets,1),N_det))
      allocate (eigenvalues(N_det))
-     call lapack_diag_z(eigenvalues,eigenvectors,                      &
+     call lapack_diag_complex(eigenvalues,eigenvectors,                      &
          H_matrix_all_dets,size(H_matrix_all_dets,1),N_det)
      CI_electronic_energy(:) = 0.d0
      if (s2_eig) then

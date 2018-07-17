@@ -290,7 +290,7 @@ subroutine davidson_diag_hjj_sjj(dets_in,u_in,H_jj,s2_out,energies,dim_in,sze,N_
       ! Diagonalize h
       ! -------------
 
-      call lapack_diag_z(lambda,y,h,size(h,1),shift2)
+      call lapack_diag_complex(lambda,y,h,size(h,1),shift2)
       
       ! Compute S2 for each eigenvector
       ! -------------------------------
