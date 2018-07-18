@@ -462,9 +462,7 @@ end
   !double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
   complex*16, allocatable        :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
   
-  if (.not.do_direct_integrals) then
     PROVIDE ao_bielec_integrals_in_map mo_coef
-  endif
   
   mo_bielec_integral_jj_from_ao = 0.d0
   mo_bielec_integral_jj_exchange_from_ao = 0.d0
@@ -477,7 +475,7 @@ end
       !$OMP  cz,                                                     &
       !$OMP  iqrs, iqsr,iqri,iqis)                                   &
       !$OMP SHARED(mo_tot_num,mo_coef_transp,ao_num,                 &
-      !$OMP  ao_integrals_threshold,do_direct_integrals)             &
+      !$OMP  ao_integrals_threshold)             &
       !$OMP REDUCTION(+:mo_bielec_integral_jj_from_ao,mo_bielec_integral_jj_exchange_from_ao)
   
   allocate( int_value(ao_num), int_idx(ao_num),                      &
@@ -495,31 +493,6 @@ end
         enddo
       enddo
       
-      if (do_direct_integrals) then
-        double precision               :: ao_bielec_integral
-        do r=1,ao_num
-          call compute_ao_bielec_integrals(q,r,s,ao_num,int_value)
-          do p=1,ao_num
-            integral = int_value(p)
-            if (abs(integral) > ao_integrals_threshold) then
-              do i=1,mo_tot_num
-                iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
-              enddo
-            endif
-          enddo
-          call compute_ao_bielec_integrals(q,s,r,ao_num,int_value)
-          do p=1,ao_num
-            integral = int_value(p)
-            if (abs(integral) > ao_integrals_threshold) then
-              do i=1,mo_tot_num
-                iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
-              enddo
-            endif
-          enddo
-        enddo
-        
-      else
-        
         do r=1,ao_num
           call get_ao_bielec_integrals_non_zero(q,r,s,ao_num,int_value,int_idx,n)
           do pp=1,n
@@ -542,7 +515,6 @@ end
             endif
           enddo
         enddo
-      endif
       iqis = 0.d0
       iqri = 0.d0
       do r=1,ao_num
@@ -593,9 +565,7 @@ END_PROVIDER
   !double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
   complex*16, allocatable        :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
   
-  if (.not.do_direct_integrals) then
-    PROVIDE ao_bielec_integrals_in_map mo_coef
-  endif
+  PROVIDE ao_bielec_integrals_in_map mo_coef
   
   mo_bielec_integral_vv_from_ao = 0.d0
   mo_bielec_integral_vv_exchange_from_ao = 0.d0
@@ -608,7 +578,7 @@ END_PROVIDER
       !$OMP  cz,                                                     &
       !$OMP  iqrs, iqsr,iqri,iqis)                                   &
       !$OMP SHARED(n_virt_orb,mo_tot_num,list_virt,mo_coef_transp,ao_num,&
-      !$OMP  ao_integrals_threshold,do_direct_integrals)             &
+      !$OMP  ao_integrals_threshold)             &
       !$OMP REDUCTION(+:mo_bielec_integral_vv_from_ao,mo_bielec_integral_vv_exchange_from_ao)
   
   allocate( int_value(ao_num), int_idx(ao_num),                      &
@@ -627,33 +597,6 @@ END_PROVIDER
         enddo
       enddo
       
-      if (do_direct_integrals) then
-        double precision               :: ao_bielec_integral
-        do r=1,ao_num
-          call compute_ao_bielec_integrals(q,r,s,ao_num,int_value)
-          do p=1,ao_num
-            integral = int_value(p)
-            if (abs(integral) > ao_integrals_threshold) then
-              do i0=1,n_virt_orb
-                i = list_virt(i0)
-                iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
-              enddo
-            endif
-          enddo
-          call compute_ao_bielec_integrals(q,s,r,ao_num,int_value)
-          do p=1,ao_num
-            integral = int_value(p)
-            if (abs(integral) > ao_integrals_threshold) then
-              do i0=1,n_virt_orb
-                i =list_virt(i0)
-                iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
-              enddo
-            endif
-          enddo
-        enddo
-        
-      else
-        
         do r=1,ao_num
           call get_ao_bielec_integrals_non_zero(q,r,s,ao_num,int_value,int_idx,n)
           do pp=1,n
@@ -678,7 +621,6 @@ END_PROVIDER
             endif
           enddo
         enddo
-      endif
       iqis = 0.d0
       iqri = 0.d0
       do r=1,ao_num
@@ -715,35 +657,7 @@ END_PROVIDER
   
 END_PROVIDER
 
-! complex version of provider below
-! BEGIN_PROVIDER [ complex*16, mo_bielec_integral_jj, (mo_tot_num,mo_tot_num) ]
-!&BEGIN_PROVIDER [ complex*16, mo_bielec_integral_jj_exchange, (mo_tot_num,mo_tot_num) ]
-!&BEGIN_PROVIDER [ complex*16, mo_bielec_integral_jj_anti, (mo_tot_num,mo_tot_num) ]
-!  implicit none
-!  BEGIN_DOC
-!  ! mo_bielec_integral_jj(i,j) = J_ij
-!  ! mo_bielec_integral_jj_exchange(i,j) = K_ij
-!  ! mo_bielec_integral_jj_anti(i,j) = J_ij - K_ij
-!  END_DOC
-!  
-!  integer                        :: i,j
-!  complex*16                     :: get_mo_bielec_integral
-!  
-!  PROVIDE mo_bielec_integrals_in_map
-!  mo_bielec_integral_jj = 0.d0
-!  mo_bielec_integral_jj_exchange = 0.d0
-!  
-!  do j=1,mo_tot_num
-!    do i=1,mo_tot_num
-!      mo_bielec_integral_jj(i,j) = get_mo_bielec_integral(i,j,i,j,mo_integrals_map)
-!      mo_bielec_integral_jj_exchange(i,j) = get_mo_bielec_integral(i,j,j,i,mo_integrals_map)
-!      mo_bielec_integral_jj_anti(i,j) = mo_bielec_integral_jj(i,j) - mo_bielec_integral_jj_exchange(i,j)
-!    enddo
-!  enddo
-!  
-!END_PROVIDER
 
-! real version of provider above
  BEGIN_PROVIDER [ double precision, mo_bielec_integral_jj, (mo_tot_num,mo_tot_num) ]
 &BEGIN_PROVIDER [ double precision, mo_bielec_integral_jj_exchange, (mo_tot_num,mo_tot_num) ]
 &BEGIN_PROVIDER [ double precision, mo_bielec_integral_jj_anti, (mo_tot_num,mo_tot_num) ]

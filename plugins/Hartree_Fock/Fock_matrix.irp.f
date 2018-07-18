@@ -112,107 +112,118 @@ END_PROVIDER
  
  integer                        :: i,j,k,l,k1,r,s
  integer                        :: i0,j0,k0,l0
+ integer                        :: ii(4), jj(4), kk(4), ll(4), k2
  integer*8                      :: p,q
  complex*16                     :: integral, c0, c1, c2 
- double precision               :: ao_bielec_integral, local_threshold
+ double precision               :: local_threshold
+ complex*16                     :: ao_bielec_integral
  complex*16, allocatable        :: ao_bi_elec_integral_alpha_tmp(:,:)
  complex*16, allocatable        :: ao_bi_elec_integral_beta_tmp(:,:)
 
  ao_bi_elec_integral_alpha = (0.d0,0.d0)
  ao_bi_elec_integral_beta  = (0.d0,0.d0)
- if (do_direct_integrals) then
 
-   !$OMP PARALLEL DEFAULT(NONE)                                      &
-       !$OMP PRIVATE(i,j,l,k1,k,integral,ii,jj,kk,ll,i8,keys,values,p,q,r,s,i0,j0,k0,l0, &
-       !$OMP ao_bi_elec_integral_alpha_tmp,ao_bi_elec_integral_beta_tmp, c0, c1, c2, &
-       !$OMP local_threshold)&
-       !$OMP SHARED(ao_num,HF_density_matrix_ao_alpha,HF_density_matrix_ao_beta,&
-       !$OMP ao_integrals_map,ao_integrals_threshold, ao_bielec_integral_schwartz, &
-       !$OMP ao_overlap_abs, ao_bi_elec_integral_alpha, ao_bi_elec_integral_beta)
-
-   allocate(keys(1), values(1))
-   allocate(ao_bi_elec_integral_alpha_tmp(ao_num,ao_num), &
-            ao_bi_elec_integral_beta_tmp(ao_num,ao_num))
-   ao_bi_elec_integral_alpha_tmp = (0.d0,0.d0)
-   ao_bi_elec_integral_beta_tmp  = (0.d0,0.d0)
-
-   q = ao_num*ao_num*ao_num*ao_num
-   !$OMP DO SCHEDULE(dynamic)
-   do p=1_8,q
-           call bielec_integrals_index_reverse(kk,ii,ll,jj,p)
-           if ( (kk(1)>ao_num).or. &
-                (ii(1)>ao_num).or. &
-                (jj(1)>ao_num).or. &
-                (ll(1)>ao_num) ) then
-                cycle
-           endif
-           k = kk(1)
-           i = ii(1)
-           l = ll(1)
-           j = jj(1)
-
-           if (ao_overlap_abs(k,l)*ao_overlap_abs(i,j)  &
-              < ao_integrals_threshold) then
-             cycle
-           endif
-           local_threshold = ao_bielec_integral_schwartz(k,l)*ao_bielec_integral_schwartz(i,j)
-           if (local_threshold < ao_integrals_threshold) then
-             cycle
-           endif
-           i0 = i
-           j0 = j
-           k0 = k
-           l0 = l
-           values(1) = 0.d0
-           local_threshold = ao_integrals_threshold/local_threshold
-           do k2=1,8
-             if (kk(k2)==0) then
-               cycle
-             endif
-             i = ii(k2)
-             j = jj(k2)
-             k = kk(k2)
-             l = ll(k2)
-             c0 = HF_density_matrix_ao_alpha(k,l)+HF_density_matrix_ao_beta(k,l)
-             c1 = HF_density_matrix_ao_alpha(k,i)
-             c2 = HF_density_matrix_ao_beta(k,i)
-             if ( cdabs(c0)+cdabs(c1)+cdabs(c2) < local_threshold) then
-               cycle
-             endif
-             if (values(1) == 0.d0) then
-               values(1) = ao_bielec_integral(l0,k0,i0,j0)
-             endif
-             integral = c0 * values(1)
-             ao_bi_elec_integral_alpha_tmp(i,j) += integral ! c_a(i,j) = (DM_a(k,l)+DM_b(k,l))*(lk|ij)
-             ao_bi_elec_integral_beta_tmp (i,j) += integral ! c_b(i,j) = (DM_a(k,l)+DM_b(k,l))*(lk|ij)
-             integral = values(1)
-             ao_bi_elec_integral_alpha_tmp(l,j) -= c1 * integral ! c_a(l,j) = -DM_a(k,i) * (lk|ij)
-             ao_bi_elec_integral_beta_tmp (l,j) -= c2 * integral ! c_b(l,j) = -DM_b(k,i) * (lk|ij)
-           enddo
-   enddo
-   !$OMP END DO NOWAIT
-   !$OMP CRITICAL
-   ao_bi_elec_integral_alpha += ao_bi_elec_integral_alpha_tmp
-   !$OMP END CRITICAL
-   !$OMP CRITICAL
-   ao_bi_elec_integral_beta  += ao_bi_elec_integral_beta_tmp
-   !$OMP END CRITICAL
-   deallocate(keys,values,ao_bi_elec_integral_alpha_tmp,ao_bi_elec_integral_beta_tmp)
-   !$OMP END PARALLEL
- else
+!!   don't do direct   
+!!   if (do_direct_integrals) then
+!!  
+!!     !$OMP PARALLEL DEFAULT(NONE)                                      &
+!!         !$OMP PRIVATE(i,j,l,k1,k,integral,ii,jj,kk,ll,i8,keys,values,p,q,r,s,i0,j0,k0,l0, &
+!!         !$OMP ao_bi_elec_integral_alpha_tmp,ao_bi_elec_integral_beta_tmp, c0, c1, c2, &
+!!         !$OMP local_threshold)&
+!!         !$OMP SHARED(ao_num,HF_density_matrix_ao_alpha,HF_density_matrix_ao_beta,&
+!!         !$OMP ao_integrals_map,ao_integrals_threshold, ao_bielec_integral_schwartz, &
+!!         !$OMP ao_overlap_abs, ao_bi_elec_integral_alpha, ao_bi_elec_integral_beta)
+!!  
+!!     allocate(keys(1), values(1))
+!!     allocate(ao_bi_elec_integral_alpha_tmp(ao_num,ao_num), &
+!!              ao_bi_elec_integral_beta_tmp(ao_num,ao_num))
+!!     ao_bi_elec_integral_alpha_tmp = (0.d0,0.d0)
+!!     ao_bi_elec_integral_beta_tmp  = (0.d0,0.d0)
+!!  
+!!  !   q = ao_num*ao_num*ao_num*ao_num
+!!  !   q = ishft((ao_num*ao_num+ao_num)*(ao_num*ao_num+ao_num+2),-3) !8fold
+!!     q = ishft((ao_num*ao_num)*(ao_num*ao_num+1),-1) !2fold
+!!     !$OMP DO SCHEDULE(dynamic)
+!!     do p=1_8,q
+!!             call bielec_integrals_index_reverse_2fold(kk,ii,ll,jj,p)
+!!             if ( (kk(1)>ao_num).or. &
+!!                  (ii(1)>ao_num).or. &
+!!                  (jj(1)>ao_num).or. &
+!!                  (ll(1)>ao_num) ) then
+!!                  cycle
+!!             endif
+!!             k = kk(1)
+!!             i = ii(1)
+!!             l = ll(1)
+!!             j = jj(1)
+!!  
+!!             if (ao_overlap_abs(k,l)*ao_overlap_abs(i,j)  &
+!!                < ao_integrals_threshold) then
+!!               cycle
+!!             endif
+!!             local_threshold = ao_bielec_integral_schwartz(k,l)*ao_bielec_integral_schwartz(i,j)
+!!             if (local_threshold < ao_integrals_threshold) then
+!!               cycle
+!!             endif
+!!             i0 = i
+!!             j0 = j
+!!             k0 = k
+!!             l0 = l
+!!             values(1) = (0.d0,0.d0)
+!!             local_threshold = ao_integrals_threshold/local_threshold
+!!             do k2=1,8
+!!               if (kk(k2)==0) then
+!!                 cycle
+!!               endif
+!!               i = ii(k2)
+!!               j = jj(k2)
+!!               k = kk(k2)
+!!               l = ll(k2)
+!!               c0 = HF_density_matrix_ao_alpha(k,l)+HF_density_matrix_ao_beta(k,l)
+!!               c1 = HF_density_matrix_ao_alpha(k,i)
+!!               c2 = HF_density_matrix_ao_beta(k,i)
+!!               if ( cdabs(c0)+cdabs(c1)+cdabs(c2) < local_threshold) then
+!!                 cycle
+!!               endif
+!!               if (values(1) == (0.d0,0.d0)) then
+!!                 values(1) = ao_bielec_integral(l0,k0,i0,j0)
+!!  !               values(1) = get_ao_bielec_integral(l0,i0,k0,j0,ao_integrals_map)
+!!               endif
+!!               integral = c0 * values(1)
+!!               ao_bi_elec_integral_alpha_tmp(i,j) += integral ! c_a(i,j) = (DM_a(k,l)+DM_b(k,l))*(lk|ij)
+!!               ao_bi_elec_integral_beta_tmp (i,j) += integral ! c_b(i,j) = (DM_a(k,l)+DM_b(k,l))*(lk|ij)
+!!               integral = values(1)
+!!               ao_bi_elec_integral_alpha_tmp(l,j) -= c1 * integral ! c_a(l,j) = -DM_a(k,i) * (lk|ij)
+!!               ao_bi_elec_integral_beta_tmp (l,j) -= c2 * integral ! c_b(l,j) = -DM_b(k,i) * (lk|ij)
+!!             enddo
+!!     enddo
+!!     !$OMP END DO NOWAIT
+!!     !$OMP CRITICAL
+!!     ao_bi_elec_integral_alpha += ao_bi_elec_integral_alpha_tmp
+!!     !$OMP END CRITICAL
+!!     !$OMP CRITICAL
+!!     ao_bi_elec_integral_beta  += ao_bi_elec_integral_beta_tmp
+!!     !$OMP END CRITICAL
+!!     deallocate(keys,values,ao_bi_elec_integral_alpha_tmp,ao_bi_elec_integral_beta_tmp)
+!!     !$OMP END PARALLEL
+!!   else
    PROVIDE ao_bielec_integrals_in_map 
            
    integer(omp_lock_kind) :: lck(ao_num)
    integer*8                      :: i8
-   integer                        :: ii(8), jj(8), kk(8), ll(8), k2
    integer(cache_map_size_kind)   :: n_elements_max, n_elements
    integer(key_kind), allocatable :: keys(:)
    double precision, allocatable  :: values(:)
+   complex*16, parameter    :: i_sign(4) = (/(0.d0,-1.d0),(0.d0,-1.d0),(0.d0,1.d0),(0.d0,1.d0)/)
+   logical :: imag_part
+   integer(key_kind) :: pair_key
+   complex*16                     :: c0,c1,c2
 
    !$OMP PARALLEL DEFAULT(NONE)                                      &
        !$OMP PRIVATE(i,j,l,k1,k,integral,ii,jj,kk,ll,i8,keys,values,n_elements_max, &
-       !$OMP  n_elements,ao_bi_elec_integral_alpha_tmp,ao_bi_elec_integral_beta_tmp)&
-       !$OMP SHARED(ao_num,HF_density_matrix_ao_alpha,HF_density_matrix_ao_beta,&
+       !$OMP  n_elements,ao_bi_elec_integral_alpha_tmp,ao_bi_elec_integral_beta_tmp,pair_key, &
+       !$OMP  c0,c1,c2)&
+       !$OMP SHARED(ao_num,HF_density_matrix_ao_alpha,HF_density_matrix_ao_beta,i_sign, &
        !$OMP  ao_integrals_map, ao_bi_elec_integral_alpha, ao_bi_elec_integral_beta) 
 
    call get_cache_map_n_elements_max(ao_integrals_map,n_elements_max)
@@ -224,29 +235,60 @@ END_PROVIDER
 
    !$OMP DO SCHEDULE(dynamic,64)
    !DIR$ NOVECTOR
-   do i8=0_8,ao_integrals_map%map_size
-     n_elements = n_elements_max
-     call get_cache_map(ao_integrals_map,i8,keys,values,n_elements)
-     do k1=1,n_elements
-       call bielec_integrals_index_reverse(kk,ii,ll,jj,keys(k1))
+    do i8=0_8,ao_integrals_map%map_size
+      n_elements = n_elements_max
+      call get_cache_map(ao_integrals_map,i8,keys,values,n_elements)
+      do k1=1,n_elements
+ !       call bielec_integrals_index_reverse(kk,ii,ll,jj,keys(k1))
+        call bielec_integrals_index_reverse_4fold(ii,jj,kk,ll,keys(k1),pair_key)
+        if (keys(k1) <= pair_key) then
+          !values(k1) is real part
+          do k2=1,4
+            if (kk(k2)==0) then
+              cycle
+            endif
+            i = ii(k2)
+            j = jj(k2)
+            k = kk(k2)
+            l = ll(k2)
+            integral = values(k1)
+            
+            c0 = (HF_density_matrix_ao_alpha(l,j)+HF_density_matrix_ao_beta(l,j)) * integral
+            c1 = HF_density_matrix_ao_alpha(k,j) * integral
+            c2 = HF_density_matrix_ao_beta(k,j) * integral
 
-       do k2=1,8
-         if (kk(k2)==0) then
-           cycle
-         endif
-         i = ii(k2)
-         j = jj(k2)
-         k = kk(k2)
-         l = ll(k2)
-         integral = (HF_density_matrix_ao_alpha(k,l)+HF_density_matrix_ao_beta(k,l)) * values(k1)
-         ao_bi_elec_integral_alpha_tmp(i,j) += integral
-         ao_bi_elec_integral_beta_tmp (i,j) += integral
-         integral = values(k1)
-         ao_bi_elec_integral_alpha_tmp(l,j) -= HF_density_matrix_ao_alpha(k,i) * integral
-         ao_bi_elec_integral_beta_tmp (l,j) -= HF_density_matrix_ao_beta (k,i) * integral
-       enddo
-     enddo
-   enddo
+
+            ao_bi_elec_integral_alpha_tmp(i,k) += c0
+            ao_bi_elec_integral_beta_tmp (i,k) += c0
+            ao_bi_elec_integral_alpha_tmp(i,l) -= c1
+            ao_bi_elec_integral_beta_tmp (i,l) -= c2
+          enddo
+        else
+          !values(k1) is imaginary part of <kl|ij>,<lk|ji>
+          !       and -1*imaginary part of <ij|kl>,<ji|lk>
+          do k2=1,4
+            if (kk(k2)==0) then
+              cycle
+            endif
+            i = ii(k2)
+            j = jj(k2)
+            k = kk(k2)
+            l = ll(k2)
+            integral = i_sign(k2)*values(k1)
+            
+            c0 = (HF_density_matrix_ao_alpha(l,j)+HF_density_matrix_ao_beta(l,j)) * integral
+            c1 = HF_density_matrix_ao_alpha(k,j) * integral
+            c2 = HF_density_matrix_ao_beta(k,j) * integral
+
+
+            ao_bi_elec_integral_alpha_tmp(i,k) += c0
+            ao_bi_elec_integral_beta_tmp (i,k) += c0
+            ao_bi_elec_integral_alpha_tmp(i,l) -= c1
+            ao_bi_elec_integral_beta_tmp (i,l) -= c2
+          enddo
+        endif
+      enddo
+    enddo
    !$OMP END DO NOWAIT
    !$OMP CRITICAL
    ao_bi_elec_integral_alpha += ao_bi_elec_integral_alpha_tmp

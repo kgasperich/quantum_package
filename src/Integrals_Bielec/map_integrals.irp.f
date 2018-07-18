@@ -165,8 +165,6 @@ subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
       endif
     endif
   enddo
-
-
 end
 
 subroutine idx2_sq_rev(i,k,ik)
@@ -199,6 +197,7 @@ subroutine bielec_integrals_index_reverse_2fold(i,j,k,l,i1)
   implicit none
   integer, intent(out)           :: i(2),j(2),k(2),l(2)
   integer(key_kind), intent(in)  :: i1
+  integer(key_kind)              :: i0
   integer                        :: i2,i3
   i = 0
   call idx2_tri_rev_key(i3,i2,i1)
@@ -231,14 +230,69 @@ subroutine bielec_integrals_index_reverse_2fold(i,j,k,l,i1)
   endif
   do ii=1,2
     if (i(ii) /= 0) then
-      call bielec_integrals_index_2fold(i(ii),j(ii),k(ii),l(ii),i2)
-      if (i1 /= i2) then
-        print *,  i1, i2
+      call bielec_integrals_index_2fold(i(ii),j(ii),k(ii),l(ii),i0)
+      if (i1 /= i0) then
+        print *,  i1, i0
         print *,  i(ii), j(ii), k(ii), l(ii)
         stop 'bielec_integrals_index_reverse_2fold failed'
       endif
     endif
   enddo
+end
+
+subroutine bielec_integrals_index_reverse_4fold(i,j,k,l,i1,key2)
+  use map_module
+  implicit none
+  integer, intent(out)           :: i(2),j(2),k(2),l(2)
+  integer(key_kind), intent(in)  :: i1
+  integer(key_kind), intent(out) :: key2
+  integer(key_kind)              :: i0
+  integer                        :: i2,i3
+  i = 0
+  call idx2_tri_rev_key(i3,i2,i1)
+
+  call idx2_sq_rev(j(1),l(1),i2)
+  call idx2_sq_rev(i(1),k(1),i3)
+
+              !ijkl
+  i(2) = j(1) !jilk
+  j(2) = i(1)
+  k(2) = l(1)
+  l(2) = k(1)
+
+  i(3) = k(1) !klij   complex conjugate
+  j(3) = l(1)
+  k(3) = i(1)
+  l(3) = j(1)
+
+  i(4) = l(1) !lkji   complex conjugate
+  j(4) = k(1)
+  k(4) = j(1)
+  l(4) = i(1)
+
+  integer :: ii, jj
+  do ii=2,4
+    do jj=1,ii-1
+      if ( (i(ii) == i(jj)).and. &
+           (j(ii) == j(jj)).and. &
+           (k(ii) == k(jj)).and. &
+           (l(ii) == l(jj)) ) then
+         i(ii) = 0
+         exit
+      endif
+    enddo
+  enddo
+  do ii=1,2
+    if (i(ii) /= 0) then
+      call bielec_integrals_index_2fold(i(ii),j(ii),k(ii),l(ii),i0)
+      if (i1 /= i0) then
+        print *,  i1, i0
+        print *,  i(ii), j(ii), k(ii), l(ii)
+        stop 'bielec_integrals_index_reverse_4fold failed'
+      endif
+    endif
+  enddo
+  call bielec_integrals_index_2fold(k(1),l(1),i(1),j(1),key2)
 end
 
  BEGIN_PROVIDER [ integer, ao_integrals_cache_min ]
@@ -252,24 +306,41 @@ end
 
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, ao_integrals_cache, (0:64*64*64*64) ]
+BEGIN_PROVIDER [ complex*16, ao_integrals_cache, (0:64*64*64*64) ]
  implicit none
  BEGIN_DOC
  ! Cache of AO integrals for fast access
  END_DOC
  PROVIDE ao_bielec_integrals_in_map
  integer                        :: i,j,k,l,ii
- integer(key_kind)              :: idx
- real(integral_kind)            :: integral
- !$OMP PARALLEL DO PRIVATE (i,j,k,l,idx,ii,integral)
+ integer(key_kind)              :: idx1,idx2
+ integer(key_kind)              :: idx_re,idx_im
+ real(integral_kind)            :: tmp_re, tmp_im
+ complex(integral_kind)         :: integral
+ !$OMP PARALLEL DO PRIVATE (i,j,k,l,idx1,idx2,ii,tmp_re,tmp_im,integral,idx_re,idx_im)
  do l=ao_integrals_cache_min,ao_integrals_cache_max
    do k=ao_integrals_cache_min,ao_integrals_cache_max
      do j=ao_integrals_cache_min,ao_integrals_cache_max
        do i=ao_integrals_cache_min,ao_integrals_cache_max
          !DIR$ FORCEINLINE
-         call bielec_integrals_index(i,j,k,l,idx)
+         call bielec_integrals_index_2fold(i,j,k,l,idx1)
+         call bielec_integrals_index_2fold(k,l,i,j,idx2)
          !DIR$ FORCEINLINE
-         call map_get(ao_integrals_map,idx,integral)
+         idx_re = min(idx1,idx2)
+         idx_im = max(idx1,idx2)
+         call map_get(ao_integrals_map,idx_re,tmp_re)
+         if (idx_re /= idx_im) then
+           call map_get(ao_integrals_map,idx_im,tmp_im)
+           if (idx1 < idx2) then
+             integral = cmplx(tmp_re,tmp_im)
+           else
+             integral = cmplx(tmp_re,-tmp_im)
+           endif
+         else
+           tmp_im = 0.d0
+           integral = cmplx(tmp_re,tmp_im)
+         endif
+
          ii = l-ao_integrals_cache_min
          ii = ior( ishft(ii,6), k-ao_integrals_cache_min)
          ii = ior( ishft(ii,6), j-ao_integrals_cache_min)
@@ -284,23 +355,25 @@ BEGIN_PROVIDER [ double precision, ao_integrals_cache, (0:64*64*64*64) ]
 END_PROVIDER
 
 
-double precision function get_ao_bielec_integral(i,j,k,l,map) result(result)
+complex*16 function get_ao_bielec_integral(i,j,k,l,map) result(result)
   use map_module
   implicit none
   BEGIN_DOC
-  ! Gets one AO bi-electronic integral from the AO map
+  ! Gets one AO bi-electronic integral from the AO map <ij|kl>
   END_DOC
   integer, intent(in)            :: i,j,k,l
-  integer(key_kind)              :: idx
+  integer(key_kind)              :: idx1,idx2
+  integer(key_kind)              :: idx_re,idx_im
   type(map_type), intent(inout)  :: map
   integer                        :: ii
-  real(integral_kind)            :: tmp
+  real(integral_kind)            :: tmp_re,tmp_im
+  complex(integral_kind)         :: tmp_int
   PROVIDE ao_bielec_integrals_in_map ao_integrals_cache ao_integrals_cache_min
   !DIR$ FORCEINLINE
   if (ao_overlap_abs(i,k)*ao_overlap_abs(j,l) < ao_integrals_threshold ) then
-    tmp = 0.d0
+    tmp_int = (0.d0,0.d0)
   else if (ao_bielec_integral_schwartz(i,k)*ao_bielec_integral_schwartz(j,l) < ao_integrals_threshold) then
-    tmp = 0.d0
+    tmp_int = (0.d0,0.d0)
   else
     ii = l-ao_integrals_cache_min
     ii = ior(ii, k-ao_integrals_cache_min)
@@ -308,18 +381,32 @@ double precision function get_ao_bielec_integral(i,j,k,l,map) result(result)
     ii = ior(ii, i-ao_integrals_cache_min)
     if (iand(ii, -64) /= 0) then
       !DIR$ FORCEINLINE
-      call bielec_integrals_index(i,j,k,l,idx)
+      call bielec_integrals_index_2fold(i,j,k,l,idx1)
+      call bielec_integrals_index_2fold(k,l,i,j,idx2)
       !DIR$ FORCEINLINE
-      call map_get(map,idx,tmp)
+      idx_re = min(idx1,idx2)
+      idx_im = max(idx1,idx2)
+      call map_get(map,idx_re,tmp_re)
+      if (idx_re /= idx_im) then
+        call map_get(map,idx_im,tmp_im)
+        if (tmp1 < tmp2) then
+          tmp_int = cmplx(tmp_re,tmp_im)
+        else
+          tmp_int = cmplx(tmp_re,-tmp_im)
+        endif
+      else
+        tmp_im = 0.d0
+        tmp_int = cmplx(tmp_re,tmp_im)
+      endif
     else
       ii = l-ao_integrals_cache_min
       ii = ior( ishft(ii,6), k-ao_integrals_cache_min)
       ii = ior( ishft(ii,6), j-ao_integrals_cache_min)
       ii = ior( ishft(ii,6), i-ao_integrals_cache_min)
-      tmp = ao_integrals_cache(ii)
+      tmp_int = ao_integrals_cache(ii)
     endif
   endif
-  result = tmp
+  result = tmp_int
 end
 
 
@@ -331,7 +418,7 @@ subroutine get_ao_bielec_integrals(j,k,l,sze,out_val)
   END_DOC
   implicit none
   integer, intent(in)            :: j,k,l, sze
-  real(integral_kind), intent(out) :: out_val(sze)
+  complex(integral_kind), intent(out) :: out_val(sze)
   
   integer                        :: i
   integer(key_kind)              :: hash
@@ -340,11 +427,11 @@ subroutine get_ao_bielec_integrals(j,k,l,sze,out_val)
   thresh = ao_integrals_threshold
   
   if (ao_overlap_abs(j,l) < thresh) then
-    out_val = 0.d0
+    out_val = (0.d0,0.d0)
     return
   endif
   
-  double precision :: get_ao_bielec_integral
+  complex*16 :: get_ao_bielec_integral
   do i=1,sze
     out_val(i) = get_ao_bielec_integral(i,j,k,l,ao_integrals_map)
   enddo
@@ -359,32 +446,30 @@ subroutine get_ao_bielec_integrals_non_zero(j,k,l,sze,out_val,out_val_index,non_
   ! All non-zero i are retrieved for j,k,l fixed.
   END_DOC
   integer, intent(in)            :: j,k,l, sze
-  real(integral_kind), intent(out) :: out_val(sze)
+  complex(integral_kind), intent(out) :: out_val(sze)
   integer, intent(out)           :: out_val_index(sze),non_zero_int
   
   integer                        :: i
-  integer(key_kind)              :: hash
-  double precision               :: thresh,tmp
+  double precision               :: thresh
+  complex*16               :: tmp
   PROVIDE ao_bielec_integrals_in_map
   thresh = ao_integrals_threshold
   
   non_zero_int = 0
   if (ao_overlap_abs(j,l) < thresh) then
-    out_val = 0.d0
+    out_val = (0.d0,0.d0)
     return
   endif
  
   non_zero_int = 0
   do i=1,sze
-    integer, external :: ao_l4
-    double precision, external :: ao_bielec_integral
     !DIR$ FORCEINLINE
     if (ao_bielec_integral_schwartz(i,k)*ao_bielec_integral_schwartz(j,l) < thresh) then
       cycle
     endif
-    call bielec_integrals_index(i,j,k,l,hash)
-    call map_get(ao_integrals_map, hash,tmp)
-    if (dabs(tmp) < thresh ) cycle
+    complex*16 :: get_ao_bielec_integral
+    tmp = get_ao_bielec_integral(i,j,k,l,ao_integrals_map)
+    if (cdabs(tmp) < thresh ) cycle
     non_zero_int = non_zero_int+1
     out_val_index(non_zero_int) = i
     out_val(non_zero_int) = tmp
@@ -433,6 +518,7 @@ subroutine insert_into_ao_integrals_map(n_integrals,buffer_i, buffer_values)
   implicit none
   BEGIN_DOC
   ! Create new entry into AO map
+  ! TODO: if using 3-index integrals (density fitting) to construct AO ints, change this to map_update
   END_DOC
   
   integer, intent(in)                :: n_integrals
