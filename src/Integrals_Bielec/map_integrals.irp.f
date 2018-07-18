@@ -3,6 +3,41 @@ use map_module
 !! AO Map
 !! ======
 
+subroutine idx2_sq(i,j,ij)
+  implicit none
+  integer, intent(in)  :: i,j
+  integer, intent(out) :: ij
+  if (i<j) then
+    ij=(j-1)*(j-1)+2*i-mod(j+1,2)
+  else if (i>j) then
+    ij=(i-1)*(i-1)+2*j-mod(i,2)
+  else
+    ij=i*i
+  endif
+end
+
+subroutine idx2_tri_int(i,j,ij)
+  implicit none
+  integer, intent(in)  :: i,j
+  integer, intent(out) :: ij
+  integer :: p,q
+  p = max(i,j)
+  q = min(i,j)
+  ij = q+ishft(p*p-p,-1)
+end
+
+subroutine idx2_tri_key(i,j,ij)
+  use map_module
+  implicit none
+  integer, intent(in)  :: i,j
+  integer(key_kind), intent(out) :: ij
+  integer(key_kind) :: p,q
+  p = max(i,j)
+  q = min(i,j)
+  ij = q+ishft(p*p-p,-1)
+end
+
+
 BEGIN_PROVIDER [ type(map_type), ao_integrals_map ]
   implicit none
   BEGIN_DOC
@@ -21,16 +56,10 @@ subroutine bielec_integrals_index(i,j,k,l,i1)
   implicit none
   integer, intent(in)            :: i,j,k,l
   integer(key_kind), intent(out) :: i1
-  integer(key_kind)              :: p,q,r,s,i2
-  p = min(i,k)
-  r = max(i,k)
-  p = p+ishft(r*r-r,-1)
-  q = min(j,l)
-  s = max(j,l)
-  q = q+ishft(s*s-s,-1)
-  i1 = min(p,q)
-  i2 = max(p,q)
-  i1 = i1+ishft(i2*i2-i2,-1)
+  integer                        :: p,q
+  call idx2_tri_int(i,k,p)
+  call idx2_tri_int(j,l,q)
+  call idx2_tri_key(p,q,i1)
 end
 
 subroutine bielec_integrals_index_2fold(i,j,k,l,i1)
@@ -38,24 +67,32 @@ subroutine bielec_integrals_index_2fold(i,j,k,l,i1)
   implicit none
   integer, intent(in)            :: i,j,k,l
   integer(key_kind), intent(out) :: i1
-  integer(key_kind)              :: p,q,i2
-  if (i==k) then
-    p=i*i
-  else if (i.lt.k) then
-    p=(k-1)*(k-1)+2*i-mod(k+1,2)
-  else
-    p=(i-1)*(i-1)+2*k-mod(i,2)
-  endif
-  if (j==l) then
-    q=j*j
-  else if (j.lt.l) then
-    q=(l-1)*(l-1)+2*j-mod(l+1,2)
-  else
-    q=(j-1)*(j-1)+2*l-mod(j,2)
-  endif
-  i1 = min(p,q)
-  i2 = max(p,q)
-  i1 = i1+ishft(i2*i2-i2,-1)
+  integer                        :: ik,jl
+
+  call idx2_sq(i,k,ik)
+  call idx2_sq(j,l,jl)
+  call idx2_tri_key(ik,jl,i1)
+end
+
+subroutine idx2_tri_rev_key(i,k,ik)
+  use map_module
+  BEGIN_DOC
+  !return i<=k
+  END_DOC
+  integer(key_kind), intent(in) :: ik
+  integer, intent(out)          :: i,k
+  k = ceiling(0.5d0*(dsqrt(8.d0*dble(ik)+1.d0)-1.d0))
+  i = int(ik - ishft(k*k-k,-1))
+end
+
+subroutine idx2_tri_rev_int(i,k,ik)
+  BEGIN_DOC
+  !return i<=k
+  END_DOC
+  integer, intent(in)           :: ik
+  integer, intent(out)          :: i,k
+  k = ceiling(0.5d0*(dsqrt(8.d0*dble(ik)+1.d0)-1.d0))
+  i = int(ik - ishft(k*k-k,-1))
 end
 
 subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
@@ -63,14 +100,12 @@ subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
   implicit none
   integer, intent(out)           :: i(8),j(8),k(8),l(8)
   integer(key_kind), intent(in)  :: i1
-  integer(key_kind)              :: i2,i3
+  integer(key_kind)              :: i0
+  integer                        :: i2,i3
   i = 0
-  i2   = ceiling(0.5d0*(dsqrt(8.d0*dble(i1)+1.d0)-1.d0))
-  l(1) = ceiling(0.5d0*(dsqrt(8.d0*dble(i2)+1.d0)-1.d0))
-  i3   = i1 - ishft(i2*i2-i2,-1)
-  k(1) = ceiling(0.5d0*(dsqrt(8.d0*dble(i3)+1.d0)-1.d0))
-  j(1) = int(i2 - ishft(l(1)*l(1)-l(1),-1),4)
-  i(1) = int(i3 - ishft(k(1)*k(1)-k(1),-1),4)
+  call idx2_tri_rev_key(i3,i2,i1)
+  call idx2_tri_rev_int(j(1),l(1),i2)
+  call idx2_tri_rev_int(i(1),k(1),i3)
 
               !ijkl
   i(2) = i(1) !ilkj
@@ -122,9 +157,9 @@ subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
   enddo
   do ii=1,8
     if (i(ii) /= 0) then
-      call bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i2)
-      if (i1 /= i2) then
-        print *,  i1, i2
+      call bielec_integrals_index(i(ii),j(ii),k(ii),l(ii),i0)
+      if (i1 /= i0) then
+        print *,  i1, i0
         print *,  i(ii), j(ii), k(ii), l(ii)
         stop 'bielec_integrals_index_reverse failed'
       endif
@@ -134,33 +169,43 @@ subroutine bielec_integrals_index_reverse(i,j,k,l,i1)
 
 end
 
+subroutine idx2_sq_rev(i,k,ik)
+  BEGIN_DOC
+  ! reverse square compound index
+  END_DOC
+!  p = ceiling(dsqrt(dble(ik)))
+!  q = ceiling(0.5d0*(dble(ik)-dble((p-1)*(p-1))))
+!  if (mod(ik,2)==0) then
+!    k=p
+!    i=q
+!  else
+!    i=p
+!    k=q
+!  endif
+  integer, intent(in)           :: ik
+  integer, intent(out)          :: i,k
+  integer                       :: pq(0:1),i1,i2
+  pq(0) = ceiling(dsqrt(dble(ik)))
+  pq(1) = ceiling(0.5d0*(dble(ik)-dble((pq(0)-1)*(pq(0)-1))))
+  i1=mod(ik,2)
+  i2=mod(ik+1,2)
+
+  k=pq(i1)
+  i=pq(i2)
+end
+
 subroutine bielec_integrals_index_reverse_2fold(i,j,k,l,i1)
   use map_module
   implicit none
   integer, intent(out)           :: i(2),j(2),k(2),l(2)
   integer(key_kind), intent(in)  :: i1
-  integer(key_kind)              :: i2,i3,p,q
+  integer                        :: i2,i3
   i = 0
-  i2   = ceiling(0.5d0*(dsqrt(8.d0*dble(i1)+1.d0)-1.d0))
-  i3   = i1 - ishft(i2*i2-i2,-1)
-  p = ceiling(dsqrt(dble(i2)))
-  q = ceiling(0.5d0*(dble(i2)-dble((p-1)*(p-1))))
-  if (mod(i2,2)==0) then
-    l(1)=p
-    j(1)=q
-  else
-    j(1)=p
-    l(1)=q
-  endif
-  p = ceiling(dsqrt(dble(i3)))
-  q = ceiling(0.5d0*(dble(i3)-dble((p-1)*(p-1))))
-  if (mod(i3,2)==0) then
-    k(1)=p
-    i(1)=q
-  else
-    i(1)=p
-    k(1)=q
-  endif
+  call idx2_tri_rev_key(i3,i2,i1)
+
+  call idx2_sq_rev(j(1),l(1),i2)
+  call idx2_sq_rev(i(1),k(1),i3)
+
               !ijkl
   i(2) = j(1) !jilk
   j(2) = i(1)
