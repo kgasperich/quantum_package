@@ -45,7 +45,7 @@ BEGIN_PROVIDER [ type(map_type), ao_integrals_map ]
   END_DOC
   integer(key_kind)              :: key_max
   integer(map_size_kind)         :: sze
-  call bielec_integrals_index(ao_num,ao_num,ao_num,ao_num,key_max)
+  call bielec_integrals_index_2fold(ao_num,ao_num,ao_num,ao_num,key_max)
   sze = key_max
   call map_init(ao_integrals_map,sze)
   print*,  'AO map initialized : ', sze
@@ -450,7 +450,7 @@ subroutine get_ao_bielec_integrals_non_zero(j,k,l,sze,out_val,out_val_index,non_
   integer, intent(out)           :: out_val_index(sze),non_zero_int
   
   integer                        :: i
-  double precision               :: thresh
+  double precision               :: thresh, schwarz_jl
   complex*16               :: tmp
   PROVIDE ao_bielec_integrals_in_map
   thresh = ao_integrals_threshold
@@ -462,9 +462,10 @@ subroutine get_ao_bielec_integrals_non_zero(j,k,l,sze,out_val,out_val_index,non_
   endif
  
   non_zero_int = 0
+  schwarz_jl = ao_bielec_integral_schwartz(j,l)
   do i=1,sze
     !DIR$ FORCEINLINE
-    if (ao_bielec_integral_schwartz(i,k)*ao_bielec_integral_schwartz(j,l) < thresh) then
+    if (ao_bielec_integral_schwartz(i,k)*schwarz_jl < thresh) then
       cycle
     endif
     complex*16 :: get_ao_bielec_integral
