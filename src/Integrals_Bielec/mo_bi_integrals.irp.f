@@ -84,10 +84,11 @@ subroutine add_integrals_to_map(mask_ijkl)
   integer, allocatable           :: list_ijkl(:,:)
   integer                        :: n_i, n_j, n_k, n_l
   integer, allocatable           :: bielec_tmp_0_idx(:)
-  real(integral_kind), allocatable :: bielec_tmp_0(:,:)
+  !real(integral_kind), allocatable :: bielec_tmp_0(:,:)
   !double precision, allocatable  :: bielec_tmp_1(:)
   !double precision, allocatable  :: bielec_tmp_2(:,:)
   !double precision, allocatable  :: bielec_tmp_3(:,:,:)
+  complex(integral_kind), allocatable :: bielec_tmp_0(:,:)
   complex*16, allocatable  :: bielec_tmp_1(:)
   complex*16, allocatable  :: bielec_tmp_2(:,:)
   complex*16, allocatable  :: bielec_tmp_3(:,:,:)
@@ -201,9 +202,9 @@ subroutine add_integrals_to_map(mask_ijkl)
   !$  thread_num = omp_get_thread_num()
   !$OMP DO SCHEDULE(guided)
   do s1 = 1,ao_num
-    bielec_tmp_3 = 0.d0
+    bielec_tmp_3 = (0.d0,0.d0)
     do r1 = 1,ao_num
-      bielec_tmp_2 = 0.d0
+      bielec_tmp_2 = (0.d0,0.d0)
       do q1 = 1,ao_num
         call get_ao_bielec_integrals(q1,r1,s1,ao_num,bielec_tmp_0(1,q1))
         ! call compute_ao_bielec_integrals(j1,k1,l1,ao_num,bielec_tmp_0(1,j1))
@@ -211,12 +212,12 @@ subroutine add_integrals_to_map(mask_ijkl)
       do q1 = 1,ao_num
         rmax = 0
         do p1 = 1,ao_num
-          cr = bielec_tmp_0(p1,q1)
-          if (cr == 0.d0) then
+          cz = bielec_tmp_0(p1,q1)
+          if (cz == (0.d0,0.d0)) then
             cycle
           endif
           rmax += 1
-          bielec_tmp_0(rmax,q1) = cr
+          bielec_tmp_0(rmax,q1) = cz
           bielec_tmp_0_idx(rmax) = p1
         enddo
         
@@ -224,7 +225,7 @@ subroutine add_integrals_to_map(mask_ijkl)
           cycle
         endif
         
-        bielec_tmp_1 = 0.d0
+        bielec_tmp_1 = (0.d0,0.d0)
         pp1=1
         do pp1 = 1,rmax-4,4
           p1 = bielec_tmp_0_idx(pp1)
@@ -454,9 +455,9 @@ end
   integer                        :: i,j,p,q,r,s
   double precision               :: c
   complex*16                     :: cz
-  real(integral_kind)            :: integral
+  complex(integral_kind)            :: integral
   integer                        :: n, pp
-  real(integral_kind), allocatable :: int_value(:)
+  complex(integral_kind), allocatable :: int_value(:)
   integer, allocatable           :: int_idx(:)
   
   !double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
@@ -498,7 +499,7 @@ end
           do pp=1,n
             p = int_idx(pp)
             integral = int_value(pp)
-            if (abs(integral) > ao_integrals_threshold) then
+            if (cdabs(integral) > ao_integrals_threshold) then
               do i=1,mo_tot_num
                 iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
@@ -508,7 +509,7 @@ end
           do pp=1,n
             p = int_idx(pp)
             integral = int_value(pp)
-            if (abs(integral) > ao_integrals_threshold) then
+            if (cdabs(integral) > ao_integrals_threshold) then
               do i=1,mo_tot_num
                 iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
               enddo
@@ -557,9 +558,9 @@ END_PROVIDER
   integer                        :: i0,j0
   double precision               :: c
   complex*16                     :: cz
-  real(integral_kind)            :: integral
+  complex(integral_kind)            :: integral
   integer                        :: n, pp
-  real(integral_kind), allocatable :: int_value(:)
+  complex(integral_kind), allocatable :: int_value(:)
   integer, allocatable           :: int_idx(:)
   
   !double precision, allocatable  :: iqrs(:,:), iqsr(:,:), iqis(:), iqri(:)
@@ -592,8 +593,8 @@ END_PROVIDER
       do j=1,ao_num
         do i0=1,n_virt_orb
           i = list_virt(i0)
-          iqrs(i,j) = 0.d0
-          iqsr(i,j) = 0.d0
+          iqrs(i,j) = (0.d0,0.d0)
+          iqsr(i,j) = (0.d0,0.d0)
         enddo
       enddo
       
@@ -602,7 +603,7 @@ END_PROVIDER
           do pp=1,n
             p = int_idx(pp)
             integral = int_value(pp)
-            if (abs(integral) > ao_integrals_threshold) then
+            if (cdabs(integral) > ao_integrals_threshold) then
               do i0=1,n_virt_orb
                 i =list_virt(i0)
                 iqrs(i,r) += conjg(mo_coef_transp(i,p)) * integral
@@ -613,7 +614,7 @@ END_PROVIDER
           do pp=1,n
             p = int_idx(pp)
             integral = int_value(pp)
-            if (abs(integral) > ao_integrals_threshold) then
+            if (cdabs(integral) > ao_integrals_threshold) then
               do i0=1,n_virt_orb
                 i = list_virt(i0)
                 iqsr(i,r) += conjg(mo_coef_transp(i,p)) * integral
