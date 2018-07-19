@@ -389,7 +389,7 @@ complex*16 function get_ao_bielec_integral(i,j,k,l,map) result(result)
       call map_get(map,idx_re,tmp_re)
       if (idx_re /= idx_im) then
         call map_get(map,idx_im,tmp_im)
-        if (tmp1 < tmp2) then
+        if (idx1 < idx2) then
           tmp_int = cmplx(tmp_re,tmp_im)
         else
           tmp_int = cmplx(tmp_re,-tmp_im)
