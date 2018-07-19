@@ -162,29 +162,3 @@ subroutine mo_as_svd_vectors_of_mo_matrix(matrix,lda,m,n,label)
   mo_label = label
 end
 
-
-
-subroutine give_all_mos_at_r(r,mos_array)
- implicit none
- double precision, intent(in) :: r(3)
- complex*16, intent(out) :: mos_array(mo_tot_num)
- call give_specific_mos_at_r(r,mos_array, mo_coef)
-end
-
-subroutine give_specific_mos_at_r(r,mos_array, mo_coef_specific)
- implicit none
- double precision, intent(in)  :: r(3)
- complex*16, intent(in)        :: mo_coef_specific(ao_num, mo_tot_num)
- complex*16, intent(out)       :: mos_array(mo_tot_num)
- double precision              :: aos_array(ao_num)
- complex*16                    :: accu
- integer :: i,j
- call give_all_aos_at_r(r,aos_array)
- do i = 1, mo_tot_num
-  accu = (0.d0,0.d0)
-  do j = 1, ao_num
-   accu += mo_coef_specific(j,i) * aos_array(j) 
-  enddo
-  mos_array(i) = accu
- enddo
-end
