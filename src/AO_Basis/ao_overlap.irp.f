@@ -4,7 +4,7 @@ BEGIN_PROVIDER [ complex*16, ao_overlap,(ao_num,ao_num) ]
 ! Overlap between atomic basis functions:
 ! :math:`\int \chi_i(r) \chi_j(r) dr)`
   END_DOC
-  if (read_ao_one_integrals) then
+  if (read_ao_overlap_integrals) then
     call read_one_e_integrals_complex('ao_overlap', ao_overlap,&
         size(ao_overlap,1), size(ao_overlap,2))
     print *,  'AO overlap integrals read from disk'
