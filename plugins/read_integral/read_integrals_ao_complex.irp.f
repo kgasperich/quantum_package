@@ -34,7 +34,7 @@ subroutine run
   enddo
   10 continue
   close(iunit)
-  call write_one_e_integrals('ao_kinetic_integral', A, size(A,1), size(A,2))
+  call write_one_e_integrals_complex('ao_kinetic_integral', A, size(A,1), size(A,2))
 
 
   A = 0.d0
@@ -46,9 +46,9 @@ subroutine run
   enddo
   12 continue
   close(iunit)
-  call write_one_e_integrals('ao_ne_integral', A, size(A,1), size(A,2))
+  call write_one_e_integrals_complex('ao_ne_integral', A, size(A,1), size(A,2))
 
-  call write_one_e_integrals('ao_pseudo_integral', ao_pseudo_integral,&
+  call write_one_e_integrals_complex('ao_pseudo_integral', ao_pseudo_integral,&
         size(ao_pseudo_integral,1), size(ao_pseudo_integral,2))
 
 
