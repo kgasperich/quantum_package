@@ -24,6 +24,7 @@ subroutine run
   enddo
   10 continue
   close(iunit)
+  mo_label = "None"
   call save_mos
 
 end
