@@ -23,7 +23,11 @@ subroutine run
   real(integral_kind), allocatable :: buffer_values_re(:), buffer_values_im(:)
 
   n_chunk_integrals = 1024
-  allocate(buffer_i(n_chunk_integrals), buffer_values(n_chunk_integrals))
+  allocate( &
+    buffer_re(n_chunk_integrals), &
+    buffer_im(n_chunk_integrals), &
+    buffer_values_re(n_chunk_integrals), &
+    buffer_values_im(n_chunk_integrals))
 
   iunit = getunitandopen('bielec_ao_complex','r')
   n_integrals=0
