@@ -2,10 +2,10 @@ program print_energy
  implicit none
  read_wf = .true.
  touch read_wf
- call routine
+ call routine_print_e
 end
 
-subroutine routine
+subroutine routine_print_e
  implicit none
  integer :: i,j
 ! double precision :: accu,hij

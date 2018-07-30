@@ -2,10 +2,10 @@ program diag_and_save
  implicit none
  read_wf = .True.
  touch read_wf
- call routine
+ call routine_diag
 end
 
-subroutine routine
+subroutine routine_diag
  implicit none
  print*,'N_det = ',N_det
  PROVIDE H_apply_buffer_allocated
