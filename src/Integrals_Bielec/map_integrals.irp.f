@@ -243,7 +243,7 @@ end
 subroutine bielec_integrals_index_reverse_4fold(i,j,k,l,i1,key2)
   use map_module
   implicit none
-  integer, intent(out)           :: i(2),j(2),k(2),l(2)
+  integer, intent(out)           :: i(4),j(4),k(4),l(4)
   integer(key_kind), intent(in)  :: i1
   integer(key_kind), intent(out) :: key2
   integer(key_kind)              :: i0
