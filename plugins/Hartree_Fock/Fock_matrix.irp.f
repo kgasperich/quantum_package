@@ -159,7 +159,7 @@ END_PROVIDER
         if (keys(k1) <= pair_key) then
           !values(k1) is real part
           do k2=1,4
-            if (kk(k2)==0) then
+            if (ii(k2)==0) then
               cycle
             endif
             i = ii(k2)
@@ -182,7 +182,7 @@ END_PROVIDER
           !values(k1) is imaginary part of <kl|ij>,<lk|ji>
           !       and -1*imaginary part of <ij|kl>,<ji|lk>
           do k2=1,4
-            if (kk(k2)==0) then
+            if (ii(k2)==0) then
               cycle
             endif
             i = ii(k2)
