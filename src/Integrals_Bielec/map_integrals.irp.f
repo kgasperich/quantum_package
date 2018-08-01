@@ -372,8 +372,8 @@ complex*16 function get_ao_bielec_integral(i,j,k,l,map) result(result)
   !DIR$ FORCEINLINE
   if (ao_overlap_abs(i,k)*ao_overlap_abs(j,l) < ao_integrals_threshold ) then
     tmp_int = (0.d0,0.d0)
-  else if (ao_bielec_integral_schwartz(i,k)*ao_bielec_integral_schwartz(j,l) < ao_integrals_threshold) then
-    tmp_int = (0.d0,0.d0)
+!  else if (ao_bielec_integral_schwartz(i,k)*ao_bielec_integral_schwartz(j,l) < ao_integrals_threshold) then
+!    tmp_int = (0.d0,0.d0)
   else
     ii = l-ao_integrals_cache_min
     ii = ior(ii, k-ao_integrals_cache_min)

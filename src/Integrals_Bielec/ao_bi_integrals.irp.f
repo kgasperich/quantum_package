@@ -28,10 +28,13 @@ BEGIN_PROVIDER [ logical, ao_bielec_integrals_in_map ]
   PROVIDE read_ao_integrals disk_access_ao_integrals
   if (read_ao_integrals) then
     print*,'Reading the AO integrals'
-      call map_load_from_disk(trim(ezfio_filename)//'/work/ao_ints',ao_integrals_map)
-      print*, 'AO integrals provided'
-      ao_bielec_integrals_in_map = .True.
-      return
+    call map_load_from_disk(trim(ezfio_filename)//'/work/ao_ints',ao_integrals_map)
+    print*, 'AO integrals provided'
+    ao_bielec_integrals_in_map = .True.
+    return
+  else
+    print*,'ERROR: complex AO integrals must be provided'
+    stop
   endif
   
 END_PROVIDER
@@ -46,7 +49,7 @@ BEGIN_PROVIDER [ double precision, ao_bielec_integral_schwartz,(ao_num,ao_num)  
   double precision               :: cpu_1,cpu_2, wall_1, wall_2
   complex*16                     :: ao_bielec_integral
   
-  ao_bielec_integral_schwartz(1,1) = real(ao_bielec_integral(1,1,1,1))
+!  ao_bielec_integral_schwartz(1,1) = real(ao_bielec_integral(1,1,1,1))
   !$OMP PARALLEL DO PRIVATE(i,k)                                     &
       !$OMP DEFAULT(NONE)                                            &
       !$OMP SHARED (ao_num,ao_bielec_integral_schwartz)              &
@@ -58,7 +61,7 @@ BEGIN_PROVIDER [ double precision, ao_bielec_integral_schwartz,(ao_num,ao_num)  
     enddo
   enddo
   !$OMP END PARALLEL DO
-  
+
 END_PROVIDER
 
 
