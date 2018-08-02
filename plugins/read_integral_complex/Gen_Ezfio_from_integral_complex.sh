@@ -15,6 +15,7 @@ cp $ezfio/{ao,mo}_basis/ao_md5
 
 #Read the integral
 echo 'Read Integral'
-qp_run read_mo_coef_complex $ezfio 
 qp_run read_ao_mono_complex $ezfio 
 qp_run read_ao_eri_chunk_complex $ezfio 
+qp_run read_mo_coef_complex $ezfio 
+qp_run mo_from_ao_orth $ezfio 

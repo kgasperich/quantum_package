@@ -46,4 +46,4 @@ ezfio.set_mo_basis_ao_md5(ao_md5)
 
 
 ezfio.set_mo_basis_mo_tot_num(mo_tot_num)
-ezfio.set_mo_basis_mo_coef([ [0]*mo_tot_num] * ao_num)
+ezfio.set_mo_basis_mo_coef_real([ [0]*mo_tot_num] * ao_num)
