@@ -31,7 +31,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8):
   
     Nk, nao, nmo = mo_k.shape
     print("n Kpts", Nk)
-    print("n active Mos", nmo)
+    print("n active Mos per kpt", nmo)
   
     # Write all the parameter need to creat a dummy EZFIO folder who will containt the integral after.
     # More an implentation detail than a real thing
@@ -53,83 +53,6 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8):
     print('nucl_repul', e_nuc)
     with open('e_nuc','w') as f:
         f.write(str(e_nuc))
-  
-    def get_phase(cell, kpts, kmesh=None):
-        '''
-        The unitary transformation that transforms the supercell basis k-mesh
-        adapted basis.
-        '''
-  
-        latt_vec = cell.lattice_vectors()
-        if kmesh is None:
-            # Guess kmesh
-            scaled_k = cell.get_scaled_kpts(kpts).round(8)
-            kmesh = (len(np.unique(scaled_k[:,0])),
-                     len(np.unique(scaled_k[:,1])),
-                     len(np.unique(scaled_k[:,2])))
-  
-        R_rel_a = np.arange(kmesh[0])
-        R_rel_b = np.arange(kmesh[1])
-        R_rel_c = np.arange(kmesh[2])
-        R_vec_rel = lib.cartesian_prod((R_rel_a, R_rel_b, R_rel_c))
-        R_vec_abs = np.einsum('nu, uv -> nv', R_vec_rel, latt_vec)
-  
-        NR = len(R_vec_abs)
-        phase = np.exp(1j*np.einsum('Ru, ku -> Rk', R_vec_abs, kpts))
-        phase /= np.sqrt(NR)  # normalization in supercell
-  
-        # R_rel_mesh has to be construct exactly same to the Ts in super_cell function
-        scell = tools.super_cell(cell, kmesh)
-        return scell, phase
-  
-    def mo_k2gamma(cell, mo_energy, mo_coeff, kpts, kmesh=None):
-        '''
-        Transform MOs in Kpoints to the equivalents supercell
-        '''
-        scell, phase = get_phase(cell, kpts, kmesh)
-  
-        E_g = np.hstack(mo_energy)
-        C_k = np.asarray(mo_coeff)
-        Nk, Nao, Nmo = C_k.shape
-        NR = phase.shape[0]
-  
-        # Transform AO indices
-        C_gamma = np.einsum('Rk, kum -> Rukm', phase, C_k)
-        C_gamma = C_gamma.reshape(Nao*NR, Nk*Nmo)
-  
-        E_sort_idx = np.argsort(E_g)
-        E_g = E_g[E_sort_idx]
-        C_gamma = C_gamma[:,E_sort_idx]
-        s = scell.pbc_intor('int1e_ovlp')
-        assert(abs(reduce(np.dot, (C_gamma.conj().T, s, C_gamma))
-                   - np.eye(Nmo*Nk)).max() < 1e-7)
-  
-        # Transform MO indices
-        E_k_degen = abs(E_g[1:] - E_g[:-1]).max() < 1e-5
-        if np.any(E_k_degen):
-            degen_mask = np.append(False, E_k_degen) | np.append(E_k_degen, False)
-            shift = min(E_g[degen_mask]) - .1
-            f = np.dot(C_gamma[:,degen_mask] * (E_g[degen_mask] - shift),
-                       C_gamma[:,degen_mask].conj().T)
-            assert(abs(f.imag).max() < 1e-5)
-  
-            e, na_orb = la.eigh(f.real, s, type=2)
-            C_gamma[:,degen_mask] = na_orb[:, e>0]
-  
-        if abs(C_gamma.imag).max() < 1e-7:
-            print('!Warning  Some complexe pollutions in MOs are present')
-        
-        C_gamma = C_gamma.real
-        if  abs(reduce(np.dot, (C_gamma.conj().T, s, C_gamma)) - np.eye(Nmo*Nk)).max() < 1e-7:
-            print('!Warning  Some complexe pollutions in MOs are present') 
-  
-        s_k = cell.pbc_intor('int1e_ovlp', kpts=kpts)
-        # overlap between k-point unitcell and gamma-point supercell
-        s_k_g = np.einsum('kuv,Rk->kuRv', s_k, phase.conj()).reshape(Nk,Nao,NR*Nao)
-        # The unitary transformation from k-adapted orbitals to gamma-point orbitals
-        mo_phase = lib.einsum('kum,kuv,vi->kmi', C_k.conj(), s_k_g, C_gamma)
-  
-        return mo_phase
   
     #       __    __          _                                 
     # |\/| |  |  |    _   _  |_  _ 
@@ -203,49 +126,6 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8):
         ij1=min(i,j)
         ij2=max(i,j)
         return ij1+(ij2*(ij2-1))//2
-#    eri_4d_ao = np.zeros((Nk,nao,Nk,nao,Nk,nao,Nk,nao), dtype=np.complex)
-#    for d, kd in enumerate(kpts):
-#        for c, kc in enumerate(kpts):
-#            if c > d: break
-#            idx2_cd = idx2_tri(c,d)
-#            for b, kb in enumerate(kpts):
-#                if b > d: break
-#                a = kconserv[b,c,d]
-#                if idx2_tri(a,b) > idx2_cd: continue
-#                if ((c==d) and (a>b)): continue
-#                ka = kpts[a]
-#                v = mf.with_df.get_ao_eri(kpts=[ka,kb,kc,kd],compact=False).reshape((nao,)*4)
-#                v *= 1./Nk
-#                eri_4d_ao[a,:,b,:,c,:,d] = v
-#    
-#    eri_4d_ao = eri_4d_ao.reshape([Nk*nao]*4)
-#
-#    with open('bielec_ao_complex','w') as outfile: 
-#        for d in range(Nk):
-#            for c in range(Nk):
-#                if c > d: break
-#                idx2_cd = idx2_tri(c,d)
-#                for b in range(Nk):
-#                    if b > d: break
-#                    a = kconserv[b,c,d]
-#                    if idx2_tri(a,b) > idx2_cd: continue
-#                    if ((c==d) and (a>b)): continue
-#                    for l in range(nao):
-#                        ll=l+d*nao
-#                        for j in range(nao):
-#                            jj=j+c*nao
-#                            if jj>ll: break
-#                            idx2_jjll = idx2_tri(jj,ll)
-#                            for k in range(nao):
-#                                kk=k+b*nao
-#                                if kk>ll: break
-#                                for i in range(nao):
-#                                    ii=k+a*nao
-#                                    if idx2_tri(ii,kk) > idx2_jjll: break
-#                                    if ((jj==ll) and (ii>kk)): break
-#                                        v=eri_4d_ao[ii,kk,jj,ll]
-#                                        if (abs(v) > bielec_int_threshold):
-#                                            outfile.write('%s %s %s %s %s %s\n' % (ii+1,jj+1,kk+1,ll+1,v.real,v.imag))
 
     with open('bielec_ao_complex','w') as outfile: 
         for d, kd in enumerate(kpts):
@@ -276,6 +156,13 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8):
                                     v=eri_4d_ao_kpt[i,k,j,l]
                                     if (abs(v) > bielec_int_threshold):
                                         outfile.write('%s %s %s %s %s %s\n' % (ii+1,jj+1,kk+1,ll+1,v.real,v.imag))
+
+    with open('kconserv_complex','w') as outfile:
+        for a in range(Nk):
+            for b in range(Nk):
+                for c in range(Nk):
+                    d = kconserv[a,b,c]
+                    outfile.write('%s %s %s %s\n' % (a+1,c+1,b+1,d+1))
 
     
     
