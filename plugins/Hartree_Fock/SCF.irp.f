@@ -20,10 +20,10 @@ subroutine create_guess
   call ezfio_has_mo_basis_mo_coef_real(exists)
   if (.not.exists) then
     if (mo_guess_type == "HCore") then
-     ! mo_coef = ao_ortho_lowdin_coef
-      call zlacp2('X',ao_num,mo_tot_num, &
-                  ao_ortho_lowdin_coef,size(ao_ortho_lowdin_coef,1), &
-                  mo_coef,size(mo_coef,1))
+      mo_coef = ao_ortho_lowdin_coef
+     ! call zlacp2('X',ao_num,mo_tot_num, &
+     !             ao_ortho_lowdin_coef,size(ao_ortho_lowdin_coef,1), &
+     !             mo_coef,size(mo_coef,1))
       TOUCH mo_coef
       mo_label = 'Guess'
       call mo_as_eigvectors_of_mo_matrix(mo_mono_elec_integral,size(mo_mono_elec_integral,1),size(mo_mono_elec_integral,2),mo_label,1,.false.)
