@@ -117,8 +117,11 @@ END_DOC
 
 !   Print results at the end of each iteration
 
-    write(6,'(I4, 1X, F16.10, 1X, F16.10, 1X, F16.10, 1X, I3)')  &
-      iteration_SCF, energy_SCF, Delta_energy_SCF, max_error_DIIS, dim_DIIS
+!    write(6,'(I4, 1X, F16.10, 1X, F16.10, 1X, F16.10, 1X, I3)')  &
+!      iteration_SCF, energy_SCF, Delta_energy_SCF, max_error_DIIS, dim_DIIS
+!    TOUCH one_elec_energy two_elec_energy
+    write(6,'(I4, 1X, F16.10, 1X, F16.10, 1X, F16.10, 1X, I3, 1X, F16.10, 1X, F16.10)')  &
+      iteration_SCF, energy_SCF, Delta_energy_SCF, max_error_DIIS, dim_DIIS, one_elec_energy, two_elec_energy
 
     if (Delta_energy_SCF < 0.d0) then
       call save_mos

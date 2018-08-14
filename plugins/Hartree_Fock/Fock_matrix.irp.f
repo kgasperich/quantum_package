@@ -258,6 +258,38 @@ BEGIN_PROVIDER [ double precision, HF_energy ]
  HF_energy = real(HF_energy_tmp)
   
 END_PROVIDER
+ 
+ BEGIN_PROVIDER [ double precision, one_elec_energy ]
+&BEGIN_PROVIDER [ double precision, two_elec_energy ]
+ implicit none
+ BEGIN_DOC
+ ! Hartree-Fock energy
+ END_DOC
+ complex*16 :: e1_tmp, e2_tmp
+ e1_tmp = (0.d0,0.d0) 
+ e2_tmp = (0.d0,0.d0) 
+ integer                        :: i,j
+ do j=1,ao_num
+   do i=1,ao_num
+     e1_tmp +=  (                                          &
+         (ao_mono_elec_integral(i,j) ) *  HF_density_matrix_ao_alpha(i,j) +&
+         (ao_mono_elec_integral(i,j) ) *  HF_density_matrix_ao_beta (i,j) )
+     e2_tmp += 0.5 * (                                          &
+         (ao_bi_elec_integral_alpha(i,j) ) *  HF_density_matrix_ao_alpha(i,j) +&
+         (ao_bi_elec_integral_beta(i,j) ) *  HF_density_matrix_ao_beta (i,j) )
+   enddo
+ enddo
+
+ if (abs(imag(e1_tmp)) .gt. 1.0d-12) then
+   stop '1-elec energy should be real'
+ endif
+ if (abs(imag(e2_tmp)) .gt. 1.0d-12) then
+   stop '2-elec energy should be real'
+ endif
+ one_elec_energy = real(e1_tmp)
+ two_elec_energy = real(e2_tmp)
+  
+END_PROVIDER
 
 
 BEGIN_PROVIDER [ complex*16, Fock_matrix_ao, (ao_num, ao_num) ]
