@@ -17,5 +17,7 @@ cp $ezfio/{ao,mo}_basis/ao_md5
 echo 'Read Integral'
 qp_run read_ao_mono_complex $ezfio 
 qp_run read_ao_eri_chunk_complex $ezfio 
-qp_run read_mo_coef_complex $ezfio 
-qp_run mo_from_ao_orth $ezfio 
+
+#comment out one of the following two lines
+qp_run read_mo_coef_complex $ezfio #start from converged pyscf MOs 
+#qp_run mo_from_ao_orth $ezfio #use canonical orthonormalized AOs as initial MO guess
