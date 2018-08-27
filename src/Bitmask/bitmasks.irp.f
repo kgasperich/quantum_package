@@ -73,16 +73,33 @@ BEGIN_PROVIDER [ integer(bit_kind), HF_bitmask, (N_int,2)]
   BEGIN_DOC
   ! Hartree Fock bit mask
   END_DOC
-  integer                        :: i,j,n
+  integer                        :: i,j,n,k
   integer                        :: occ(elec_alpha_num)
 
   HF_bitmask = 0_bit_kind
-  do i=1,elec_alpha_num
-   occ(i) = i 
-  enddo
+
+  if (use_kpts) then
+    k=0
+    do i=1,elec_alpha_num_per_kpt
+      do j=1,num_kpts
+        k += 1
+        occ(k) = i + (j-1)*mo_tot_num_per_kpt
+      enddo
+    enddo
+  else
+    do i=1,elec_alpha_num
+     occ(i) = i 
+    enddo
+  endif
+
   call list_to_bitstring( HF_bitmask(1,1), occ, elec_alpha_num, N_int)
   ! elec_alpha_num <= elec_beta_num, so occ is already OK.
   call list_to_bitstring( HF_bitmask(1,2), occ, elec_beta_num, N_int)
+
+  print *, 'HF_bitmask:'
+  call print_det(HF_bitmask, N_int)
+
+  print *, occ
 
 END_PROVIDER
 

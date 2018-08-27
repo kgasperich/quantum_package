@@ -24,8 +24,13 @@ subroutine run
   iunit = getunitandopen('kinetic_ao_complex','r')
   do 
     read (iunit,*,end=10) i,j, int_re, int_im
-    A(i,j) = dcmplx(int_re,int_im)
-    A(j,i) = dcmplx(int_re,-int_im)
+    if (i.eq.j) then
+      int_im = 0.d0
+      A(i,i) = dcmplx(int_re,int_im)
+    else
+      A(i,j) = dcmplx(int_re,int_im)
+      A(j,i) = dcmplx(int_re,-int_im)
+    endif
   enddo
   10 continue
   close(iunit)
@@ -36,8 +41,13 @@ subroutine run
   iunit = getunitandopen('ne_ao_complex','r')
   do
     read (iunit,*,end=11) i,j, int_re, int_im
-    A(i,j) = dcmplx(int_re,int_im)
-    A(j,i) = dcmplx(int_re,-int_im)
+    if (i.eq.j) then
+      int_im = 0.d0
+      A(i,i) = dcmplx(int_re,int_im)
+    else
+      A(i,j) = dcmplx(int_re,int_im)
+      A(j,i) = dcmplx(int_re,-int_im)
+    endif
   enddo
   11 continue
   close(iunit)
@@ -48,8 +58,13 @@ subroutine run
   iunit = getunitandopen('overlap_ao_complex','r')
   do 
     read (iunit,*,end=12) i,j, int_re, int_im
-    A(i,j) = dcmplx(int_re,int_im)
-    A(j,i) = dcmplx(int_re,-int_im)
+    if (i.eq.j) then
+      int_im = 0.d0
+      A(i,i) = dcmplx(int_re,int_im)
+    else
+      A(i,j) = dcmplx(int_re,int_im)
+      A(j,i) = dcmplx(int_re,-int_im)
+    endif
   enddo
   12 continue
   close(iunit)

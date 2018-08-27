@@ -35,6 +35,11 @@ BEGIN_PROVIDER [ integer, mo_tot_num ]
   
 END_PROVIDER
 
+BEGIN_PROVIDER [integer, mo_tot_num_per_kpt ]
+  implicit none
+  mo_tot_num_per_kpt = mo_tot_num / num_kpts
+END_PROVIDER
+
 BEGIN_PROVIDER [ integer, mo_num ]
  implicit none
  BEGIN_DOC

@@ -77,7 +77,8 @@
    do i = 1, mo_tot_num
      Fock_matrix_diag_mo(i) = real(Fock_matrix_mo(i,i))
      if (dabs(imag(Fock_matrix_mo(i,i))) .gt. 1.0d-12) then
-       stop 'diagonal elements of Fock matrix should be real'
+       !stop 'diagonal elements of Fock matrix should be real'
+       print *, 'diagonal elements of Fock matrix should be real'
      endif
    enddo
 END_PROVIDER
@@ -253,7 +254,8 @@ BEGIN_PROVIDER [ double precision, HF_energy ]
  enddo
 
  if (abs(imag(HF_energy_tmp)) .gt. 1.0d-12) then
-   stop 'HF energy should be real'
+   !stop 'HF energy should be real'
+   print *, 'HF energy should be real'
  endif
  HF_energy = real(HF_energy_tmp)
   
@@ -281,10 +283,12 @@ END_PROVIDER
  enddo
 
  if (abs(imag(e1_tmp)) .gt. 1.0d-12) then
-   stop '1-elec energy should be real'
+   !stop '1-elec energy should be real'
+   print *, '1-elec energy should be real'
  endif
  if (abs(imag(e2_tmp)) .gt. 1.0d-12) then
-   stop '2-elec energy should be real'
+   !stop '2-elec energy should be real'
+   print *, '2-elec energy should be real'
  endif
  one_elec_energy = real(e1_tmp)
  two_elec_energy = real(e2_tmp)

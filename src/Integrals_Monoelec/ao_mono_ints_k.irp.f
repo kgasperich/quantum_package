@@ -45,7 +45,7 @@ END_PROVIDER
  BEGIN_PROVIDER [ complex*16, ao_mono_elec_integral_kpts,(ao_num,ao_num,num_kpts)]
 &BEGIN_PROVIDER [ double precision, ao_mono_elec_integral_diag_kpts,(ao_num,num_kpts)]
   implicit none
-  integer :: i,j
+  integer :: i,j,k
   BEGIN_DOC
  ! array of the mono electronic hamiltonian on the AOs basis
  ! : sum of the kinetic and nuclear electronic potential 
