@@ -7,13 +7,23 @@ num_elec, nucl_num, mo_tot_num = map(int,sys.argv[2:5])
 
 nuclear_repulsion = float(sys.argv[5])
 ao_num = float(sys.argv[6])
+n_kpts = int(sys.argv[7])
 ezfio.set_file(filename)
 
+ao_num = mo_tot_num
 #Important !
 import math
-ezfio.electrons_elec_alpha_num = int(math.ceil(num_elec / 2.))
-ezfio.electrons_elec_beta_num = int(math.floor(num_elec / 2.))
+nelec_per_kpt = num_elec // n_kpts
+nelec_alpha_per_kpt = int(math.ceil(nelec_per_kpt / 2.))
+nelec_beta_per_kpt = int(math.floor(nelec_per_kpt / 2.))
 
+ezfio.electrons_elec_alpha_num = int(nelec_alpha_per_kpt * n_kpts)
+ezfio.electrons_elec_beta_num = int(nelec_beta_per_kpt * n_kpts)
+
+#ezfio.electrons_elec_alpha_num = int(math.ceil(num_elec / 2.))
+#ezfio.electrons_elec_beta_num = int(math.floor(num_elec / 2.))
+
+ezfio.set_utils_num_kpts(n_kpts)
 
 #Important
 ezfio.set_nuclei_nucl_num(nucl_num)
@@ -46,4 +56,6 @@ ezfio.set_mo_basis_ao_md5(ao_md5)
 
 
 ezfio.set_mo_basis_mo_tot_num(mo_tot_num)
+c_mo = [[1 if i==j else 0 for i in range(mo_tot_num)] for j in range(ao_num)]
 ezfio.set_mo_basis_mo_coef_real([ [0]*mo_tot_num] * ao_num)
+#ezfio.set_mo_basis_mo_coef_real(c_mo)
