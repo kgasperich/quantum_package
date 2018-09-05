@@ -193,7 +193,7 @@ subroutine read_one_e_integrals_complex_kpts(filename, A, m, n, p)
 
   do k=1,p
     do j=1,n
-      do i=1,n
+      do i=1,m
         A(i,j,k) = cmplx(A_re(i,j,k),A_im(i,j,k))
       enddo
     enddo
