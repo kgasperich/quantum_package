@@ -117,7 +117,7 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
   type(selection_buffer), intent(inout) :: buf
   
   integer                         :: h1,h2,s1,s2,s3,i1,i2,ib,sp,k,i,j,nt,ii
-  integer                         :: kpt1,kpt2,kpt12
+  integer                         :: kpt1,kpt2,kpt12,kk1,kk2,ik01,ik02,ik1,ik2
   integer(bit_kind)               :: hole(N_int,2), particle(N_int,2), mask(N_int, 2), pmask(N_int, 2)
   logical                         :: fullMatch, ok
   
@@ -413,12 +413,12 @@ subroutine select_singles_and_doubles(i_generator,hole_mask,particle_mask,fock_d
           
           h2 = hole_list(i2,s2)
           kpt2 = (h2-1)/mo_tot_num_per_kpt + 1
-          kpt12 = kconserv(kpt1,kpt2,0)
+          kpt12 = kconserv(kpt1,kpt2,1)
           call apply_hole(pmask, s2,h2, mask, ok, N_int) ! remove h2 (spin s2) from pmask and return as mask
           banned = .true.
           !only allow excitations that conserve momentum
           do kk1=1,num_kpts
-            kk2 = kconserv(kpt12,0,kk1)
+            kk2 = kconserv(kpt12,1,kk1)
             ik01 = (kk1-1) * mo_tot_num_per_kpt + 1
             ik02 = (kk2-1) * mo_tot_num_per_kpt + 1
             do ik1=ik01, ik01 + mo_tot_num_per_kpt - 1
