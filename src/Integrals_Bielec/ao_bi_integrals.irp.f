@@ -43,6 +43,56 @@ END_PROVIDER
  
 subroutine ao_map_fill_from_df
 
+  integer :: i,k,j,l
+  integer :: ki,kk,kj,kl
+  integer :: ii,ik,ij,il
+  integer :: kikk2,kjkl2,jl2,ik2
+
+
+
+  do kl=1, num_kpts
+    do kj=1, kl
+      call idx2_tri_int(kj,kl,kjkl2)
+      do kk=1,l
+        ki=kconserv(kl,kk,kj)
+        call idx2_tri_int(ki,kk,kikk2)
+        if (kikk2 > kjkl2) cycle
+        if ((kl == kj) .and. (ki > kk)) cycle
+
+        ! this is where i should do a dgemm-like operation
+        ! let A = df_integral_array:
+        ! compute array B (bielec integrals for this set of 4 kpts)
+        ! B(i,j,k,l) = \sum_{mu=1}^{df_num} A(kikk2,mu,i,k) * A(kjkl2,mu,j,l)
+        ! if ki<kk take conjugate transpose of first instance of A (transpose with respect to i and k)
+        ! if kj<kl (i.e. always) take conjugate transpose of second instance of A (transpose with respect to j and l)
+        ! TODO: option 1: change bounds so that kl <= kj
+        !       option 2: change df_integral array so that it is the conjugate transpose of what it is now (transpose last 2 dimensions)
+
+        do il=1,num_ao_per_kpt
+          l=il+(kl-1)*num_ao_per_kpt
+          do ij=1,num_ao_per_kpt
+            j=ij+(kj-1)*num_ao_per_kpt
+            if (j>l) exit
+            call idx2_tri_int(j,l,jl2)
+            do ik=1,num_ao_per_kpt
+              k=ik+(kk-1)*num_ao_per_kpt
+              if (k>l) exit
+              do ii=1,num_ao_per_kpt
+                i=ii+(ki-1)*num_ao_per_kpt
+                call idx2_tri_int(i,k,ik2)
+                if (ik2 > jl2) exit
+                if ((j==l) .and. (i>k)) exit
+                integral = (0.d0,0.d0)
+                do mu = 1, df_tot_num
+                  integral += df_integral_array(
+
+
+
+
+
+      
+
+
   n_integrals = 0
   do l = 1, ao_tot_num
     do j = 1, l
