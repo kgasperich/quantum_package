@@ -18,10 +18,13 @@ cp $ezfio/{ao,mo}_basis/ao_md5
 #Read the integral
 echo 'Read Integral'
 
-qp_run read_mo_mono_complex $ezfio 
-qp_run read_mo_eri_chunk_complex $ezfio 
-#qp_run read_ao_mono_complex $ezfio 
+#qp_run read_mo_mono_complex $ezfio 
+#qp_run read_mo_eri_chunk_complex $ezfio 
+
+qp_run read_ao_mono_complex $ezfio 
 #qp_run read_ao_eri_chunk_complex $ezfio 
+qp_run read_ao_df_complex $ezfio
+qp_run read_kconserv $ezfio
 #
 ##comment out one of the following two lines
 #qp_run read_mo_coef_complex $ezfio #start from converged pyscf MOs 

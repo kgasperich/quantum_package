@@ -34,6 +34,8 @@ BEGIN_PROVIDER [ logical, ao_bielec_integrals_in_map ]
     return
   else if (read_df_integral_array) then
     call ao_map_fill_from_df
+    ao_bielec_integrals_in_map = .True.
+    return
   else
     print*,'ERROR: complex AO integrals must be provided'
     stop
@@ -176,11 +178,19 @@ subroutine ao_map_fill_from_df
       enddo
     enddo
   enddo
+  
+  if (n_integrals /= 0) then
+    call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1,&
+      real(ao_integrals_threshold,integral_kind))
+    call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2,&
+      real(ao_integrals_threshold,integral_kind))
+  endif
 
-  call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1,&
-      real(ao_integrals_threshold,integral_kind))
-  call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2,&
-      real(ao_integrals_threshold,integral_kind))
+  call map_sort(ao_integrals_map)
+  call map_unique(ao_integrals_map)
+
+  call map_save_to_disk(trim(ezfio_filename)//'/work/ao_ints',ao_integrals_map)
+  call ezfio_set_integrals_bielec_disk_access_ao_integrals('Read')
   
   deallocate( &
     ints_ik,&
@@ -193,7 +203,7 @@ subroutine ao_map_fill_from_df
     buffer_value2&
     )
 
-end
+end subroutine ao_map_fill_from_df
 
 
 BEGIN_PROVIDER [ double precision, ao_bielec_integral_schwartz,(ao_num,ao_num)  ]
