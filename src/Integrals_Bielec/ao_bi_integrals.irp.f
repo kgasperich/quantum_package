@@ -42,14 +42,44 @@ BEGIN_PROVIDER [ logical, ao_bielec_integrals_in_map ]
 END_PROVIDER
  
 subroutine ao_map_fill_from_df
+  implicit none
+  BEGIN_DOC
+  ! fill ao bielec integral map using 3-index df integrals
+  ! todo: add OMP directives, do smarter things with pointers/reshaping/transposing
+  END_DOC
 
   integer :: i,k,j,l
   integer :: ki,kk,kj,kl
   integer :: ii,ik,ij,il
   integer :: kikk2,kjkl2,jl2,ik2
 
+  complex*16,allocatable :: ints_ik(:,:), ints_jl(:,:), ints_ikjl_tmp(:,:), ints_ikjl(:,:,:,:)
+
+  complex*16 :: integral
+  integer                        :: n_integrals
+  integer                        :: size_buffer
+  integer(key_kind),allocatable  :: buffer_i1(:), buffer_i2(:)
+  real(integral_kind),allocatable :: buffer_value1(:),buffer_value2(:)
+  integer(key_kind)              :: tmp_idx1,tmp_idx2
+  double precision               :: tmp_re,tmp_im
+
+  size_buffer = min(ao_num*ao_num*ao_num,16000000)
+  print*, 'Providing the ao_bielec integrals from 3-index df integrals'
+  
+  allocate( &
+    ints_ik(ao_num_per_kpt**2,df_num),&
+    ints_jl(ao_num_per_kpt**2,df_num),&
+    ints_ikjl_tmp(ao_num_per_kpt**2,ao_num_per_kpt**2),&
+    ints_ikjl(ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt),&
+    buffer_i1(size_buffer),                                         &
+    buffer_i2(size_buffer),                                         &
+    buffer_value1(size_buffer),                                     &
+    buffer_value2(size_buffer) 
+    )
 
 
+
+  n_integrals=0
   do kl=1, num_kpts
     do kj=1, kl
       call idx2_tri_int(kj,kl,kjkl2)
@@ -59,99 +89,111 @@ subroutine ao_map_fill_from_df
         if (kikk2 > kjkl2) cycle
         if ((kl == kj) .and. (ki > kk)) cycle
 
-        ! this is where i should do a dgemm-like operation
-        ! let A = df_integral_array:
-        ! compute array B (bielec integrals for this set of 4 kpts)
-        ! B(i,j,k,l) = \sum_{mu=1}^{df_num} A(kikk2,mu,i,k) * A(kjkl2,mu,j,l)
-        ! if ki<kk take conjugate transpose of first instance of A (transpose with respect to i and k)
-        ! if kj<kl (i.e. always) take conjugate transpose of second instance of A (transpose with respect to j and l)
-        ! TODO: option 1: change bounds so that kl <= kj
-        !       option 2: change df_integral array so that it is the conjugate transpose of what it is now (transpose last 2 dimensions)
+        ! maybe use pointers instead of reshaping?
+        if (ki >= kk) then
+          ints_ik = reshape( &
+              reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/1,2,3/)),&
+              (/ao_num_per_kpt**2,df_num/))
+        else
+          ints_ik = conjg(reshape( &
+              reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/)),&
+              (/ao_num_per_kpt**2,df_num/)))
+        endif
+        ints_jl = conjg(reshape( &
+            reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/)),&
+            (/ao_num_per_kpt**2,df_num/)))
 
-        do il=1,num_ao_per_kpt
-          l=il+(kl-1)*num_ao_per_kpt
-          do ij=1,num_ao_per_kpt
-            j=ij+(kj-1)*num_ao_per_kpt
+        ! todo: option 1: change bounds so that kl <= kj
+        !       option 2: change df_integral array so that it is the conjugate transpose of what it is now (transpose first 2 dimensions)
+
+        ! todo: maybe just use 'C' instead of 'T' rather than doing conjugation above? (some cases will still require conjg on ikjl array)
+        !       figure this out in conjunction with deciding how to structure df integrals when first constructed
+        call zgemm('N','T', ao_num_per_kpt**2, ao_num_per_kpt**2, df_num, &
+               (1.d0,0.d0), ints_ik, size(ints_ik,1), &
+               ints_jl, size(ints_jl,1), &
+               (0.d0,0.d0), ints_ikjl_tmp, size(ints_ikjl_tmp,1))
+
+        ! this is bad
+        ! use a pointer instead?
+        ints_ikjl = reshape(ints_ikjl_tmp,(/ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt/))
+
+        do il=1,ao_num_per_kpt
+          l=il+(kl-1)*ao_num_per_kpt
+          do ij=1,ao_num_per_kpt
+            j=ij+(kj-1)*ao_num_per_kpt
             if (j>l) exit
             call idx2_tri_int(j,l,jl2)
-            do ik=1,num_ao_per_kpt
-              k=ik+(kk-1)*num_ao_per_kpt
+            do ik=1,ao_num_per_kpt
+              k=ik+(kk-1)*ao_num_per_kpt
               if (k>l) exit
-              do ii=1,num_ao_per_kpt
-                i=ii+(ki-1)*num_ao_per_kpt
+              do ii=1,ao_num_per_kpt
+                i=ii+(ki-1)*ao_num_per_kpt
                 call idx2_tri_int(i,k,ik2)
                 if (ik2 > jl2) exit
                 if ((j==l) .and. (i>k)) exit
-                integral = (0.d0,0.d0)
-                do mu = 1, df_tot_num
-                  integral += df_integral_array(
+                integral = ints_ikjl(ii,ik,ij,il)
+                if (cdabs(integral) < ao_integrals_threshold) then
+                  cycle
+                endif
+                n_integrals += 1
+                tmp_re = real(integral)
+                tmp_im = imag(integral)
+                call mo_bielec_integrals_index(i,j,k,l,tmp_idx1)
+                call mo_bielec_integrals_index(k,l,i,j,tmp_idx2)
+                if (tmp_idx1.eq.tmp_idx2) then
+                  ! there are mo_num^2 of these:
+                  ! is it worth accumulating the imaginary parts somewhere 
+                  ! in order to verify that they are actually zero?
+                  buffer_i1(n_integrals) = tmp_idx1
+                  buffer_i2(n_integrals) = tmp_idx1
+                  buffer_value1(n_integrals) = tmp_re
+                  buffer_value2(n_integrals) = 0.d0
+                else if (tmp_idx1 .lt. tmp_idx2) then
+                  buffer_i1(n_integrals) = tmp_idx1
+                  buffer_i2(n_integrals) = tmp_idx2
+                  buffer_value1(n_integrals) = tmp_re
+                  buffer_value2(n_integrals) = tmp_im
+                else
+                  buffer_i1(n_integrals) = tmp_idx2
+                  buffer_i2(n_integrals) = tmp_idx1
+                  buffer_value1(n_integrals) = tmp_re
+                  buffer_value2(n_integrals) = -tmp_im
+                endif
 
 
-
-
-
-      
-
-
-  n_integrals = 0
-  do l = 1, ao_tot_num
-    do j = 1, l
-      call idx2_tri_int(j,l,jl) 
-      do k = 1, l
-        do i = 1, l
-          if ((j.eq.l).and.(i.gt.k)) exit
-          call idx2_tri_int(i,k,ik)
-          if (ik.gt.jl) exit
-          integral = (0.d0,0.d0)
-          do mu = 1, df_tot_num
-            integral += df_integral_array(i,k,mu) * df_integral_array(j,l,mu)
+                if (n_integrals == size_buffer) then
+                  call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1,&
+                      real(ao_integrals_threshold,integral_kind))
+                  call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2,&
+                      real(ao_integrals_threshold,integral_kind))
+                  n_integrals = 0
+                endif
+              enddo
+            enddo
           enddo
-          if (cdabs(integral) < ao_integrals_threshold) then
-            cycle
-          endif
-          n_integrals += 1
-          tmp_re = real(integral)
-          tmp_im = imag(integral)
-          call mo_bielec_integrals_index(i,j,k,l,tmp_idx1)
-          call mo_bielec_integrals_index(k,l,i,j,tmp_idx2)
-          if (tmp_idx1.eq.tmp_idx2) then
-            ! there are mo_num^2 of these:
-            ! is it worth accumulating the imaginary parts somewhere 
-            ! in order to verify that they are actually zero?
-            buffer_i1(n_integrals) = tmp_idx1
-            buffer_i2(n_integrals) = tmp_idx1
-            buffer_value1(n_integrals) = tmp_re
-            buffer_value2(n_integrals) = 0.d0
-          else if (tmp_idx1 .lt. tmp_idx2) then
-            buffer_i1(n_integrals) = tmp_idx1
-            buffer_i2(n_integrals) = tmp_idx2
-            buffer_value1(n_integrals) = tmp_re
-            buffer_value2(n_integrals) = tmp_im
-          else
-            buffer_i1(n_integrals) = tmp_idx2
-            buffer_i2(n_integrals) = tmp_idx1
-            buffer_value1(n_integrals) = tmp_re
-            buffer_value2(n_integrals) = -tmp_im
-          endif
-
-
-          if (n_integrals == size_buffer) then
-            call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1,&
-                real(ao_integrals_threshold,integral_kind))
-            call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2,&
-                real(ao_integrals_threshold,integral_kind))
-            n_integrals = 0
-          endif
         enddo
       enddo
     enddo
   enddo
+
   call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1,&
       real(ao_integrals_threshold,integral_kind))
   call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2,&
       real(ao_integrals_threshold,integral_kind))
+  
+  deallocate( &
+    ints_ik,&
+    ints_jl,&
+    ints_ikjl_tmp,&
+    ints_ikjl,&
+    buffer_i1,&
+    buffer_i2,&
+    buffer_value1,&
+    buffer_value2,&
+    )
 
 end
+
 
 BEGIN_PROVIDER [ double precision, ao_bielec_integral_schwartz,(ao_num,ao_num)  ]
   implicit none
