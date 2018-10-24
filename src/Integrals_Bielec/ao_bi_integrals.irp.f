@@ -42,6 +42,7 @@ BEGIN_PROVIDER [ logical, ao_bielec_integrals_in_map ]
 END_PROVIDER
  
 subroutine ao_map_fill_from_df
+  use map_module
   implicit none
   BEGIN_DOC
   ! fill ao bielec integral map using 3-index df integrals
@@ -74,7 +75,7 @@ subroutine ao_map_fill_from_df
     buffer_i1(size_buffer),                                         &
     buffer_i2(size_buffer),                                         &
     buffer_value1(size_buffer),                                     &
-    buffer_value2(size_buffer) 
+    buffer_value2(size_buffer) & 
     )
 
 
@@ -189,7 +190,7 @@ subroutine ao_map_fill_from_df
     buffer_i1,&
     buffer_i2,&
     buffer_value1,&
-    buffer_value2,&
+    buffer_value2&
     )
 
 end
