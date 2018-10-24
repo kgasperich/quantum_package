@@ -3,10 +3,10 @@ program read_integrals
   PROVIDE ezfio_filename
   call ezfio_set_integrals_monoelec_disk_access_mo_one_integrals("None")
 !  call ezfio_set_utils_disk_access_ao_overlap_integrals("None")
-  call run
+  call run_mo_mono_complex
 end
 
-subroutine run
+subroutine run_mo_mono_complex
   use map_module
   implicit none
   
