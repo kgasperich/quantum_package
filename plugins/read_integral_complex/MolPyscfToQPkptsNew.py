@@ -1,7 +1,7 @@
 import numpy as np
 from functools import reduce
 
-def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, print_ao_ints=False, print_mo_ints=True):
+def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, print_ao_ints=False, print_mo_ints=True, print_df_ints=True):
     '''
     kpts = List of kpoints coordinates. Cannot be null, for gamma is other script
     kmesh = Mesh of kpoints (optional)
@@ -32,6 +32,10 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, prin
     Nk, nao, nmo = mo_k.shape
     print("n Kpts", Nk)
     print("n active Mos per kpt", nmo)
+    print("n AOs per kpt", nao)
+
+    naux = mf.with_df.get_naoaux()
+    print("n df fitting functions", naux)
   
     # Write all the parameter need to creat a dummy EZFIO folder who will containt the integral after.
     # More an implentation detail than a real thing
@@ -214,6 +218,62 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, prin
         ij1=min(iijj)
         ij2=max(iijj)
         return ij1+(ij2*(ij2-1))//2
+
+
+    
+    import h5py
+
+    intfile=h5py.File(mf.with_df._cderi,'r')
+
+    j3c = intfile.get('j3c')
+    if print_df_ints:
+        with open('df_integral_array','w') as outfile:
+            pass
+    naosq = nao*nao
+    naotri = (nao*(nao+1))//2
+    j3clist = [j3c.get(i) for i in j3c.keys()]
+    for i in j3clist:
+        print(i.shape)
+
+    def makesq(vlist,n1,n2):
+        out=np.zeros([n1,n2,n2],dtype=np.complex128)
+        lmask=np.tri(n2,dtype=bool)
+        for i in range(n1):
+            out[i][lmask] = vlist[i].conj()
+        out2=out.transpose([0,2,1])
+        for i in range(n1):
+            out2[i][lmask] = vlist[i]
+        return out2
+    
+    def makesq2(vlist,n1,n2):
+        out=np.zeros([n1,n2,n2],dtype=np.complex128)
+        lmask=np.tri(n2,dtype=bool)
+        tmp=np.zeros([n2,n2],dtype=np.complex128)
+        tmp2=np.zeros([n2,n2],dtype=np.complex128)
+        for i in range(n1):
+            tmp[lmask] = vlist[i].conj()
+            tmp2=tmp.T
+            tmp2[lmask] = vlist[i]
+            out[i] = tmp2.copy()
+        return out
+    
+    # dimensions are (kikj,iaux,jao,kao), where kikj is compound index of kpts i and j
+    # output dimensions should be reversed (nao, nao, naux, nkptpairs)
+    j3arr=np.array([i.value.reshape([naux,nao,nao]) if (i.shape[1] == naosq) else makesq(i.value,naux,nao) for i in j3clist])
+
+    nkpt_pairs = j3arr.shape[3]
+
+    if print_df_ints:
+        with open('df_integral_array','a') as outfile:
+            for k in range(nkpt_pairs):
+                for iaux in range(naux):
+                    for i in range(nao):
+                        for j in range(nao):
+                            v = j3arr[k,iaux,i,j]
+                            if (abs(v) > bielec_int_threshold):
+                                outfile.write('%s %s %s %s %s %s\n' % (i+1,j+1,iaux+1,k+1,v.real,v.imag))
+
+
 
 #    eri_4d_ao = np.zeros((Nk,nao,Nk,nao,Nk,nao,Nk,nao), dtype=np.complex)
 #    for d, kd in enumerate(kpts):
