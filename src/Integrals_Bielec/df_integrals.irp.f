@@ -47,7 +47,7 @@ END_PROVIDER
      write_df_integral_array = .False.
      
    else
-     print *, 'utils/disk_access_df_integral_array has a wrong type'
+     print *, 'integrals_bielec/disk_access_df_integral_array has a wrong type'
      stop 1
      
    endif
