@@ -165,10 +165,8 @@ subroutine ao_map_fill_from_df
 
 
                 if (n_integrals == size_buffer) then
-                  call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1,&
-                      real(ao_integrals_threshold,integral_kind))
-                  call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2,&
-                      real(ao_integrals_threshold,integral_kind))
+                  call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1)
+                  call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2)
                   n_integrals = 0
                 endif
               enddo
@@ -180,10 +178,8 @@ subroutine ao_map_fill_from_df
   enddo
   
   if (n_integrals /= 0) then
-    call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1,&
-      real(ao_integrals_threshold,integral_kind))
-    call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2,&
-      real(ao_integrals_threshold,integral_kind))
+    call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1)
+    call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2)
   endif
 
   call map_sort(ao_integrals_map)
