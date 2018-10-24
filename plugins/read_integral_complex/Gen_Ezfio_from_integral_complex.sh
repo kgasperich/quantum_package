@@ -9,7 +9,8 @@ read nel nmo natom <<< $(cat param)
 read e_nucl <<< $(cat e_nuc)
 read nao <<< $(cat num_ao)
 read nkpts <<< $(cat num_kpts)
-./create_ezfio_complex.py $ezfio $nel $natom $nmo $e_nucl $nao $nkpts
+read ndf <<< $(cat num_df)
+./create_ezfio_complex.py $ezfio $nel $natom $nmo $e_nucl $nao $nkpts $ndf
 #Handle the orbital consitensy check
 qp_edit -c $ezfio &> /dev/null
 cp $ezfio/{ao,mo}_basis/ao_md5 

@@ -8,6 +8,7 @@ num_elec, nucl_num, mo_tot_num = map(int,sys.argv[2:5])
 nuclear_repulsion = float(sys.argv[5])
 ao_num = float(sys.argv[6])
 n_kpts = int(sys.argv[7])
+n_aux = int(sys.argv[8])
 ezfio.set_file(filename)
 
 ao_num = mo_tot_num
@@ -24,6 +25,7 @@ ezfio.electrons_elec_beta_num = int(nelec_beta_per_kpt * n_kpts)
 #ezfio.electrons_elec_beta_num = int(math.floor(num_elec / 2.))
 
 ezfio.set_utils_num_kpts(n_kpts)
+ezfio.set_integrals_bielec_df_num(n_aux)
 
 #Important
 ezfio.set_nuclei_nucl_num(nucl_num)

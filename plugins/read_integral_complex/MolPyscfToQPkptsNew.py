@@ -36,6 +36,8 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, prin
 
     naux = mf.with_df.get_naoaux()
     print("n df fitting functions", naux)
+    with open('num_df','w') as f:
+        f.write(str(naux))
   
     # Write all the parameter need to creat a dummy EZFIO folder who will containt the integral after.
     # More an implentation detail than a real thing
@@ -261,7 +263,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, prin
     # output dimensions should be reversed (nao, nao, naux, nkptpairs)
     j3arr=np.array([i.value.reshape([naux,nao,nao]) if (i.shape[1] == naosq) else makesq(i.value,naux,nao) for i in j3clist])
 
-    nkpt_pairs = j3arr.shape[3]
+    nkpt_pairs = j3arr.shape[0]
 
     if print_df_ints:
         with open('df_integral_array','a') as outfile:
