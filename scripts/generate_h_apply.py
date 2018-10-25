@@ -130,7 +130,7 @@ class H_apply(object):
 
   call dsort(H_jj,iorder,N_det)
   do k=1,N_states
-    psi_coef(iorder(k),k) = 1.d0
+    psi_coef(iorder(k),k) = (1.d0,0.d0)
   enddo
   deallocate(H_jj,iorder)
     """
@@ -310,7 +310,7 @@ class H_apply(object):
       double precision                :: sum_norm_pert(N_st)
       double precision                :: sum_H_pert_diag(N_st)
       double precision, allocatable   :: e_2_pert_buffer(:,:)
-      double precision, allocatable   :: coef_pert_buffer(:,:)
+      complex*16, allocatable   :: coef_pert_buffer(:,:)
       ASSERT (Nint == N_int)
       """
       self.data["init_thread"] = """
@@ -379,7 +379,7 @@ class H_apply(object):
 
       self.data["printout_always"] = """
       do k=1,N_st
-          norm_psi(k) = norm_psi(k) + psi_coef_generators(i_generator,k)*psi_coef_generators(i_generator,k)
+          norm_psi(k) = norm_psi(k) + cdabs(psi_coef_generators(i_generator,k)*psi_coef_generators(i_generator,k))
         delta_pt2(k) = pt2(k) - pt2_old(k)
       enddo
       """
