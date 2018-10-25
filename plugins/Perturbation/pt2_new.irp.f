@@ -4,16 +4,16 @@ subroutine i_H_psi_pert_new_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,
   integer, intent(in)            :: Nint, Ndet,Ndet_max,Nstate,idx_key(Ndet), N_minilist
   integer(bit_kind), intent(in)  :: keys(Nint,2,Ndet)
   integer(bit_kind), intent(in)  :: key(Nint,2)
-  double precision, intent(in)   :: coef(Ndet_max,Nstate)
-  double precision, intent(out)  :: i_H_psi_array(Nstate)
-  double precision, intent(out)  :: coef_pert
+  complex*16, intent(in)   :: coef(Ndet_max,Nstate)
+  complex*16, intent(out)  :: i_H_psi_array(Nstate)
+  complex*16, intent(out)  :: coef_pert
 
   integer                        :: idx(0:Ndet)
   
   integer                        :: i, ii,j, i_in_key, i_in_coef
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
-  double precision               :: hij
+  complex*16               :: hij
   double precision :: delta_e_final
   double precision :: hjj
   BEGIN_DOC
@@ -32,18 +32,19 @@ subroutine i_H_psi_pert_new_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,
   coef_pert = 0.d0
   
   call filter_connected_i_H_psi0(keys,key,Nint,N_minilist,idx)
-  double precision :: coef_array(Nstate)
+  complex*16 :: coef_array(Nstate)
   if (Nstate == 1) then
 
     do ii=1,idx(0)
       i_in_key = idx(ii)
       i_in_coef = idx_key(idx(ii))
       !DIR$ FORCEINLINE
-      call i_H_j(keys(1,1,i_in_key),key,Nint,hij)
+      call i_H_j(key,keys(1,1,i_in_key),Nint,hij)
       i_H_psi_array(1) = i_H_psi_array(1) + coef(i_in_coef,1)*hij
       do i = 1, Nstate
        coef_array(i) = coef(i_in_coef,i)
       enddo
+      !get_delta_e_dyall not implemented for complex MOs
       call get_delta_e_dyall(keys(1,1,i_in_key),key,coef_array,hij,delta_e_final)
        
       coef_pert +=  coef(i_in_coef,1)*hij / delta_e_final
@@ -58,7 +59,7 @@ subroutine i_H_psi_pert_new_minilist(key,keys,idx_key,N_minilist,coef,Nint,Ndet,
       i_in_key = idx(ii)
       i_in_coef = idx_key(idx(ii))
       !DIR$ FORCEINLINE
-      call i_H_j(keys(1,1,i_in_key),key,Nint,hij)
+      call i_H_j(key,keys(1,1,i_in_key),Nint,hij)
       i_H_psi_array(1) = i_H_psi_array(1) + coef(i_in_coef,1)*hij
       do j = 1, Nstate
         i_H_psi_array(j) = i_H_psi_array(j) + coef(i_in_coef,j)*hij

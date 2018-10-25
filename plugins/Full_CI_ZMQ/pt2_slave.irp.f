@@ -73,8 +73,6 @@ subroutine pt2_slave_tcp(i,energy)
   implicit none
   double precision, intent(in) :: energy(N_states_diag)
   integer, intent(in)            :: i
-  logical :: lstop
-  lstop = .False.
-  call run_pt2_slave(0,i,energy,lstop)
+  call run_pt2_slave(0,i,energy)
 end
 

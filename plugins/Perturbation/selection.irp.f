@@ -9,7 +9,7 @@ subroutine fill_H_apply_buffer_selection(n_selected,det_buffer,e_2_pert_buffer,c
   integer, intent(in)            :: n_selected, Nint, N_st, iproc
   integer(bit_kind), intent(in)  :: det_buffer(Nint,2,n_selected)
   double precision, intent(in)   :: e_2_pert_buffer(N_st,n_selected)
-  double precision, intent(in)   :: coef_pert_buffer(N_st,n_selected)
+  complex*16, intent(in)   :: coef_pert_buffer(N_st,n_selected)
   double precision, intent(inout):: select_max_out
   integer                        :: i,j,k,l
   integer                        :: new_size
@@ -82,7 +82,7 @@ subroutine remove_small_contributions
   END_DOC
   integer :: i,j,k, N_removed
   logical, allocatable :: keep(:)
-  double precision :: i_H_psi_array(N_states)
+  complex*16 :: i_H_psi_array(N_states)
 
   allocate (keep(N_det))
   call diagonalize_CI
@@ -96,9 +96,10 @@ subroutine remove_small_contributions
   !$OMP REDUCTION(+:N_removed)
   !$OMP DO
   do i=2*N_det_generators+1, N_det
-    call i_H_psi(psi_det_sorted(1,1,i),psi_det_sorted,psi_coef_sorted,N_int,min(N_det,2*N_det_generators),psi_det_size,N_states,i_H_psi_array)
+    call i_h_psi(psi_det_sorted(1,1,i),psi_det_sorted,psi_coef_sorted,N_int,min(N_det,2*N_det_generators),psi_det_size,N_states,i_H_psi_array)
     keep(i) = .False.
     do j=1,N_states
+      !TODO: fix this for complex
       keep(i) = keep(i) .or. (-real(psi_coef_sorted(i,j)*i_H_psi_array(j)) > selection_criterion_min)
     enddo
   enddo

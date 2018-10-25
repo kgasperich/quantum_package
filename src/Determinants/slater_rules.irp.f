@@ -1082,14 +1082,14 @@ subroutine i_H_psi_SC2(key,keys,coef,Nint,Ndet,Ndet_max,Nstate,i_H_psi_array,idx
   integer, intent(in)            :: Nint, Ndet,Ndet_max,Nstate
   integer(bit_kind), intent(in)  :: keys(Nint,2,Ndet)
   integer(bit_kind), intent(in)  :: key(Nint,2)
-  double precision, intent(in)   :: coef(Ndet_max,Nstate)
-  double precision, intent(out)  :: i_H_psi_array(Nstate)
+  complex*16, intent(in)   :: coef(Ndet_max,Nstate)
+  complex*16, intent(out)  :: i_H_psi_array(Nstate)
   integer         , intent(out)  :: idx_repeat(0:Ndet)
   
   integer                        :: j, jj,k
   double precision               :: phase
   integer                        :: exc(0:2,2,2)
-  double precision               :: hij
+  complex*16               :: hij
   integer,allocatable            :: idx(:)
   
   ASSERT (Nint > 0)

@@ -3,8 +3,9 @@ subroutine pt2_h_core(det_pert,c_pert,e_2_pert,H_pert_diag,Nint,ndet,N_st,minili
   implicit none
   integer, intent(in)            :: Nint,ndet,N_st
   integer(bit_kind), intent(in)  :: det_pert(Nint,2)
-  double precision , intent(out) :: c_pert(N_st),e_2_pert(N_st),H_pert_diag(N_st)
-  double precision               :: i_H_psi_array(N_st)
+  double precision , intent(out) :: e_2_pert(N_st),H_pert_diag(N_st)
+  complex*16 , intent(out) :: c_pert(N_st)
+  complex*16               :: i_H_psi_array(N_st)
   
   integer, intent(in)            :: N_minilist
   integer, intent(in)            :: idx_minilist(0:N_det_selectors)
@@ -15,7 +16,7 @@ subroutine pt2_h_core(det_pert,c_pert,e_2_pert,H_pert_diag,Nint,ndet,N_st,minili
   !
   ! for the various N_st states.
   !
-  ! c_pert(i) = <psi(i)|H|det_pert>/( E(i) - <det_pert|H|det_pert> )
+  ! c_pert(i) = <det_pert|H|psi(i)>/( E(i) - <det_pert|H|det_pert> )
   !
   ! e_2_pert(i) = <psi(i)|H|det_pert>^2/( E(i) - <det_pert|H|det_pert> )
   !
@@ -47,6 +48,7 @@ subroutine pt2_h_core(det_pert,c_pert,e_2_pert,H_pert_diag,Nint,ndet,N_st,minili
  endif
  integer :: h1,p1,h2,p2,s1,s2
  call decode_exc(exc,degree,h1,p1,h2,p2,s1,s2)
+ !TODO: fix this for complex?
  c_pert = phase * mo_mono_elec_integral(h1,p1)
  e_2_pert = -cdabs(mo_mono_elec_integral(h1,p1)+1.d0)
   

@@ -226,7 +226,7 @@ IRP_ENDIF
   deallocate( buffer_i, buffer_value )
 
   integer (map_size_kind) :: get_ao_map_size 
-  control = get_ao_map_size(ao_integrals_map)
+  control = get_ao_map_size()
 
   if (control /= accu) then
       print *, ''

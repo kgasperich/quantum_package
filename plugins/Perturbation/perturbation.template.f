@@ -16,8 +16,10 @@ subroutine perturb_buffer_$PERT(i_generator,buffer,buffer_size,e_2_pert_buffer,c
   double precision, intent(in)    :: fock_diag_tmp(2,0:mo_tot_num)
   double precision, intent(in)    :: electronic_energy(N_st)
   double precision, intent(inout) :: sum_norm_pert(N_st),sum_e_2_pert(N_st)
-  double precision, intent(inout) :: coef_pert_buffer(N_st,buffer_size),e_2_pert_buffer(N_st,buffer_size),sum_H_pert_diag(N_st)
-  double precision               :: c_pert(N_st), e_2_pert(N_st),  H_pert_diag(N_st)
+  double precision, intent(inout) :: e_2_pert_buffer(N_st,buffer_size),sum_H_pert_diag(N_st)
+  complex*16, intent(inout) :: coef_pert_buffer(N_st,buffer_size)
+  double precision               :: e_2_pert(N_st),  H_pert_diag(N_st)
+  complex*16               :: c_pert(N_st)
   integer                        :: i,k,l, c_ref, ni, ex
   integer, external              :: connected_to_ref
   logical, external              :: is_in_wavefunction
@@ -170,7 +172,7 @@ subroutine perturb_buffer_$PERT(i_generator,buffer,buffer_size,e_2_pert_buffer,c
     do k = 1,N_st
       e_2_pert_buffer(k,i)   = e_2_pert(k)
       coef_pert_buffer(k,i)  = c_pert(k)
-      sum_norm_pert(k)       = sum_norm_pert(k)   + c_pert(k) * c_pert(k)
+      sum_norm_pert(k)       = sum_norm_pert(k)   + cdabs(conjg(c_pert(k)) * c_pert(k))
       sum_e_2_pert(k)        = sum_e_2_pert(k)    + e_2_pert(k)
       sum_H_pert_diag(k)     = sum_H_pert_diag(k) + H_pert_diag(k)
     enddo
@@ -195,8 +197,10 @@ subroutine perturb_buffer_by_mono_$PERT(i_generator,buffer,buffer_size,e_2_pert_
   double precision, intent(in)    :: fock_diag_tmp(2,0:mo_tot_num)
   double precision, intent(in)    :: electronic_energy(N_st)
   double precision, intent(inout) :: sum_norm_pert(N_st),sum_e_2_pert(N_st)
-  double precision, intent(inout) :: coef_pert_buffer(N_st,buffer_size),e_2_pert_buffer(N_st,buffer_size),sum_H_pert_diag(N_st)
-  double precision               :: c_pert(N_st), e_2_pert(N_st),  H_pert_diag(N_st)
+  double precision, intent(inout) :: e_2_pert_buffer(N_st,buffer_size),sum_H_pert_diag(N_st)
+  complex*16, intent(inout) :: coef_pert_buffer(N_st,buffer_size)
+  double precision               :: e_2_pert(N_st),  H_pert_diag(N_st)
+  complex*16               :: c_pert(N_st)
   integer                        :: i,k, c_ref, ni, ex
   integer, external              :: connected_to_ref_by_mono
   logical, external              :: is_in_wavefunction
@@ -248,7 +252,7 @@ subroutine perturb_buffer_by_mono_$PERT(i_generator,buffer,buffer_size,e_2_pert_
     do k = 1,N_st
       e_2_pert_buffer(k,i)   = e_2_pert(k)
       coef_pert_buffer(k,i)  = c_pert(k)
-      sum_norm_pert(k)       = sum_norm_pert(k)   + c_pert(k) * c_pert(k)
+      sum_norm_pert(k)       = sum_norm_pert(k)   + cdabs(conjg(c_pert(k)) * c_pert(k))
       sum_e_2_pert(k)        = sum_e_2_pert(k)    + e_2_pert(k)
       sum_H_pert_diag(k)     = sum_H_pert_diag(k) + H_pert_diag(k)
     enddo

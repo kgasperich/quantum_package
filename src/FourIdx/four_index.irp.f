@@ -29,7 +29,8 @@ subroutine four_index_transform(map_a,map_c,matrix_B,LDB,            &
   integer                        :: a, b, c, d
   double precision, external     :: get_ao_bielec_integral
   integer*8                      :: ii
-  integer(key_kind)              :: idx
+  integer                        :: idx
+  integer(key_kind)              :: key_i
   real(integral_kind)            :: tmp
   integer(key_kind), allocatable :: key(:)
   real(integral_kind), allocatable :: value(:)
@@ -82,7 +83,7 @@ subroutine four_index_transform(map_a,map_c,matrix_B,LDB,            &
 
     allocate(l_pointer(l_start_block:l_end_block+1), value((i_max*k_max)) )
     ii = 1_8
-    !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(i,j,k,l,ik,idx) 
+    !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(i,j,k,l,ik,key_i) 
     do l=l_start_block,l_end_block
       !$OMP SINGLE
       l_pointer(l) = ii
@@ -92,8 +93,8 @@ subroutine four_index_transform(map_a,map_c,matrix_B,LDB,            &
         do k=k_start,k_end
           do i=i_start,i_end
             ik = (i-i_start+1) + (k-k_start)*(k_end-k_start+1)
-            call bielec_integrals_index(i,j,k,l,idx)
-            call map_get(map_a,idx,value(ik))
+            call bielec_integrals_index(i,j,k,l,key_i)
+            call map_get(map_a,key_i,value(ik))
           enddo
         enddo
         !$OMP END DO
@@ -220,7 +221,7 @@ subroutine four_index_transform(map_a,map_c,matrix_B,LDB,            &
         enddo
       enddo
 
-      idx = 0_8
+      idx = 0
 
 ! TODO : Remove symmetry in storage
       integer :: p, q
@@ -234,7 +235,7 @@ subroutine four_index_transform(map_a,map_c,matrix_B,LDB,            &
             endif
             if ((a==b).and.(p>q)) cycle
             p = p+1
-            idx = idx+1_8
+            idx = idx+1
             call bielec_integrals_index(a,b,c,d,key(idx))
 !print *,  int(key(idx),4), int(a,2),int(b,2),int(c,2),int(d,2), p, q
             value(idx) = U(a,c,b)
