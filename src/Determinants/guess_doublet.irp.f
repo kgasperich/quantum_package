@@ -1,4 +1,4 @@
-program put_gess
+program put_gess_doublet
  use bitmasks
  implicit none
  integer :: i,j

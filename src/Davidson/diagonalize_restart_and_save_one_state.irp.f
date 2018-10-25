@@ -2,10 +2,10 @@ program diag_and_save
  implicit none
  read_wf = .True.
  touch read_wf
- call routine
+ call routine_diag_and_save
 end
 
-subroutine routine
+subroutine routine_diag_and_save
  implicit none
  print*,'N_det = ',N_det
  call diagonalize_CI
