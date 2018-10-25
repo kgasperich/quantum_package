@@ -69,6 +69,14 @@ subroutine ao_map_fill_from_df
   size_buffer = min(ao_num*ao_num*ao_num,16000000)
   print*, 'Providing the ao_bielec integrals from 3-index df integrals'
   call ezfio_set_integrals_bielec_disk_access_ao_integrals('Write')
+
+  !$OMP PARALLEL PRIVATE(i,k,j,l,ki,kk,kj,kl,ii,ik,ij,il,kikk2,kjkl2,jl2,ik2, &
+      !$OMP  ints_ik, ints_jl, ints_ikjl_tmp, ints_ikjl, &
+      !$OMP  n_integrals, buffer_i1, buffer_i2, buffer_value1, buffer_value2, &
+      !$OMP  tmp_idx1, tmp_idx2, tmp_re, tmp_im, integral) &
+      !$OMP  DEFAULT(NONE)  &
+      !$OMP  SHARED(size_buffer, ao_num, num_kpts, df_num, ao_num_per_kpt, &
+      !$OMP  kconserv, df_integral_array, ao_integrals_threshold)
   
   allocate( &
     ints_ik(ao_num_per_kpt**2,df_num),&
@@ -82,6 +90,8 @@ subroutine ao_map_fill_from_df
   )
 
   n_integrals=0
+
+  !$OMP DO SCHEDULE(guided)
   do kl=1, num_kpts
     do kj=1, kl
       call idx2_tri_int(kj,kl,kjkl2)
@@ -172,12 +182,28 @@ subroutine ao_map_fill_from_df
       enddo !kk
     enddo !kj
   enddo !kl
-  
+ 
+  !$OMP END DO NOWAIT
+
+  deallocate( &
+    ints_ik,&
+    ints_jl,&
+    ints_ikjl_tmp,&
+    ints_ikjl&
+    )
   if (n_integrals /= 0) then
     call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1)
     call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2)
     n_integrals=0
   endif
+  
+  deallocate( &
+    buffer_i1,&
+    buffer_i2,&
+    buffer_value1,&
+    buffer_value2&
+    )
+  !$OMP END PARALLEL
 
   call map_sort(ao_integrals_map)
   call map_unique(ao_integrals_map)
@@ -185,16 +211,6 @@ subroutine ao_map_fill_from_df
   call map_save_to_disk(trim(ezfio_filename)//'/work/ao_ints',ao_integrals_map)
   call ezfio_set_integrals_bielec_disk_access_ao_integrals('Read')
   
-  deallocate( &
-    ints_ik,&
-    ints_jl,&
-    ints_ikjl_tmp,&
-    ints_ikjl,&
-    buffer_i1,&
-    buffer_i2,&
-    buffer_value1,&
-    buffer_value2&
-    )
 
 end subroutine ao_map_fill_from_df
 
