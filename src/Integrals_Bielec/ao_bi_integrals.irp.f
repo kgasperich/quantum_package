@@ -57,6 +57,7 @@ subroutine ao_map_fill_from_df
   integer :: kikk2,kjkl2,jl2,ik2
 
   complex*16,allocatable :: ints_ik(:,:), ints_jl(:,:), ints_ikjl_tmp(:,:), ints_ikjl(:,:,:,:)
+  complex*16,allocatable :: ints_tmp1(:,:,:), ints_tmp2(:,:,:)
 
   complex*16 :: integral
   integer                        :: n_integrals
@@ -68,43 +69,43 @@ subroutine ao_map_fill_from_df
 
   size_buffer = min(ao_num*ao_num*ao_num,16000000)
   print*, 'Providing the ao_bielec integrals from 3-index df integrals'
+  call ezfio_set_integrals_bielec_disk_access_ao_integrals('Write')
   
   allocate( &
     ints_ik(ao_num_per_kpt**2,df_num),&
     ints_jl(ao_num_per_kpt**2,df_num),&
+    ints_tmp1(ao_num_per_kpt,ao_num_per_kpt,df_num),&
+    ints_tmp2(ao_num_per_kpt,ao_num_per_kpt,df_num),&
     ints_ikjl_tmp(ao_num_per_kpt**2,ao_num_per_kpt**2),&
     ints_ikjl(ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt),&
     buffer_i1(size_buffer),                                         &
     buffer_i2(size_buffer),                                         &
     buffer_value1(size_buffer),                                     &
     buffer_value2(size_buffer) & 
-    )
-
-
+  )
 
   n_integrals=0
   do kl=1, num_kpts
     do kj=1, kl
       call idx2_tri_int(kj,kl,kjkl2)
-      do kk=1,l
+      do kk=1,kl
         ki=kconserv(kl,kk,kj)
         call idx2_tri_int(ki,kk,kikk2)
         if (kikk2 > kjkl2) cycle
         if ((kl == kj) .and. (ki > kk)) cycle
-
         ! maybe use pointers instead of reshaping?
         if (ki >= kk) then
-          ints_ik = reshape( &
-              reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/1,2,3/)),&
-              (/ao_num_per_kpt**2,df_num/))
+          ints_tmp2 = reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/1,2,3/))
         else
-          ints_ik = conjg(reshape( &
-              reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/)),&
-              (/ao_num_per_kpt**2,df_num/)))
+          ints_tmp1 = reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))
+          ints_tmp2 = conjg(ints_tmp1)
         endif
-        ints_jl = conjg(reshape( &
-            reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/)),&
-            (/ao_num_per_kpt**2,df_num/)))
+        ints_ik = reshape(ints_tmp2,(/ao_num_per_kpt**2,df_num/))
+
+        ints_tmp1 = reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))
+        ints_tmp2 = conjg(ints_tmp1)
+        ints_jl = reshape(ints_tmp2,(/ao_num_per_kpt**2,df_num/))
+
 
         ! todo: option 1: change bounds so that kl <= kj
         !       option 2: change df_integral array so that it is the conjugate transpose of what it is now (transpose first 2 dimensions)
@@ -144,9 +145,6 @@ subroutine ao_map_fill_from_df
                 call mo_bielec_integrals_index(i,j,k,l,tmp_idx1)
                 call mo_bielec_integrals_index(k,l,i,j,tmp_idx2)
                 if (tmp_idx1.eq.tmp_idx2) then
-                  ! there are mo_num^2 of these:
-                  ! is it worth accumulating the imaginary parts somewhere 
-                  ! in order to verify that they are actually zero?
                   buffer_i1(n_integrals) = tmp_idx1
                   buffer_i2(n_integrals) = tmp_idx1
                   buffer_value1(n_integrals) = tmp_re
@@ -169,17 +167,18 @@ subroutine ao_map_fill_from_df
                   call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2)
                   n_integrals = 0
                 endif
-              enddo
-            enddo
-          enddo
-        enddo
-      enddo
-    enddo
-  enddo
+              enddo !ii
+            enddo !ik
+          enddo !ij
+        enddo !il
+      enddo !kk
+    enddo !kj
+  enddo !kl
   
   if (n_integrals /= 0) then
     call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1)
     call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2)
+    n_integrals=0
   endif
 
   call map_sort(ao_integrals_map)
@@ -191,6 +190,8 @@ subroutine ao_map_fill_from_df
   deallocate( &
     ints_ik,&
     ints_jl,&
+    ints_tmp1,&
+    ints_tmp2,&
     ints_ikjl_tmp,&
     ints_ikjl,&
     buffer_i1,&
