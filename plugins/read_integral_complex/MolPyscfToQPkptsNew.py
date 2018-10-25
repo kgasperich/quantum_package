@@ -234,8 +234,6 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, prin
     naosq = nao*nao
     naotri = (nao*(nao+1))//2
     j3clist = [j3c.get(i) for i in j3c.keys()]
-    for i in j3clist:
-        print(i.shape)
 
     def makesq(vlist,n1,n2):
         out=np.zeros([n1,n2,n2],dtype=np.complex128)
