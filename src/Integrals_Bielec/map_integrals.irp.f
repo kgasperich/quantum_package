@@ -81,8 +81,10 @@ subroutine idx2_tri_rev_key(i,k,ik)
   END_DOC
   integer(key_kind), intent(in) :: ik
   integer, intent(out)          :: i,k
+  integer(key_kind) :: tmp_k
   k = ceiling(0.5d0*(dsqrt(8.d0*dble(ik)+1.d0)-1.d0))
-  i = int(ik - ishft(k*k-k,-1))
+  tmp_k = k
+  i = int(ik - ishft(tmp_k*tmp_k-tmp_k,-1))
 end
 
 subroutine idx2_tri_rev_int(i,k,ik)
