@@ -57,7 +57,6 @@ subroutine ao_map_fill_from_df
   integer :: kikk2,kjkl2,jl2,ik2
 
   complex*16,allocatable :: ints_ik(:,:), ints_jl(:,:), ints_ikjl_tmp(:,:), ints_ikjl(:,:,:,:)
-  complex*16,allocatable :: ints_tmp1(:,:,:), ints_tmp2(:,:,:)
 
   complex*16 :: integral
   integer                        :: n_integrals
@@ -74,8 +73,6 @@ subroutine ao_map_fill_from_df
   allocate( &
     ints_ik(ao_num_per_kpt**2,df_num),&
     ints_jl(ao_num_per_kpt**2,df_num),&
-    ints_tmp1(ao_num_per_kpt,ao_num_per_kpt,df_num),&
-    ints_tmp2(ao_num_per_kpt,ao_num_per_kpt,df_num),&
     ints_ikjl_tmp(ao_num_per_kpt**2,ao_num_per_kpt**2),&
     ints_ikjl(ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt),&
     buffer_i1(size_buffer),                                         &
@@ -95,16 +92,17 @@ subroutine ao_map_fill_from_df
         if ((kl == kj) .and. (ki > kk)) cycle
         ! maybe use pointers instead of reshaping?
         if (ki >= kk) then
-          ints_tmp2 = reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/1,2,3/))
+          ints_ik = reshape(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/1,2,3/)),&
+                    (/ao_num_per_kpt**2,df_num/))
         else
-          ints_tmp1 = reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))
-          ints_tmp2 = conjg(ints_tmp1)
+          ints_ik = reshape( &
+                   conjg(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
+                   (/ao_num_per_kpt**2,df_num/))
         endif
-        ints_ik = reshape(ints_tmp2,(/ao_num_per_kpt**2,df_num/))
 
-        ints_tmp1 = reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))
-        ints_tmp2 = conjg(ints_tmp1)
-        ints_jl = reshape(ints_tmp2,(/ao_num_per_kpt**2,df_num/))
+        ints_jl = reshape( &
+                 conjg(reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
+                 (/ao_num_per_kpt**2,df_num/))
 
 
         ! todo: option 1: change bounds so that kl <= kj
@@ -190,8 +188,6 @@ subroutine ao_map_fill_from_df
   deallocate( &
     ints_ik,&
     ints_jl,&
-    ints_tmp1,&
-    ints_tmp2,&
     ints_ikjl_tmp,&
     ints_ikjl,&
     buffer_i1,&
