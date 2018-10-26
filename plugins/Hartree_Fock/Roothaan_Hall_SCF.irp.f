@@ -208,7 +208,8 @@ END_DOC
         accum_im = accum_im + imag(scratch(k,k))
       enddo
       if (dabs(accum_im) .gt. thr_im) then
-        stop 'problem with imaginary parts in DIIS B_matrix?'
+        !stop 'problem with imaginary parts in DIIS B_matrix?'
+        print*, 'problem with imaginary parts in DIIS B_matrix?',accum_im
       endif
     enddo
   enddo
