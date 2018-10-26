@@ -97,9 +97,9 @@ subroutine ao_map_fill_from_df
       call idx2_tri_int(kj,kl,kjkl2)
       do kk=1,kl
         ki=kconserv(kl,kk,kj)
+        if ((kl == kj) .and. (ki > kk)) cycle
         call idx2_tri_int(ki,kk,kikk2)
         if (kikk2 > kjkl2) cycle
-        if ((kl == kj) .and. (ki > kk)) cycle
         ! maybe use pointers instead of reshaping?
         if (ki >= kk) then
           ints_ik = reshape(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/1,2,3/)),&
@@ -140,9 +140,9 @@ subroutine ao_map_fill_from_df
               if (k>l) exit
               do ii=1,ao_num_per_kpt
                 i=ii+(ki-1)*ao_num_per_kpt
+                if ((j==l) .and. (i>k)) exit
                 call idx2_tri_int(i,k,ik2)
                 if (ik2 > jl2) exit
-                if ((j==l) .and. (i>k)) exit
                 integral = ints_ikjl(ii,ik,ij,il)
                 if (cdabs(integral) < ao_integrals_threshold) then
                   cycle
