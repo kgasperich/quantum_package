@@ -37,7 +37,7 @@ program print_integrals
   integer :: ik,jl
   complex*16 :: integral12
   complex*16 :: get_mo_bielec_integral
-  do l=1,ao_num
+  do l=1,mo_tot_num
     do j=1,l
       call idx2_tri_int(j,l,jl)
       do k=1,l
