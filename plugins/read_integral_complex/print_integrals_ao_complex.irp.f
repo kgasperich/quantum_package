@@ -55,29 +55,47 @@ subroutine run
 
 !  integer(key_kind) :: i0,i1a,i1b,i2a,i2b
 
-  integer :: ik,jl
+  integer :: ki,kj,kk,kl, ii,ij,ik,il, kjkl2,kikk2,jl2,ik2
+  integer*8 :: intcount
   complex*16 :: integral12
   complex*16 :: get_ao_bielec_integral
-  do l=1,ao_num
-    do j=1,l
-      call idx2_tri_int(j,l,jl)
-      do k=1,l
-        do i=1,l
-          if (j==l .and. i>k) then
-            exit
-          endif
-          call idx2_tri_int(i,k,ik)
-          if (ik > jl) then
-            exit
-          endif
-          integral12 = get_ao_bielec_integral(i,j,k,l,ao_integrals_map)
-          if (cdabs(integral12) > ao_integrals_threshold) then
-            write (iunit,'(4(I6,X),2(E25.15,X))') i,j,k,l, real(integral12),  imag(integral12)
-          endif
-        enddo
-      enddo
-    enddo
-  enddo
+
+  intcount=0
+  do kl=1, num_kpts
+    do kj=1, kl
+      call idx2_tri_int(kj,kl,kjkl2)
+      do kk=1,kl
+        ki=kconserv(kl,kk,kj)
+        if ((kl == kj) .and. (ki > kk)) cycle
+        call idx2_tri_int(ki,kk,kikk2)
+        if (kikk2 > kjkl2) cycle
+        do il=1,ao_num_per_kpt
+          l=il+(kl-1)*ao_num_per_kpt
+          do ij=1,ao_num_per_kpt
+            j=ij+(kj-1)*ao_num_per_kpt
+            if (j>l) exit
+            call idx2_tri_int(j,l,jl2)
+            do ik=1,ao_num_per_kpt
+              k=ik+(kk-1)*ao_num_per_kpt
+              if (k>l) exit
+              do ii=1,ao_num_per_kpt
+                i=ii+(ki-1)*ao_num_per_kpt
+                if ((j==l) .and. (i>k)) exit
+                call idx2_tri_int(i,k,ik2)
+                if (ik2 > jl2) exit
+                intcount += 1
+                integral12 = get_ao_bielec_integral(i,j,k,l,ao_integrals_map)
+                if (cdabs(integral12) > ao_integrals_threshold) then
+                  write (iunit,'(4(I6,X),2(E25.15,X))') i,j,k,l, real(integral12),  imag(integral12)
+                endif
+              enddo !ii
+            enddo !ik
+          enddo !ij
+        enddo !il
+      enddo !kk
+    enddo !kj
+  enddo !kl
 
   close(iunit)
+  print*,'number of nonzero ints by kpt symmetry: ',intcount
 end
