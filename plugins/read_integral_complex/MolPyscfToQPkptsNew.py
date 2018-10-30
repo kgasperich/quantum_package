@@ -1,7 +1,12 @@
 import numpy as np
 from functools import reduce
 
-def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, print_ao_ints=False, print_mo_ints=True, print_df_ints=True):
+def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, 
+        print_ao_ints=False, 
+        print_mo_ints=False, 
+        print_df_ints=True, 
+        print_ao_ints_mono=True, 
+        print_mo_ints_mono=False):
     '''
     kpts = List of kpoints coordinates. Cannot be null, for gamma is other script
     kmesh = Mesh of kpoints (optional)
@@ -172,7 +177,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, prin
     kin_ao = ('kinetic',np.reshape(cell.pbc_intor('int1e_kin',1,1,kpts=kpts),(Nk,nao,nao)),kin_threshold)
 
     for name, intval_kpts_ao, thresh in (ne_ao, ovlp_ao, kin_ao):
-        if print_ao_ints:
+        if print_ao_ints_mono:
             with open('%s_ao_complex' % name,'w') as outfile:
                 for ik in range(Nk):
                     shift=ik*nao+1
@@ -181,7 +186,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, prin
                             int_ij = intval_kpts_ao[ik,i,j]
                             if abs(int_ij) > thresh:
                                 outfile.write('%s %s %s %s\n' % (i+shift, j+shift, int_ij.real, int_ij.imag))
-        if print_mo_ints:
+        if print_mo_ints_mono:
             intval_kpts_mo = np.einsum('kim,kij,kjn->kmn',mo_k.conj(),intval_kpts_ao,mo_k)
             with open('%s_mo_complex' % name,'w') as outfile:
                 for ik in range(Nk):

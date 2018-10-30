@@ -6,12 +6,12 @@ filename = sys.argv[1]
 num_elec, nucl_num, mo_tot_num = map(int,sys.argv[2:5])
 
 nuclear_repulsion = float(sys.argv[5])
-ao_num = float(sys.argv[6])
+ao_num = int(sys.argv[6])
 n_kpts = int(sys.argv[7])
 n_aux = int(sys.argv[8])
 ezfio.set_file(filename)
 
-ao_num = mo_tot_num
+#ao_num = mo_tot_num
 #Important !
 import math
 nelec_per_kpt = num_elec // n_kpts
@@ -59,5 +59,5 @@ ezfio.set_mo_basis_ao_md5(ao_md5)
 
 ezfio.set_mo_basis_mo_tot_num(mo_tot_num)
 c_mo = [[1 if i==j else 0 for i in range(mo_tot_num)] for j in range(ao_num)]
-ezfio.set_mo_basis_mo_coef_real([ [0]*mo_tot_num] * ao_num)
+#ezfio.set_mo_basis_mo_coef_real([ [0]*mo_tot_num] * ao_num)
 #ezfio.set_mo_basis_mo_coef_real(c_mo)
