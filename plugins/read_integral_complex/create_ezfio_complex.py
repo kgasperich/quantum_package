@@ -37,7 +37,7 @@ ezfio.set_nuclei_disk_access_nuclear_repulsion('Read')
 ezfio.set_nuclei_nuclear_repulsion(nuclear_repulsion)
 
 # Ao num
-ao_num = mo_tot_num
+#ao_num = mo_tot_num
 ezfio.set_ao_basis_ao_basis("Dummy one. We read MO")
 ezfio.set_ao_basis_ao_num(ao_num)
 ezfio.set_ao_basis_ao_nucl([1]*ao_num) #Maybe put a realy incorrect stuff
