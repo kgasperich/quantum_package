@@ -70,14 +70,15 @@ subroutine write_one_e_integrals_complex(filename, A, m, n)
   character(len=*), intent(in)   :: filename
   integer, intent(in)            :: m,n
   complex*16, intent(in)   :: A(m,n)
-  double precision, allocatable :: A_re(:,:), A_im(:,:)
+  !double precision, allocatable :: A_re(:,:), A_im(:,:)
+  double precision :: A_re(m,n), A_im(m,n)
 
   integer                        :: i,j
   integer                        :: iunit
   integer, external              :: getUnitAndOpen
   character*(256)                :: f
 
-  allocate( A_re(m,n), A_im(m,n) )
+!  allocate( A_re(m,n), A_im(m,n) )
 
   do i=1,m
     do j=1,n
@@ -93,7 +94,7 @@ subroutine write_one_e_integrals_complex(filename, A, m, n)
   iunit = getUnitAndOpen( trim(ezfio_work_dir)//trim(filename)//'_imag', 'W' )
   write(iunit) A_im
   close(iunit)
-  deallocate( A_re, A_im )
+!  deallocate( A_re, A_im )
 end
 
 subroutine read_one_e_integrals_complex(filename, A, m, n)
