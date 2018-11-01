@@ -66,7 +66,7 @@ subroutine ao_map_fill_from_df
   integer(key_kind)              :: tmp_idx1,tmp_idx2
   double precision               :: tmp_re,tmp_im
 
-  size_buffer = min(ao_num*ao_num*ao_num,16000000)
+  size_buffer = min(ao_num_per_kpt*ao_num_per_kpt*ao_num_per_kpt,16000000)
   print*, 'Providing the ao_bielec integrals from 3-index df integrals'
   call ezfio_set_integrals_bielec_disk_access_ao_integrals('Write')
 
@@ -75,7 +75,7 @@ subroutine ao_map_fill_from_df
       !$OMP  n_integrals, buffer_i1, buffer_i2, buffer_value1, buffer_value2, &
       !$OMP  tmp_idx1, tmp_idx2, tmp_re, tmp_im, integral) &
       !$OMP  DEFAULT(NONE)  &
-      !$OMP  SHARED(size_buffer, ao_num, num_kpts, df_num, ao_num_per_kpt, &
+      !$OMP  SHARED(size_buffer, num_kpts, df_num, ao_num_per_kpt, &
       !$OMP  kconserv, df_integral_array, ao_integrals_threshold)
   
   allocate( &
