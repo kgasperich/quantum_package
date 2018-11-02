@@ -237,18 +237,18 @@ subroutine cache_map_sort(map)
     do i=1,map%n_elements
       iorder(i) = i
     enddo
-    if (cache_key_kind == 2) then
+!    if (cache_key_kind == 2) then
       call i2radix_sort(map%key,iorder,map%n_elements,-1)
-    else if (cache_key_kind == 4) then
-      call iradix_sort(map%key,iorder,map%n_elements,-1)
-    else if (cache_key_kind == 8) then
-      call i8radix_sort(map%key,iorder,map%n_elements,-1)
-    endif
-    if (integral_kind == 4) then
-      call set_order(map%value,iorder,map%n_elements)
-    else if (integral_kind == 8) then
+!    else if (cache_key_kind == 4) then
+!      call iradix_sort(map%key,iorder,map%n_elements,-1)
+!    else if (cache_key_kind == 8) then
+!      call i8radix_sort(map%key,iorder,map%n_elements,-1)
+!    endif
+!    if (integral_kind == 4) then
+!      call set_order(map%value,iorder,map%n_elements)
+!    else if (integral_kind == 8) then
       call dset_order(map%value,iorder,map%n_elements)
-    endif
+!    endif
     deallocate(iorder)
     map%sorted = .True.
   endif
