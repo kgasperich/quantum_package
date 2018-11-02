@@ -241,6 +241,24 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
     j3clist = [j3c.get(i) for i in j3c.keys()]
     nkinvsq = 1./np.sqrt(Nk)
 
+    # make hermitian matrices of size (n2 x n2) from from lower triangles
+    # vlist is n1 lower triangles in flattened form
+    # given: ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t],2,4)
+    #        output a 2x4x4 array, where each 4x4 is the square constructed from the lower triangle
+    # [
+    #  [
+    #   [a  b* d* g*] 
+    #   [b  c  e* h*]
+    #   [d  e  f  i*]
+    #   [g  h  i  j ]
+    #  ],
+    #  [
+    #   [k  l* n* q*]
+    #   [l  m  o* r*]
+    #   [n  o  p  s*]
+    #   [q  r  s  t ]
+    #  ]
+    # ]
     def makesq(vlist,n1,n2):
         out=np.zeros([n1,n2,n2],dtype=np.complex128)
         lmask=np.tri(n2,dtype=bool)
