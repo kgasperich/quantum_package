@@ -71,6 +71,7 @@ subroutine ao_map_fill_from_df
 
   size_buffer = min(ao_num_per_kpt*ao_num_per_kpt*ao_num_per_kpt,16000000)
   print*, 'Providing the ao_bielec integrals from 3-index df integrals'
+  call write_time(6)
   call ezfio_set_integrals_bielec_disk_access_ao_integrals('Write')
 
   allocate( ints_jl(ao_num_kpt_2,df_num))
@@ -214,11 +215,19 @@ subroutine ao_map_fill_from_df
   enddo !kl
   deallocate( ints_jl ) 
 
-
+  print*,'sorting map'
+  call write_time(6)
   call map_sort(ao_integrals_map)
+  print*,'checking unique vals in map'
+  call write_time(6)
   call map_unique(ao_integrals_map)
+  
+  print*,'saving map to disk'
+  call write_time(6)
 
   call map_save_to_disk(trim(ezfio_filename)//'/work/ao_ints',ao_integrals_map)
+  print*,'done saving map to disk'
+  call write_time(6)
   call ezfio_set_integrals_bielec_disk_access_ao_integrals('Read')
   
 
