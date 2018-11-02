@@ -22,8 +22,10 @@ subroutine run
   A = 0.d0
   iunit = getunitandopen('df_integral_array','r')
   do 
-    read (iunit,*,end=10) i,j,mu,kikj, int_re, int_im
-    A(i,j,mu,kikj) = dcmplx(int_re,int_im)
+  !  read (iunit,*,end=10) i,j,mu,kikj, int_re, int_im
+  !  A(i,j,mu,kikj) = dcmplx(int_re,int_im)
+    read (iunit,*,end=10) j,i,mu,kikj, int_re, int_im
+    A(i,j,mu,kikj) = dcmplx(int_re,-int_im)
   enddo
   10 continue
   close(iunit)

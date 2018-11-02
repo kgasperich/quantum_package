@@ -57,6 +57,7 @@ subroutine ao_map_fill_from_df
   integer :: kikk2,kjkl2,jl2,ik2
 
   complex*16,allocatable :: ints_ik(:,:), ints_jl(:,:), ints_ikjl_tmp(:,:), ints_ikjl(:,:,:,:)
+  complex*16,allocatable :: ints_tmp1(:,:,:)!, ints_tmp2(:,:)
 
   complex*16 :: integral
   integer                        :: n_integrals
@@ -65,23 +66,33 @@ subroutine ao_map_fill_from_df
   real(integral_kind),allocatable :: buffer_value1(:),buffer_value2(:)
   integer(key_kind)              :: tmp_idx1,tmp_idx2
   double precision               :: tmp_re,tmp_im
+  integer                        :: ao_num_kpt_2
+  ao_num_kpt_2 = ao_num_per_kpt * ao_num_per_kpt
 
   size_buffer = min(ao_num_per_kpt*ao_num_per_kpt*ao_num_per_kpt,16000000)
   print*, 'Providing the ao_bielec integrals from 3-index df integrals'
   call ezfio_set_integrals_bielec_disk_access_ao_integrals('Write')
 
-  !$OMP PARALLEL PRIVATE(i,k,j,l,ki,kk,kj,kl,ii,ik,ij,il,kikk2,kjkl2,jl2,ik2, &
-      !$OMP  ints_ik, ints_jl, ints_ikjl_tmp, ints_ikjl, &
+  allocate( ints_jl(ao_num_kpt_2,df_num))
+
+  do kl=1, num_kpts
+    do kj=1, kl
+      call idx2_tri_int(kj,kl,kjkl2)
+      ints_jl = reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_kpt_2,df_num/))
+  !$OMP PARALLEL PRIVATE(i,k,j,l,ki,kk,ii,ik,ij,il,kikk2,jl2,ik2, &
+      !$OMP  ints_ik, ints_ikjl_tmp, ints_ikjl, &
       !$OMP  n_integrals, buffer_i1, buffer_i2, buffer_value1, buffer_value2, &
+      !$OMP  ints_tmp1, & 
       !$OMP  tmp_idx1, tmp_idx2, tmp_re, tmp_im, integral) &
       !$OMP  DEFAULT(NONE)  &
-      !$OMP  SHARED(size_buffer, num_kpts, df_num, ao_num_per_kpt, &
+      !$OMP  SHARED(size_buffer, num_kpts, df_num, ao_num_per_kpt, ao_num_kpt_2, &
+      !$OMP  kl,kj,kjkl2,ints_jl, & 
       !$OMP  kconserv, df_integral_array, ao_integrals_threshold)
   
   allocate( &
-    ints_ik(ao_num_per_kpt**2,df_num),&
-    ints_jl(ao_num_per_kpt**2,df_num),&
-    ints_ikjl_tmp(ao_num_per_kpt**2,ao_num_per_kpt**2),&
+    ints_tmp1(ao_num_per_kpt,ao_num_per_kpt,df_num),&
+    ints_ik(ao_num_kpt_2,df_num),&
+    ints_ikjl_tmp(ao_num_kpt_2,ao_num_kpt_2),&
     ints_ikjl(ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt),&
     buffer_i1(size_buffer),                                         &
     buffer_i2(size_buffer),                                         &
@@ -89,12 +100,8 @@ subroutine ao_map_fill_from_df
     buffer_value2(size_buffer) & 
   )
 
-  n_integrals=0
 
   !$OMP DO SCHEDULE(guided)
-  do kl=1, num_kpts
-    do kj=1, kl
-      call idx2_tri_int(kj,kl,kjkl2)
       do kk=1,kl
         ki=kconserv(kl,kk,kj)
         if ((kl == kj) .and. (ki > kk)) cycle
@@ -102,17 +109,16 @@ subroutine ao_map_fill_from_df
         if (kikk2 > kjkl2) cycle
         ! maybe use pointers instead of reshaping?
         if (ki >= kk) then
-          ints_ik = reshape(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/1,2,3/)),&
-                    (/ao_num_per_kpt**2,df_num/))
+!          ints_ik = reshape( &
+!                   conjg(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
+!                   (/ao_num_per_kpt**2,df_num/))
+          ints_tmp1 = conjg(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/)))
+
+          ints_ik = reshape(ints_tmp1, (/ao_num_kpt_2,df_num/))
         else
-          ints_ik = reshape( &
-                   conjg(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
-                   (/ao_num_per_kpt**2,df_num/))
+          ints_ik = reshape(df_integral_array(:,:,:,kikk2),(/ao_num_kpt_2,df_num/))
         endif
 
-        ints_jl = reshape( &
-                 conjg(reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
-                 (/ao_num_per_kpt**2,df_num/))
 
 
         ! todo: option 1: change bounds so that kl <= kj
@@ -120,7 +126,7 @@ subroutine ao_map_fill_from_df
 
         ! todo: maybe just use 'C' instead of 'T' rather than doing conjugation above? (some cases will still require conjg on ikjl array)
         !       figure this out in conjunction with deciding how to structure df integrals when first constructed
-        call zgemm('N','T', ao_num_per_kpt**2, ao_num_per_kpt**2, df_num, &
+        call zgemm('N','T', ao_num_kpt_2, ao_num_kpt_2, df_num, &
                (1.d0,0.d0), ints_ik, size(ints_ik,1), &
                ints_jl, size(ints_jl,1), &
                (0.d0,0.d0), ints_ikjl_tmp, size(ints_ikjl_tmp,1))
@@ -128,7 +134,8 @@ subroutine ao_map_fill_from_df
         ! this is bad
         ! use a pointer instead?
         ints_ikjl = reshape(ints_ikjl_tmp,(/ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt/))
-
+        
+        n_integrals=0
         do il=1,ao_num_per_kpt
           l=il+(kl-1)*ao_num_per_kpt
           do ij=1,ao_num_per_kpt
@@ -179,23 +186,22 @@ subroutine ao_map_fill_from_df
             enddo !ik
           enddo !ij
         enddo !il
+
+        if (n_integrals /= 0) then
+          call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1)
+          call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2)
+          n_integrals=0
+        endif
       enddo !kk
-    enddo !kj
-  enddo !kl
- 
   !$OMP END DO NOWAIT
 
+
   deallocate( &
+    ints_tmp1,&
     ints_ik,&
-    ints_jl,&
     ints_ikjl_tmp,&
     ints_ikjl&
     )
-  if (n_integrals /= 0) then
-    call insert_into_ao_integrals_map(n_integrals,buffer_i1,buffer_value1)
-    call insert_into_ao_integrals_map(n_integrals,buffer_i2,buffer_value2)
-    n_integrals=0
-  endif
   
   deallocate( &
     buffer_i1,&
@@ -204,6 +210,10 @@ subroutine ao_map_fill_from_df
     buffer_value2&
     )
   !$OMP END PARALLEL
+    enddo !kj
+  enddo !kl
+  deallocate( ints_jl ) 
+
 
   call map_sort(ao_integrals_map)
   call map_unique(ao_integrals_map)
