@@ -1,10 +1,10 @@
 program read_integrals
 
   PROVIDE ezfio_filename
-  call run
+  call run_read_mo_chunk_complex
 end
 
-subroutine run
+subroutine run_read_mo_chunk_complex
   use map_module
   implicit none
   
