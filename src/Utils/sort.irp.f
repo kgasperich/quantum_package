@@ -37,12 +37,21 @@ BEGIN_TEMPLATE
   integer,intent(in)             :: isize
   $type,intent(inout)            :: x(isize)
   integer,intent(inout)          :: iorder(isize)
-  call rec_$X_quicksort(x,iorder,isize,1,isize)
+  integer, external              :: omp_get_num_threads
+  if (omp_get_num_threads() == 1) then
+    !$OMP PARALLEL DEFAULT(SHARED) 
+    !$OMP SINGLE
+    call rec_$X_quicksort(x,iorder,isize,1,isize,nproc)
+    !$OMP END SINGLE
+    !$OMP END PARALLEL
+  else
+    call rec_$X_quicksort(x,iorder,isize,1,isize,nproc)
+  endif
  end
 
- recursive subroutine rec_$X_quicksort(x, iorder, isize, first, last)
+ recursive subroutine rec_$X_quicksort(x, iorder, isize, first, last, level)
   implicit none
-  integer, intent(in)            :: isize, first, last
+  integer, intent(in)            :: isize, first, last, level
   integer,intent(inout)          :: iorder(isize)
   $type, intent(inout)           :: x(isize)
   $type                          :: c, tmp
@@ -69,11 +78,25 @@ BEGIN_TEMPLATE
     i=i+1
     j=j-1
   enddo
-  if (first < i-1) then
-    call rec_$X_quicksort(x, iorder, isize, first, i-1)
-  endif
-  if (j+1 < last) then
-    call rec_$X_quicksort(x, iorder, isize, j+1, last)
+  if ( ((i-first <= 10000).and.(last-j <= 10000)).or.(level<=0) ) then
+    if (first < i-1) then
+      call rec_$X_quicksort(x, iorder, isize, first, i-1,level/2)
+    endif
+    if (j+1 < last) then
+      call rec_$X_quicksort(x, iorder, isize, j+1, last,level/2)
+    endif
+  else
+    if (first < i-1) then
+      !$OMP TASK DEFAULT(SHARED) FIRSTPRIVATE(isize,first,i,level) 
+      call rec_$X_quicksort(x, iorder, isize, first, i-1,level/2)
+      !$OMP END TASK
+    endif
+    if (j+1 < last) then
+      !$OMP TASK DEFAULT(SHARED) FIRSTPRIVATE(isize,last,j,level) 
+      call rec_$X_quicksort(x, iorder, isize, j+1, last,level/2)
+      !$OMP END TASK
+    endif
+    !$OMP TASKWAIT
   endif
  end
 
@@ -281,7 +304,8 @@ BEGIN_TEMPLATE
   $type,intent(inout)            :: x(isize)
   integer,intent(inout)          :: iorder(isize)
   integer                        :: n
-  call $Xradix_sort(x,iorder,isize,-1)
+!  call $Xradix_sort(x,iorder,isize,-1)
+  call quick_$Xsort(x,iorder,isize)
  end subroutine $Xsort
 
 SUBST [ X, type ]
@@ -457,16 +481,16 @@ BEGIN_TEMPLATE
         iorder(i) = iorder1(1_$int_type+i1-i)
       enddo
     endif
-    deallocate(x1,iorder1,stat=err)
-    if (err /= 0) then
-      print *,  irp_here, ': Unable to deallocate arrays x1, iorder1'
-      stop
-    endif
     
     if (i2>1_$int_type) then
       call $Xradix_sort$big(x(i1+1_$int_type),iorder(i1+1_$int_type),i2,-2)
     endif
     
+    deallocate(x1,iorder1,stat=err)
+    if (err /= 0) then
+      print *,  irp_here, ': Unable to deallocate arrays x1, iorder1'
+      stop
+    endif
     return
 
   else if (iradix == -2) then ! Positive
@@ -527,13 +551,23 @@ BEGIN_TEMPLATE
     endif
     
     
+    !$OMP PARALLEL DEFAULT(SHARED) if (isize > 1000000)
+    !$OMP SINGLE
     if (i3>1_$int_type) then
+      !$OMP TASK FIRSTPRIVATE(iradix_new,i3) SHARED(x,iorder) if(i3 > 1000000)
       call $Xradix_sort$big(x,iorder,i3,iradix_new-1)
+      !$OMP END TASK
     endif
     
     if (isize-i3>1_$int_type) then
+      !$OMP TASK FIRSTPRIVATE(iradix_new,i3) SHARED(x,iorder) if(isize-i3 > 1000000)
       call $Xradix_sort$big(x(i3+1_$int_type),iorder(i3+1_$int_type),isize-i3,iradix_new-1)
+      !$OMP END TASK
     endif
+
+    !$OMP TASKWAIT
+    !$OMP END SINGLE
+    !$OMP END PARALLEL
     
     return
   endif
@@ -589,11 +623,16 @@ BEGIN_TEMPLATE
   
   
   if (i1>1_$int_type) then
+    !$OMP TASK FIRSTPRIVATE(i0,iradix,i1) SHARED(x,iorder) if(i1 >1000000)
     call $Xradix_sort$big(x(i0+1_$int_type),iorder(i0+1_$int_type),i1,iradix-1)
+    !$OMP END TASK
   endif
   if (i0>1) then
+    !$OMP TASK FIRSTPRIVATE(i0,iradix) SHARED(x,iorder) if(i0 >1000000)
     call $Xradix_sort$big(x,iorder,i0,iradix-1)
+    !$OMP END TASK
   endif
+  !$OMP TASKWAIT
   
  end
 
