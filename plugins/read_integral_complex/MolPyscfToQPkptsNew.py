@@ -234,7 +234,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
 
     j3c = intfile.get('j3c')
     if print_df_ints:
-        with open('df_integral_array','w') as outfile:
+        with open('df_ao_integral_array','w') as outfile:
             pass
     naosq = nao*nao
     naotri = (nao*(nao+1))//2
@@ -288,7 +288,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
     nkpt_pairs = j3arr.shape[0]
 
     if print_df_ints:
-        with open('df_integral_array','a') as outfile:
+        with open('df_ao_integral_array','a') as outfile:
             for k in range(nkpt_pairs):
                 for iaux in range(naux):
                     for i in range(nao):

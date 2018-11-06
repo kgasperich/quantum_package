@@ -32,7 +32,10 @@ BEGIN_PROVIDER [ logical, ao_bielec_integrals_in_map ]
     print*, 'AO integrals provided'
     ao_bielec_integrals_in_map = .True.
     return
-  else if (read_df_integral_array) then
+  else if (read_df_ao_integral_array) then
+    if (use_df_mo) then
+      print*,'ERROR: use_df_mo=.T., so 4idx AO ints should not be used'
+    endif
     call ao_map_fill_from_df
     ao_bielec_integrals_in_map = .True.
     return
@@ -79,7 +82,7 @@ subroutine ao_map_fill_from_df
   do kl=1, num_kpts
     do kj=1, kl
       call idx2_tri_int(kj,kl,kjkl2)
-      ints_jl = reshape(df_integral_array(:,:,:,kjkl2),(/ao_num_kpt_2,df_num/))
+      ints_jl = reshape(df_ao_integral_array(:,:,:,kjkl2),(/ao_num_kpt_2,df_num/))
   !$OMP PARALLEL PRIVATE(i,k,j,l,ki,kk,ii,ik,ij,il,kikk2,jl2,ik2, &
       !$OMP  ints_ik, ints_ikjl_tmp, ints_ikjl, &
       !$OMP  n_integrals, buffer_i1, buffer_i2, buffer_value1, buffer_value2, &
@@ -88,7 +91,7 @@ subroutine ao_map_fill_from_df
       !$OMP  DEFAULT(NONE)  &
       !$OMP  SHARED(size_buffer, num_kpts, df_num, ao_num_per_kpt, ao_num_kpt_2, &
       !$OMP  kl,kj,kjkl2,ints_jl, & 
-      !$OMP  kconserv, df_integral_array, ao_integrals_threshold)
+      !$OMP  kconserv, df_ao_integral_array, ao_integrals_threshold)
   
   allocate( &
     ints_tmp1(ao_num_per_kpt,ao_num_per_kpt,df_num),&
@@ -111,13 +114,13 @@ subroutine ao_map_fill_from_df
         ! maybe use pointers instead of reshaping?
         if (ki >= kk) then
 !          ints_ik = reshape( &
-!                   conjg(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
+!                   conjg(reshape(df_ao_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
 !                   (/ao_num_per_kpt**2,df_num/))
-          ints_tmp1 = conjg(reshape(df_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/)))
+          ints_tmp1 = conjg(reshape(df_ao_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/)))
 
           ints_ik = reshape(ints_tmp1, (/ao_num_kpt_2,df_num/))
         else
-          ints_ik = reshape(df_integral_array(:,:,:,kikk2),(/ao_num_kpt_2,df_num/))
+          ints_ik = reshape(df_ao_integral_array(:,:,:,kikk2),(/ao_num_kpt_2,df_num/))
         endif
 
 

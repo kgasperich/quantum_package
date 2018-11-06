@@ -1,7 +1,7 @@
 program read_integrals
 
   PROVIDE ezfio_filename
-  call ezfio_set_integrals_bielec_disk_access_df_integral_array("None")
+  call ezfio_set_integrals_bielec_disk_access_df_ao_integral_array("None")
   call run
 end
 
@@ -20,7 +20,7 @@ subroutine run
 
 
   A = 0.d0
-  iunit = getunitandopen('df_integral_array','r')
+  iunit = getunitandopen('df_ao_integral_array','r')
   do 
   !  read (iunit,*,end=10) i,j,mu,kikj, int_re, int_im
   !  A(i,j,mu,kikj) = dcmplx(int_re,int_im)
@@ -29,10 +29,10 @@ subroutine run
   enddo
   10 continue
   close(iunit)
-  call write_df_integral_array_file('df_integral_array', A, size(A,1), size(A,3), size(A,4))
+  call write_df_integral_array_file('df_ao_integral_array', A, size(A,1), size(A,3), size(A,4))
 
   deallocate(A)
 
-  call ezfio_set_integrals_bielec_disk_access_df_integral_array("Read")
+  call ezfio_set_integrals_bielec_disk_access_df_ao_integral_array("Read")
 
 end
