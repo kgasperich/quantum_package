@@ -276,9 +276,6 @@ subroutine mo_map_fill_from_df
   integer*8                      :: get_mo_map_size, mo_map_size
   mo_map_size = get_mo_map_size()
   
-  deallocate(list_ijkl)
-  
-  
   print*,'Molecular integrals provided:'
   print*,' Size of MO map           ', map_mb(mo_integrals_map) ,'MB'
   print*,' Number of MO integrals: ',  mo_map_size

@@ -25,7 +25,7 @@ BEGIN_PROVIDER [complex*16, df_mo_integral_array, (mo_num_per_kpt, mo_num_per_kp
     call read_df_integral_array_file('df_mo_integral_array',df_mo_integral_array,mo_num_per_kpt,df_num,num_kpt_pairs)
     print *, 'read df_mo_integral_array from disk'
   else
-    call df_mo_from_df_ao
+    call df_mo_from_df_ao(df_mo_integral_array,mo_num_per_kpt,df_num,num_kpt_pairs)
   endif
 
 END_PROVIDER
@@ -167,12 +167,14 @@ subroutine read_df_integral_array_file(filename, A, n_ao, n_df, n_kpt_pairs)
 end
 
 
-subroutine df_mo_from_df_ao
+subroutine df_mo_from_df_ao(df_mo,n_mo,n_df,n_k_pairs)
   use map_module
   implicit none
   BEGIN_DOC
   ! create 3-idx mo ints from 3-idx ao ints
   END_DOC
+  integer,intent(in) :: n_mo,n_df,n_k_pairs
+  complex*16,intent(out) :: df_mo(n_mo,n_mo,n_df,n_k_pairs)
   integer :: kl,kj,kjkl2,mu
   complex*16,allocatable :: coef_l(:,:), coef_j(:,:), ints_jl(:,:), ints_tmp(:,:)
 
@@ -190,17 +192,17 @@ subroutine df_mo_from_df_ao
     do kj=1, kl
       coef_j = mo_coef_kpts(:,:,kj)
       call idx2_tri_int(kj,kl,kjkl2)
-      do mu=1, num_df
+      do mu=1, df_num
         ints_jl = df_ao_integral_array(:,:,mu,kjkl2)
-        zgemm('C','N',mo_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt, &
+        call zgemm('C','N',mo_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt, &
               (1.d0,0.d0), coef_l, ao_num_per_kpt, &
               ints_jl, ao_num_per_kpt, &
               (0.d0,0.d0), ints_tmp, mo_num_per_kpt)
 
-        zgemm('N','N',mo_num_per_kpt,mo_num_per_kpt,ao_num_per_kpt, &
+        call zgemm('N','N',mo_num_per_kpt,mo_num_per_kpt,ao_num_per_kpt, &
               (1.d0,0.d0), ints_tmp, mo_num_per_kpt, &
               coef_j, ao_num_per_kpt, &
-              (0.d0,0.d0), df_mo_integral_array(:,:,mu,kjkl2), mo_num_per_kpt)
+              (0.d0,0.d0), df_mo(:,:,mu,kjkl2), mo_num_per_kpt)
       enddo
     enddo
   enddo
