@@ -83,7 +83,7 @@ BEGIN_PROVIDER [ integer(bit_kind), HF_bitmask, (N_int,2)]
     do i=1,elec_alpha_num_per_kpt
       do j=1,num_kpts
         k += 1
-        occ(k) = i + (j-1)*mo_tot_num_per_kpt
+        occ(k) = i + (j-1)*mo_num_per_kpt
       enddo
     enddo
   else

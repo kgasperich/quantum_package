@@ -51,12 +51,16 @@ BEGIN_PROVIDER [ integer, mo_num ]
  do i=mo_tot_num,1,-1
    if (mo_class(i) == 'Deleted') then
      mo_num -= 1
-   else
-     exit
+!   else
+!     exit
    endif
  enddo
 END_PROVIDER
 
+BEGIN_PROVIDER [integer, mo_num_per_kpt ]
+  implicit none
+  mo_num_per_kpt = mo_num / num_kpts
+END_PROVIDER
 
  BEGIN_PROVIDER [ double precision, mo_coef_real, (ao_num,mo_tot_num) ]
 &BEGIN_PROVIDER [ double precision, mo_coef_imag, (ao_num,mo_tot_num) ]
@@ -146,6 +150,28 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
 
 END_PROVIDER
 
+BEGIN_PROVIDER [ complex*16, mo_coef_kpts, (ao_num_per_kpt,mo_tot_num_per_kpt,num_kpts) ]
+  implicit none
+  BEGIN_DOC
+  ! Molecular orbital coefficients on AO basis set
+  ! mo_coef_kpts(i,j,k) = coefficient of the ith ao on the jth mo in kpt k
+  ! mo_label : Label characterizing the MOS (local, canonical, natural, etc)
+  END_DOC
+  integer                        :: i, j, k
+  PROVIDE mo_coef
+    ! Orthonormalized AO basis
+    do k = 1,num_kpts
+      do i=1,mo_tot_num_per_kpt
+        ii = i + (k-1)*mo_tot_num_per_kpt
+        do j=1,ao_num_per_kpt
+          jj = j + (k-1)*ao_num_per_kpt
+          mo_coef_kpts(j,i,k) = mo_coef(jj,ii)
+        enddo
+      enddo
+    enddo 
+
+END_PROVIDER
+
 BEGIN_PROVIDER [ complex*16, mo_coef_in_ao_ortho_basis, (ao_num, mo_tot_num) ]
  implicit none
  BEGIN_DOC
@@ -220,6 +246,18 @@ BEGIN_PROVIDER [ complex*16, mo_coef_conjg_transp, (mo_tot_num,ao_num) ]
       mo_coef_conjg_transp(i,j) = conjg(mo_coef(j,i))
     enddo
   enddo
+  
+END_PROVIDER
+
+ BEGIN_PROVIDER [ complex*16, mo_coef_kpts_transp, (mo_tot_num_per_kpt,ao_num_per_kpt,num_kpts) ]
+&BEGIN_PROVIDER [ complex*16, mo_coef_kpts_conjg_transp, (mo_tot_num_per_kpt,ao_num_per_kpt,num_kpts) ]
+  implicit none
+  BEGIN_DOC
+  ! Molecular orbital coefficients on AO basis set
+  END_DOC
+  
+  mo_coef_kpts_transp = reshape(mo_coef_kpts,(/mo_tot_num_per_kpt,ao_num_per_kpt,num_kpts/),(/2,1,3/))
+  mo_coef_kpts_conjg_transp = conjg(mo_coef_kpts_transp)
   
 END_PROVIDER
 

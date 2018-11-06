@@ -54,6 +54,34 @@ END_PROVIDER
    
 END_PROVIDER
 
+ BEGIN_PROVIDER [ logical, read_df_mo_integral_array ]
+&BEGIN_PROVIDER [ logical, write_df_mo_integral_array ]
+   
+   BEGIN_DOC
+   ! One level of abstraction for disk_access_df_integral_array
+   END_DOC
+   implicit none
+   
+   if (disk_access_df_mo_integral_array.EQ.'Read') then
+     read_df_mo_integral_array =  .True.
+     write_df_mo_integral_array = .False.
+     
+   else if  (disk_access_df_mo_integral_array.EQ.'Write') then
+     read_df_mo_integral_array = .False.
+     write_df_mo_integral_array =  .True.
+     
+   else if (disk_access_df_mo_integral_array.EQ.'None') then
+     read_df_mo_integral_array = .False.
+     write_df_mo_integral_array = .False.
+     
+   else
+     print *, 'integrals_bielec/disk_access_df_mo_integral_array has a wrong type'
+     stop 1
+     
+   endif
+   
+END_PROVIDER
+
 subroutine write_df_integral_array_file(filename, A, n_ao, n_df, n_kpt_pairs)
   implicit none
   BEGIN_DOC
