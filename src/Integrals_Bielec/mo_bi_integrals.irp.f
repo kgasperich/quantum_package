@@ -42,6 +42,11 @@ BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
     call map_load_from_disk(trim(ezfio_filename)//'/work/mo_ints',mo_integrals_map)
     print*, 'MO integrals provided'
     return
+  else if (use_df_mo) then
+    print*,'constructing MO bielec ints from 3-idx MO ints'
+    PROVIDE df_mo_integral_array
+    call mo_map_fill_from_df
+    return
   else
     PROVIDE ao_bielec_integrals_in_map
   endif
@@ -64,6 +69,224 @@ BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
   endif
   
 END_PROVIDER
+
+ 
+subroutine mo_map_fill_from_df
+  use map_module
+  implicit none
+  BEGIN_DOC
+  ! fill ao bielec integral map using 3-index df integrals
+  ! todo: add OMP directives, do smarter things with pointers/reshaping/transposing
+  END_DOC
+
+  integer :: i,k,j,l
+  integer :: ki,kk,kj,kl
+  integer :: ii,ik,ij,il
+  integer :: kikk2,kjkl2,jl2,ik2
+
+  complex*16,allocatable :: ints_ik(:,:), ints_jl(:,:), ints_ikjl_tmp(:,:), ints_ikjl(:,:,:,:)
+  complex*16,allocatable :: ints_tmp1(:,:,:)!, ints_tmp2(:,:)
+
+  complex*16 :: integral
+  integer                        :: n_integrals
+  integer                        :: size_buffer
+  integer(key_kind),allocatable  :: buffer_i1(:), buffer_i2(:)
+  real(integral_kind),allocatable :: buffer_value1(:),buffer_value2(:)
+  integer(key_kind)              :: tmp_idx1,tmp_idx2
+  double precision               :: tmp_re,tmp_im
+  integer                        :: mo_num_kpt_2
+
+  double precision               :: cpu_1, cpu_2, wall_1, wall_2, wall_0
+  double precision               :: map_mb
+
+  mo_num_kpt_2 = mo_num_per_kpt * mo_num_per_kpt
+
+  size_buffer = min(mo_num_per_kpt*mo_num_per_kpt*mo_num_per_kpt,16000000)
+  print*, 'Providing the mo_bielec integrals from 3-index df integrals'
+  call write_time(6)
+  call ezfio_set_integrals_bielec_disk_access_mo_integrals('Write')
+
+  call wall_time(wall_1)
+  call cpu_time(cpu_1)
+  allocate( ints_jl(mo_num_kpt_2,df_num))
+
+  wall_0 = wall_1
+  do kl=1, num_kpts
+    do kj=1, kl
+      call idx2_tri_int(kj,kl,kjkl2)
+      ints_jl = reshape(df_mo_integral_array(:,:,:,kjkl2),(/mo_num_kpt_2,df_num/))
+  !$OMP PARALLEL PRIVATE(i,k,j,l,ki,kk,ii,ik,ij,il,kikk2,jl2,ik2, &
+      !$OMP  ints_ik, ints_ikjl_tmp, ints_ikjl, &
+      !$OMP  n_integrals, buffer_i1, buffer_i2, buffer_value1, buffer_value2, &
+      !$OMP  ints_tmp1, & 
+      !$OMP  tmp_idx1, tmp_idx2, tmp_re, tmp_im, integral) &
+      !$OMP  DEFAULT(NONE)  &
+      !$OMP  SHARED(size_buffer, num_kpts, df_num, mo_num_per_kpt, mo_num_kpt_2, &
+      !$OMP  kl,kj,kjkl2,ints_jl, & 
+      !$OMP  kconserv, df_mo_integral_array, mo_integrals_threshold)
+  
+  allocate( &
+    ints_tmp1(mo_num_per_kpt,mo_num_per_kpt,df_num),&
+    ints_ik(mo_num_kpt_2,df_num),&
+    ints_ikjl_tmp(mo_num_kpt_2,mo_num_kpt_2),&
+    ints_ikjl(mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt),&
+    buffer_i1(size_buffer),                                         &
+    buffer_i2(size_buffer),                                         &
+    buffer_value1(size_buffer),                                     &
+    buffer_value2(size_buffer) & 
+  )
+
+
+  !$OMP DO SCHEDULE(guided)
+      do kk=1,kl
+        ki=kconserv(kl,kk,kj)
+        if ((kl == kj) .and. (ki > kk)) cycle
+        call idx2_tri_int(ki,kk,kikk2)
+        if (kikk2 > kjkl2) cycle
+        ! maybe use pointers instead of reshaping?
+        if (ki >= kk) then
+          ints_tmp1 = conjg(reshape(df_mo_integral_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
+
+          ints_ik = reshape(ints_tmp1, (/mo_num_kpt_2,df_num/))
+        else
+          ints_ik = reshape(df_mo_integral_array(:,:,:,kikk2),(/mo_num_kpt_2,df_num/))
+        endif
+
+
+        ! todo: maybe just use 'C' instead of 'T' rather than doing conjugation above? (some cases will still require conjg on ikjl array)
+        !       figure this out in conjunction with deciding how to structure df integrals when first constructed
+        call zgemm('N','T', mo_num_kpt_2, mo_num_kpt_2, df_num, &
+               (1.d0,0.d0), ints_ik, size(ints_ik,1), &
+               ints_jl, size(ints_jl,1), &
+               (0.d0,0.d0), ints_ikjl_tmp, size(ints_ikjl_tmp,1))
+
+        ! this is bad
+        ! use a pointer instead?
+        ints_ikjl = reshape(ints_ikjl_tmp,(/mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt/))
+        
+        n_integrals=0
+        do il=1,mo_num_per_kpt
+          l=il+(kl-1)*mo_num_per_kpt
+          do ij=1,mo_num_per_kpt
+            j=ij+(kj-1)*mo_num_per_kpt
+            if (j>l) exit
+            call idx2_tri_int(j,l,jl2)
+            do ik=1,mo_num_per_kpt
+              k=ik+(kk-1)*mo_num_per_kpt
+              if (k>l) exit
+              do ii=1,mo_num_per_kpt
+                i=ii+(ki-1)*mo_num_per_kpt
+                if ((j==l) .and. (i>k)) exit
+                call idx2_tri_int(i,k,ik2)
+                if (ik2 > jl2) exit
+                integral = ints_ikjl(ii,ik,ij,il)
+                if (cdabs(integral) < mo_integrals_threshold) then
+                  cycle
+                endif
+                n_integrals += 1
+                tmp_re = real(integral)
+                tmp_im = imag(integral)
+                call mo_bielec_integrals_index(i,j,k,l,tmp_idx1)
+                call mo_bielec_integrals_index(k,l,i,j,tmp_idx2)
+                if (tmp_idx1.eq.tmp_idx2) then
+                  buffer_i1(n_integrals) = tmp_idx1
+                  buffer_i2(n_integrals) = tmp_idx1
+                  buffer_value1(n_integrals) = tmp_re
+                  buffer_value2(n_integrals) = 0.d0
+                else if (tmp_idx1 .lt. tmp_idx2) then
+                  buffer_i1(n_integrals) = tmp_idx1
+                  buffer_i2(n_integrals) = tmp_idx2
+                  buffer_value1(n_integrals) = tmp_re
+                  buffer_value2(n_integrals) = tmp_im
+                else
+                  buffer_i1(n_integrals) = tmp_idx2
+                  buffer_i2(n_integrals) = tmp_idx1
+                  buffer_value1(n_integrals) = tmp_re
+                  buffer_value2(n_integrals) = -tmp_im
+                endif
+
+
+                if (n_integrals == size_buffer) then
+                  call insert_into_mo_integrals_map(n_integrals,buffer_i1,buffer_value1,&
+                       real(mo_integrals_threshold,integral_kind))
+                  call insert_into_mo_integrals_map(n_integrals,buffer_i2,buffer_value2,&
+                       real(mo_integrals_threshold,integral_kind))
+                  n_integrals = 0
+                endif
+              enddo !ii
+            enddo !ik
+          enddo !ij
+        enddo !il
+
+        if (n_integrals /= 0) then
+          call insert_into_mo_integrals_map(n_integrals,buffer_i1,buffer_value1,&
+               real(mo_integrals_threshold,integral_kind))
+          call insert_into_mo_integrals_map(n_integrals,buffer_i2,buffer_value2,&
+               real(mo_integrals_threshold,integral_kind))
+          n_integrals=0
+        endif
+      enddo !kk
+  !$OMP END DO NOWAIT
+
+
+  deallocate( &
+    ints_tmp1,&
+    ints_ik,&
+    ints_ikjl_tmp,&
+    ints_ikjl&
+    )
+  
+  deallocate( &
+    buffer_i1,&
+    buffer_i2,&
+    buffer_value1,&
+    buffer_value2&
+    )
+  !$OMP END PARALLEL
+    enddo !kj
+    call wall_time(wall_2)
+    if (wall_2 - wall_0 > 1.d0) then
+      wall_0 = wall_2
+      print*, 100.*float(kl)/float(num_kpts), '% in ',               &
+          wall_2-wall_1, 's', map_mb(mo_integrals_map) ,'MB'
+    endif
+
+  enddo !kl
+  deallocate( ints_jl ) 
+
+!  print*,'sorting map'
+!  call write_time(6)
+!  call map_sort(mo_integrals_map)
+!  print*,'checking unique vals in map'
+!  call write_time(6)
+!  call map_unique(mo_integrals_map)
+!  
+!  print*,'saving map to disk'
+!  call write_time(6)
+!
+!  call map_save_to_disk(trim(ezfio_filename)//'/work/ao_ints',ao_integrals_map)
+!  print*,'done saving map to disk'
+!  call write_time(6)
+!  call ezfio_set_integrals_bielec_disk_access_ao_integrals('Read')
+  
+  call map_merge(mo_integrals_map)
+  
+  call wall_time(wall_2)
+  call cpu_time(cpu_2)
+  integer*8                      :: get_mo_map_size, mo_map_size
+  mo_map_size = get_mo_map_size()
+  
+  deallocate(list_ijkl)
+  
+  
+  print*,'Molecular integrals provided:'
+  print*,' Size of MO map           ', map_mb(mo_integrals_map) ,'MB'
+  print*,' Number of MO integrals: ',  mo_map_size
+  print*,' cpu  time :',cpu_2 - cpu_1, 's'
+  print*,' wall time :',wall_2 - wall_1, 's  ( x ', (cpu_2-cpu_1)/(wall_2-wall_1), ')'
+  
+
+end subroutine mo_map_fill_from_df
 
 
 subroutine add_integrals_to_map(mask_ijkl)
