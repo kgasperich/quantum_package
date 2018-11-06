@@ -158,6 +158,7 @@ BEGIN_PROVIDER [ complex*16, mo_coef_kpts, (ao_num_per_kpt,mo_tot_num_per_kpt,nu
   ! mo_label : Label characterizing the MOS (local, canonical, natural, etc)
   END_DOC
   integer                        :: i, j, k
+  integer                        :: ii, jj
   PROVIDE mo_coef
     ! Orthonormalized AO basis
     do k = 1,num_kpts
@@ -256,7 +257,7 @@ END_PROVIDER
   ! Molecular orbital coefficients on AO basis set
   END_DOC
   
-  mo_coef_kpts_transp = reshape(mo_coef_kpts,(/mo_tot_num_per_kpt,ao_num_per_kpt,num_kpts/),(/2,1,3/))
+  mo_coef_kpts_transp = reshape(mo_coef_kpts,(/mo_tot_num_per_kpt,ao_num_per_kpt,num_kpts/),order=(/2,1,3/))
   mo_coef_kpts_conjg_transp = conjg(mo_coef_kpts_transp)
   
 END_PROVIDER
