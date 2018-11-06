@@ -1,14 +1,3 @@
-
-BEGIN_PROVIDER [integer, ao_num_per_kpt ]
-  implicit none
-  ao_num_per_kpt = ao_num / num_kpts
-END_PROVIDER
-
-BEGIN_PROVIDER [integer, num_kpt_pairs ]
-  implicit none
-  num_kpt_pairs = num_kpts * (num_kpts + 1) / 2
-END_PROVIDER
-
 BEGIN_PROVIDER [complex*16, df_ao_integral_array, (ao_num_per_kpt, ao_num_per_kpt, df_num, num_kpt_pairs)]
   implicit none
   BEGIN_DOC
