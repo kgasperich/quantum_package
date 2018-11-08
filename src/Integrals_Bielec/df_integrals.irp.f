@@ -195,13 +195,13 @@ subroutine df_mo_from_df_ao(df_mo,n_mo,n_df,n_k_pairs)
       do mu=1, df_num
         ints_jl = df_ao_integral_array(:,:,mu,kjkl2)
         call zgemm('C','N',mo_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt, &
-              (1.d0,0.d0), coef_l, ao_num_per_kpt, &
+              (1.d0,0.d0), coef_j, ao_num_per_kpt, &
               ints_jl, ao_num_per_kpt, &
               (0.d0,0.d0), ints_tmp, mo_num_per_kpt)
 
         call zgemm('N','N',mo_num_per_kpt,mo_num_per_kpt,ao_num_per_kpt, &
               (1.d0,0.d0), ints_tmp, mo_num_per_kpt, &
-              coef_j, ao_num_per_kpt, &
+              coef_l, ao_num_per_kpt, &
               (0.d0,0.d0), df_mo(:,:,mu,kjkl2), mo_num_per_kpt)
       enddo
     enddo
