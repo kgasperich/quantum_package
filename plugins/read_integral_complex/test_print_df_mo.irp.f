@@ -74,14 +74,19 @@ subroutine print_mo_bielec_from_df
           ints_ik = reshape(m_array(:,:,:,kikk2),(/mo_num_kpt_2,df_num/))
         endif
 
+!        call zgemm('N','T', mo_num_kpt_2, mo_num_kpt_2, df_num, &
+!               (1.d0,0.d0), ints_ik, size(ints_ik,1), &
+!               ints_jl, size(ints_jl,1), &
+!               (0.d0,0.d0), ints_ikjl_tmp, size(ints_ikjl_tmp,1))
+
         call zgemm('N','T', mo_num_kpt_2, mo_num_kpt_2, df_num, &
                (1.d0,0.d0), ints_ik, size(ints_ik,1), &
                ints_jl, size(ints_jl,1), &
-               (0.d0,0.d0), ints_ikjl_tmp, size(ints_ikjl_tmp,1))
+               (0.d0,0.d0), ints_ikjl, mo_num_kpt_2)
 
         ! this is bad
         ! use a pointer instead?
-        ints_ikjl = reshape(ints_ikjl_tmp,(/mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt/))
+!        ints_ikjl = reshape(ints_ikjl_tmp,(/mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt/))
         
         do il=1,mo_num_per_kpt
           l=il+(kl-1)*mo_num_per_kpt
