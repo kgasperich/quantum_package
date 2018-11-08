@@ -129,7 +129,6 @@ subroutine fill_m(df_mo,n_mo,n_df,n_k_pairs)
   complex*16,intent(out) :: df_mo(n_mo,n_mo,n_df,n_k_pairs)
   integer :: kl,kj,kjkl2,mu
   complex*16,allocatable :: coef_l(:,:), coef_j(:,:), ints_jl(:,:), ints_tmp(:,:)
-  complex*16,allocatable :: ints_tmp0(:,:)
 
   integer :: i,j
   integer :: a,b
@@ -141,32 +140,16 @@ subroutine fill_m(df_mo,n_mo,n_df,n_k_pairs)
             coef_l(ao_num_per_kpt,mo_num_per_kpt),&
             coef_j(ao_num_per_kpt,mo_num_per_kpt),&
             ints_jl(ao_num_per_kpt,ao_num_per_kpt),&
-            ints_tmp0(mo_num_per_kpt,mo_num_per_kpt),&
             ints_tmp(mo_num_per_kpt,ao_num_per_kpt)&
           )
 
   do kl=1, num_kpts
     coef_l = mo_coef_kpts_trunc(:,:,kl)
-    do a=1,ao_num_per_kpt
-      do b=1,mo_num_per_kpt
-        val1=coef_l(a,b)
-        val2=mo_coef_kpts_trunc(a,b,kl)
-        write(*,'(I3,X,I3,X,I3,X,4(F16.7))')kl,a,b,real(val1),imag(val1),real(val2),imag(val2)
-      enddo
-    enddo
-
     do kj=1, kl
       coef_j = mo_coef_kpts_trunc(:,:,kj)
       call idx2_tri_int(kj,kl,kjkl2)
       do mu=1, df_num
         ints_jl = df_ao_integral_array(:,:,mu,kjkl2)
-        do i=1,ao_num_per_kpt
-          do j=1,ao_num_per_kpt
-            val1=df_ao_integral_array(i,j,mu,kjkl2)
-            val2=ints_jl(i,j)
-            write(*,'(I3,X,I3,X,I3,X,I3,X,4(F16.7))')i,j,mu,kjkl2,real(val1),imag(val1),real(val2),imag(val2)
-          enddo
-        enddo
         call zgemm('C','N',mo_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt, &
               (1.d0,0.d0), coef_j, ao_num_per_kpt, &
               ints_jl, ao_num_per_kpt, &
@@ -176,39 +159,38 @@ subroutine fill_m(df_mo,n_mo,n_df,n_k_pairs)
               (1.d0,0.d0), ints_tmp, mo_num_per_kpt, &
               coef_l, ao_num_per_kpt, &
               (0.d0,0.d0), df_mo(:,:,mu,kjkl2), mo_num_per_kpt)
+!        call zgemm('C','N',mo_num_per_kpt,ao_num_per_kpt,ao_num_per_kpt, &
+!              (1.d0,0.d0), mo_coef_kpts_trunc(:,:,kj), ao_num_per_kpt, &
+!              df_ao_integral_array(:,:,mu,kjkl2), ao_num_per_kpt, &
+!              (0.d0,0.d0), ints_tmp, mo_num_per_kpt)
+!
 !        call zgemm('N','N',mo_num_per_kpt,mo_num_per_kpt,ao_num_per_kpt, &
 !              (1.d0,0.d0), ints_tmp, mo_num_per_kpt, &
-!              coef_l, ao_num_per_kpt, &
-!              (0.d0,0.d0), ints_tmp0, mo_num_per_kpt)
-!        do a=1,mo_num_per_kpt
-!          do b=1,mo_num_per_kpt
-!            df_mo(a,b,mu,kjkl2) = ints_tmp0(a,b)
-!          enddo
-!        enddo
+!              mo_coef_kpts_trunc(:,:,kl), ao_num_per_kpt, &
+!              (0.d0,0.d0), df_mo(:,:,mu,kjkl2), mo_num_per_kpt)
       enddo
     enddo
   enddo
 
-  do kl=1, num_kpts
-    do kj=1, kl
-      call idx2_tri_int(kj,kl,kjkl2)
-      do mu=1, df_num
-        do i=1,mo_num_per_kpt
-          do j=1,mo_num_per_kpt
-            val1=df_mo(i,j,mu,kjkl2)
-            write(*,'(I3,X,I3,X,I3,X,I3,X,2(F16.7))')i,j,mu,kjkl2,real(val1),imag(val1)
-          enddo
-        enddo
-      enddo
-    enddo
-  enddo
+!  do kl=1, num_kpts
+!    do kj=1, kl
+!      call idx2_tri_int(kj,kl,kjkl2)
+!      do mu=1, df_num
+!        do i=1,mo_num_per_kpt
+!          do j=1,mo_num_per_kpt
+!            val1=df_mo(i,j,mu,kjkl2)
+!            write(*,'(I3,X,I3,X,I3,X,I3,X,2(F16.7))')i,j,mu,kjkl2,real(val1),imag(val1)
+!          enddo
+!        enddo
+!      enddo
+!    enddo
+!  enddo
   
 
   deallocate( &
             coef_l, &
             coef_j, &
             ints_jl, &
-            ints_tmp0, &
             ints_tmp &
           )
 
