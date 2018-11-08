@@ -38,7 +38,7 @@ subroutine print_mo_bielec_from_df
   integer :: kikk2,kjkl2,jl2,ik2
 
   complex*16,allocatable :: ints_ikjl(:,:,:,:)
-  complex*16,allocatable :: ints_ik2(:,:,:), ints_jl2(:,:,:)
+  complex*16,allocatable :: ints_ik(:,:,:), ints_jl(:,:,:)
 
   complex*16 :: integral
   integer(key_kind)              :: tmp_idx1,tmp_idx2
@@ -47,14 +47,14 @@ subroutine print_mo_bielec_from_df
   mo_num_kpt_2 = mo_num_per_kpt * mo_num_per_kpt
 
   allocate( &
-    ints_ik2(mo_num_per_kpt,mo_num_per_kpt,df_num),&
-    ints_jl2(mo_num_per_kpt,mo_num_per_kpt,df_num),&
+    ints_ik(mo_num_per_kpt,mo_num_per_kpt,df_num),&
+    ints_jl(mo_num_per_kpt,mo_num_per_kpt,df_num),&
     ints_ikjl(mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt,mo_num_per_kpt)&
   )
   do kl=1, num_kpts
     do kj=1, kl
       call idx2_tri_int(kj,kl,kjkl2)
-      ints_jl2 = m_array(:,:,:,kjkl2)
+      ints_jl = m_array(:,:,:,kjkl2)
 
       do kk=1,kl
         ki=kconserv(kl,kk,kj)
@@ -62,15 +62,29 @@ subroutine print_mo_bielec_from_df
         call idx2_tri_int(ki,kk,kikk2)
         if (kikk2 > kjkl2) cycle
         if (ki > kk) then
-          ints_ik2 = conjg(reshape(m_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
+          ints_ik = conjg(reshape(m_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
         else
-          ints_ik2 = m_array(:,:,:,kikk2)
+          ints_ik = m_array(:,:,:,kikk2)
         endif
 
         call zgemm('N','T', mo_num_kpt_2, mo_num_kpt_2, df_num, &
-               (1.d0,0.d0), ints_ik2, mo_num_kpt_2, &
-               ints_jl2, mo_num_kpt_2, &
+               (1.d0,0.d0), ints_ik, mo_num_kpt_2, &
+               ints_jl, mo_num_kpt_2, &
                (0.d0,0.d0), ints_ikjl, mo_num_kpt_2)
+!         if (ki > kk) then
+!           ints_ik = reshape(m_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/))
+!           call zgemm('N','C', mo_num_kpt_2, mo_num_kpt_2, df_num, &
+!                  (1.d0,0.d0), ints_jl, mo_num_kpt_2, &
+!                  ints_ik, mo_num_kpt_2, &
+!                  (0.d0,0.d0), ints_ikjl, mo_num_kpt_2)
+!         else
+!           ints_ik = m_array(:,:,:,kikk2)
+!           call zgemm('N','T', mo_num_kpt_2, mo_num_kpt_2, df_num, &
+!                  (1.d0,0.d0), ints_jl, mo_num_kpt_2, &
+!                  ints_ik, mo_num_kpt_2, &
+!                  (0.d0,0.d0), ints_ikjl, mo_num_kpt_2)
+!         endif
+
 
         do il=1,mo_num_per_kpt
           l=il+(kl-1)*mo_num_per_kpt
@@ -87,6 +101,7 @@ subroutine print_mo_bielec_from_df
                 call idx2_tri_int(i,k,ik2)
                 if (ik2 > jl2) exit
                 integral = ints_ikjl(ii,ik,ij,il)
+!                integral = ints_ikjl(ij,il,ii,ik)
                 write(*,'(4(I3,X),2(F16.7))')i,j,k,l,real(integral),imag(integral)
 
               enddo !ii
@@ -98,11 +113,11 @@ subroutine print_mo_bielec_from_df
   enddo !kl
 
   deallocate( &
-    ints_ik2,&
+    ints_ik,&
     ints_ikjl&
     )
   
-  deallocate( ints_jl2 ) 
+  deallocate( ints_jl) 
 
 end subroutine print_mo_bielec_from_df
 
