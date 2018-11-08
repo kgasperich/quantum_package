@@ -38,6 +38,7 @@ subroutine print_mo_bielec_from_df
   integer :: kikk2,kjkl2,jl2,ik2
 
   complex*16,allocatable :: ints_ik(:,:), ints_jl(:,:), ints_ikjl_tmp(:,:), ints_ikjl(:,:,:,:)
+  complex*16,allocatable :: ints_ik2(:,:,:), ints_jl2(:,:,:)
   complex*16,allocatable :: ints_tmp1(:,:,:)!, ints_tmp2(:,:)
 
   complex*16 :: integral
@@ -47,6 +48,8 @@ subroutine print_mo_bielec_from_df
   mo_num_kpt_2 = mo_num_per_kpt * mo_num_per_kpt
 
   allocate( ints_jl(mo_num_kpt_2,df_num), &
+    ints_jl2(mo_num_per_kpt,mo_num_per_kpt,df_num),&
+    ints_ik2(mo_num_per_kpt,mo_num_per_kpt,df_num),&
     ints_tmp1(mo_num_per_kpt,mo_num_per_kpt,df_num),&
     ints_ik(mo_num_kpt_2,df_num),&
     ints_ikjl_tmp(mo_num_kpt_2,mo_num_kpt_2),&
@@ -55,7 +58,8 @@ subroutine print_mo_bielec_from_df
   do kl=1, num_kpts
     do kj=1, kl
       call idx2_tri_int(kj,kl,kjkl2)
-      ints_jl = reshape(m_array(:,:,:,kjkl2),(/mo_num_kpt_2,df_num/))
+!      ints_jl = reshape(m_array(:,:,:,kjkl2),(/mo_num_kpt_2,df_num/))
+      ints_jl2 = m_array(:,:,:,kjkl2)
 
       do kk=1,kl
         ki=kconserv(kl,kk,kj)
@@ -67,11 +71,13 @@ subroutine print_mo_bielec_from_df
 !          ints_ik = reshape( &
 !                   conjg(reshape(df_ao_integral_array(:,:,:,kikk2),(/ao_num_per_kpt,ao_num_per_kpt,df_num/),order=(/2,1,3/))),&
 !                   (/ao_num_per_kpt**2,df_num/))
-          ints_tmp1 = conjg(reshape(m_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
-
-          ints_ik = reshape(ints_tmp1, (/mo_num_kpt_2,df_num/))
+!          ints_tmp1 = conjg(reshape(m_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
+!
+!          ints_ik = reshape(ints_tmp1, (/mo_num_kpt_2,df_num/))
+           ints_ik2 = conjg(reshape(m_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
         else
-          ints_ik = reshape(m_array(:,:,:,kikk2),(/mo_num_kpt_2,df_num/))
+          !ints_ik = reshape(m_array(:,:,:,kikk2),(/mo_num_kpt_2,df_num/))
+          ints_ik2 = m_array(:,:,:,kikk2)
         endif
 
 !        call zgemm('N','T', mo_num_kpt_2, mo_num_kpt_2, df_num, &
@@ -80,8 +86,8 @@ subroutine print_mo_bielec_from_df
 !               (0.d0,0.d0), ints_ikjl_tmp, size(ints_ikjl_tmp,1))
 
         call zgemm('N','T', mo_num_kpt_2, mo_num_kpt_2, df_num, &
-               (1.d0,0.d0), ints_ik, size(ints_ik,1), &
-               ints_jl, size(ints_jl,1), &
+               (1.d0,0.d0), ints_ik2, mo_num_kpt_2, &
+               ints_jl2, mo_num_kpt_2, &
                (0.d0,0.d0), ints_ikjl, mo_num_kpt_2)
 
         ! this is bad
@@ -116,11 +122,12 @@ subroutine print_mo_bielec_from_df
   deallocate( &
     ints_tmp1,&
     ints_ik,&
+    ints_ik2,&
     ints_ikjl_tmp,&
     ints_ikjl&
     )
   
-  deallocate( ints_jl ) 
+  deallocate( ints_jl,ints_jl2 ) 
 
 end subroutine print_mo_bielec_from_df
 
