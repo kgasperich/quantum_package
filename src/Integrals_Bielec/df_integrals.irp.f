@@ -26,6 +26,11 @@ BEGIN_PROVIDER [complex*16, df_mo_integral_array, (mo_num_per_kpt, mo_num_per_kp
     print *, 'read df_mo_integral_array from disk'
   else
     call df_mo_from_df_ao(df_mo_integral_array,mo_num_per_kpt,df_num,num_kpt_pairs)
+    if (write_df_mo_integral_array) then
+      call write_df_integral_array_file('df_mo_integral_array',df_mo_integral_array,mo_num_per_kpt,df_num,num_kpt_pairs)
+      call ezfio_set_integrals_bielec_disk_access_df_mo_integral_array("Read")
+      print*, 'df mo integrals saved to disk'
+    endif
   endif
 
 END_PROVIDER
@@ -177,9 +182,12 @@ subroutine df_mo_from_df_ao(df_mo,n_mo,n_df,n_k_pairs)
   complex*16,intent(out) :: df_mo(n_mo,n_mo,n_df,n_k_pairs)
   integer :: kl,kj,kjkl2,mu
   complex*16,allocatable :: coef_l(:,:), coef_j(:,:), ints_jl(:,:), ints_tmp(:,:)
+  double precision :: wall_1,wall_2,cpu_1,cpu_2
 
   print*,'providing 3-index MO integrals from 3-index AO integrals'
 
+  call wall_time(wall_1)
+  call cpu_time(cpu_1)
   allocate( &
             coef_l(ao_num_per_kpt,mo_num_per_kpt),&
             coef_j(ao_num_per_kpt,mo_num_per_kpt),&
@@ -205,6 +213,9 @@ subroutine df_mo_from_df_ao(df_mo,n_mo,n_df,n_k_pairs)
               (0.d0,0.d0), df_mo(:,:,mu,kjkl2), mo_num_per_kpt)
       enddo
     enddo
+    call wall_time(wall_2)
+    print*,100.*float(kl*(kl+1))/(2.*n_kpt_pairs), '% in ', &
+                wall_2-wall_1, 's'
   enddo
 
   deallocate( &
@@ -213,5 +224,10 @@ subroutine df_mo_from_df_ao(df_mo,n_mo,n_df,n_k_pairs)
             ints_jl, &
             ints_tmp &
           )
+  call wall_time(wall_2)
+  call cpu_time(cpu_2)
+  print*,' 3-idx MO provided'
+  print*,'  cpu  time:',cpu_2-cpu_1,'s'
+  print*,'  wall time:',wall_2-wall_1,'s  ( x ',(cpu_2-cpu_1)/(wall_2-wall_1),')'
 
 end subroutine df_mo_from_df_ao
