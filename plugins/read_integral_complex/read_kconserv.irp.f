@@ -8,7 +8,11 @@ end
 subroutine run
   use map_module
   implicit none
-  
+  BEGIN_DOC
+  ! read kconserv in physicist notation order <ij|kl>
+  ! if kconserv(i,j,k)=l, then <ij|kl> is allowed by symmetry
+  ! pyscf stores this internally in the order of chemist notation (ik|jl)
+  END_DOC
   integer :: iunit
   integer :: getunitandopen
 
