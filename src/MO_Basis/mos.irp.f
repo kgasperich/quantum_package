@@ -150,6 +150,31 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
 
 END_PROVIDER
 
+BEGIN_PROVIDER [ complex*16, mo_coef_kpts_trunc, (ao_num_per_kpt,mo_num_per_kpt,num_kpts) ]
+  implicit none
+  BEGIN_DOC
+  ! Molecular orbital coefficients on AO basis set
+  ! mo_coef_kpts(i,j,k) = coefficient of the ith ao on the jth mo in kpt k
+  ! mo_label : Label characterizing the MOS (local, canonical, natural, etc)
+  END_DOC
+  integer                        :: i, j, k
+  integer                        :: ii, jj
+  PROVIDE mo_coef
+    ! Orthonormalized AO basis
+    print*,'mo_coef_trunc'
+    do k = 1,num_kpts
+      do i=1,mo_num_per_kpt
+        ii = i + (k-1)*mo_tot_num_per_kpt
+        do j=1,ao_num_per_kpt
+          jj = j + (k-1)*ao_num_per_kpt
+          mo_coef_kpts_trunc(j,i,k) = mo_coef(jj,ii)
+          print*,j,i,k,jj,ii,mo_coef(jj,ii)
+        enddo
+      enddo
+    enddo
+
+END_PROVIDER
+
 BEGIN_PROVIDER [ complex*16, mo_coef_kpts, (ao_num_per_kpt,mo_tot_num_per_kpt,num_kpts) ]
   implicit none
   BEGIN_DOC
