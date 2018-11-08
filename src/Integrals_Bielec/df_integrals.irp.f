@@ -188,9 +188,9 @@ subroutine df_mo_from_df_ao(df_mo,n_mo,n_df,n_k_pairs)
           )
 
   do kl=1, num_kpts
-    coef_l = mo_coef_kpts(:,:,kl)
+    coef_l = mo_coef_kpts_trunc(:,:,kl)
     do kj=1, kl
-      coef_j = mo_coef_kpts(:,:,kj)
+      coef_j = mo_coef_kpts_trunc(:,:,kj)
       call idx2_tri_int(kj,kl,kjkl2)
       do mu=1, df_num
         ints_jl = df_ao_integral_array(:,:,mu,kjkl2)
