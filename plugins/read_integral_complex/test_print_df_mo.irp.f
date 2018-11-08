@@ -172,19 +172,19 @@ subroutine fill_m(df_mo,n_mo,n_df,n_k_pairs)
               ints_jl, ao_num_per_kpt, &
               (0.d0,0.d0), ints_tmp, mo_num_per_kpt)
 
-!        call zgemm('N','N',mo_num_per_kpt,mo_num_per_kpt,ao_num_per_kpt, &
-!              (1.d0,0.d0), ints_tmp, mo_num_per_kpt, &
-!              coef_j, ao_num_per_kpt, &
-!              (0.d0,0.d0), df_mo(:,:,mu,kjkl2), mo_num_per_kpt)
         call zgemm('N','N',mo_num_per_kpt,mo_num_per_kpt,ao_num_per_kpt, &
               (1.d0,0.d0), ints_tmp, mo_num_per_kpt, &
               coef_l, ao_num_per_kpt, &
-              (0.d0,0.d0), ints_tmp0, mo_num_per_kpt)
-        do a=1,mo_num_per_kpt
-          do b=1,mo_num_per_kpt
-            df_mo(a,b,mu,kjkl2) = ints_tmp0(a,b)
-          enddo
-        enddo
+              (0.d0,0.d0), df_mo(:,:,mu,kjkl2), mo_num_per_kpt)
+!        call zgemm('N','N',mo_num_per_kpt,mo_num_per_kpt,ao_num_per_kpt, &
+!              (1.d0,0.d0), ints_tmp, mo_num_per_kpt, &
+!              coef_l, ao_num_per_kpt, &
+!              (0.d0,0.d0), ints_tmp0, mo_num_per_kpt)
+!        do a=1,mo_num_per_kpt
+!          do b=1,mo_num_per_kpt
+!            df_mo(a,b,mu,kjkl2) = ints_tmp0(a,b)
+!          enddo
+!        enddo
       enddo
     enddo
   enddo
