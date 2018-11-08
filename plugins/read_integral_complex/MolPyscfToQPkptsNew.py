@@ -147,10 +147,10 @@ def mo_k2gamma(cell, mo_energy, mo_coeff, kpts, kmesh=None):
 
 
 def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8, 
-        print_ao_ints=False, 
-        print_mo_ints=False, 
-        print_df_ints=True, 
-        print_df_mo_ints=True, 
+        print_ao_ints_bi=False, 
+        print_mo_ints_bi=False, 
+        print_ao_ints_df=True, 
+        print_mo_ints_df=False, 
         print_ao_ints_mono=True, 
         print_mo_ints_mono=False):
     '''
@@ -287,12 +287,6 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
     intfile=h5py.File(mf.with_df._cderi,'r')
 
     j3c = intfile.get('j3c')
-    if print_df_ints:
-        with open('df_ao_integral_array','w') as outfile:
-            pass
-    if print_df_mo_ints:
-        with open('df_mo_integral_array','w') as outfile:
-            pass
     naosq = nao*nao
     naotri = (nao*(nao+1))//2
     j3ckeys = list(j3c.keys())
@@ -306,7 +300,9 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
 
     nkpt_pairs = j3arr.shape[0]
 
-    if print_df_ints:
+    if print_ao_ints_df:
+        with open('df_ao_integral_array','w') as outfile:
+            pass
         with open('df_ao_integral_array','a') as outfile:
             for k in range(nkpt_pairs):
                 for iaux in range(naux):
@@ -316,13 +312,15 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
                             if (abs(v) > bielec_int_threshold):
                                 outfile.write('%s %s %s %s %s %s\n' % (i+1,j+1,iaux+1,k+1,v.real,v.imag))
 
-    kpair_list=[]
-    for i in range(Nk):
-        for j in range(Nk):
-            if(i>=j):
-                kpair_list.append((i,j,idx2_tri((i,j))))
-    j3mo = np.array([np.einsum('mij,ik,jl->mkl',j3arr[kij,:,:,:],mo_k[ki,:,:].conj(),mo_k[kj,:,:]) for ki,kj,kij in kpair_list])
-    if print_df_mo_ints:
+    if print_mo_ints_df:
+        kpair_list=[]
+        for i in range(Nk):
+            for j in range(Nk):
+                if(i>=j):
+                    kpair_list.append((i,j,idx2_tri((i,j))))
+        j3mo = np.array([np.einsum('mij,ik,jl->mkl',j3arr[kij,:,:,:],mo_k[ki,:,:].conj(),mo_k[kj,:,:]) for ki,kj,kij in kpair_list])
+        with open('df_mo_integral_array','w') as outfile:
+            pass
         with open('df_mo_integral_array','a') as outfile:
             for k in range(nkpt_pairs):
                 for iaux in range(naux):
@@ -352,66 +350,67 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
 #    
 #    eri_4d_ao = eri_4d_ao.reshape([Nk*nao]*4)
 
-    if print_ao_ints:
-        with open('bielec_ao_complex','w') as outfile: 
-            pass
-    if print_mo_ints:
-        with open('bielec_mo_complex','w') as outfile: 
-            pass
 
-    for d, kd in enumerate(kpts):
-        for c, kc in enumerate(kpts):
-            if c > d: break
-            idx2_cd = idx2_tri((c,d))
-            for b, kb in enumerate(kpts):
-                if b > d: break
-                a = kconserv[b,c,d]
-                if idx2_tri((a,b)) > idx2_cd: continue
-                if ((c==d) and (a>b)): continue
-                ka = kpts[a]
+    if (print_ao_ints_bi or print_mo_ints_bi):
+        if print_ao_ints_bi:
+            with open('bielec_ao_complex','w') as outfile: 
+                pass
+        if print_mo_ints_bi:
+            with open('bielec_mo_complex','w') as outfile: 
+                pass
+        for d, kd in enumerate(kpts):
+            for c, kc in enumerate(kpts):
+                if c > d: break
+                idx2_cd = idx2_tri((c,d))
+                for b, kb in enumerate(kpts):
+                    if b > d: break
+                    a = kconserv[b,c,d]
+                    if idx2_tri((a,b)) > idx2_cd: continue
+                    if ((c==d) and (a>b)): continue
+                    ka = kpts[a]
 
-                if print_ao_ints:
-                    with open('bielec_ao_complex','a') as outfile:
-                        eri_4d_ao_kpt = mf.with_df.get_ao_eri(kpts=[ka,kb,kc,kd],compact=False).reshape((nao,)*4)
-                        eri_4d_ao_kpt *= 1./Nk
-                        for l in range(nao):
-                            ll=l+d*nao
-                            for j in range(nao):
-                                jj=j+c*nao
-                                if jj>ll: break
-                                idx2_jjll = idx2_tri((jj,ll))
-                                for k in range(nao):
-                                    kk=k+b*nao
-                                    if kk>ll: break
-                                    for i in range(nao):
-                                        ii=i+a*nao
-                                        if idx2_tri((ii,kk)) > idx2_jjll: break
-                                        if ((jj==ll) and (ii>kk)): break
-                                        v=eri_4d_ao_kpt[i,k,j,l]
-                                        if (abs(v) > bielec_int_threshold):
-                                            outfile.write('%s %s %s %s %s %s\n' % (ii+1,jj+1,kk+1,ll+1,v.real,v.imag))
-        
-                if print_mo_ints:
-                    with open('bielec_mo_complex','a') as outfile:
-                        eri_4d_mo_kpt = mf.with_df.ao2mo([mo_k[a], mo_k[b], mo_k[c], mo_k[d]],
-                                                          [ka,kb,kc,kd],compact=False).reshape((nmo,)*4)
-                        eri_4d_mo_kpt *= 1./Nk
-                        for l in range(nmo):
-                            ll=l+d*nmo
-                            for j in range(nmo):
-                                jj=j+c*nmo
-                                if jj>ll: break
-                                idx2_jjll = idx2_tri((jj,ll))
-                                for k in range(nmo):
-                                    kk=k+b*nmo
-                                    if kk>ll: break
-                                    for i in range(nmo):
-                                        ii=i+a*nmo
-                                        if idx2_tri((ii,kk)) > idx2_jjll: break
-                                        if ((jj==ll) and (ii>kk)): break
-                                        v=eri_4d_mo_kpt[i,k,j,l]
-                                        if (abs(v) > bielec_int_threshold):
-                                            outfile.write('%s %s %s %s %s %s\n' % (ii+1,jj+1,kk+1,ll+1,v.real,v.imag))
+                    if print_ao_ints_bi:
+                        with open('bielec_ao_complex','a') as outfile:
+                            eri_4d_ao_kpt = mf.with_df.get_ao_eri(kpts=[ka,kb,kc,kd],compact=False).reshape((nao,)*4)
+                            eri_4d_ao_kpt *= 1./Nk
+                            for l in range(nao):
+                                ll=l+d*nao
+                                for j in range(nao):
+                                    jj=j+c*nao
+                                    if jj>ll: break
+                                    idx2_jjll = idx2_tri((jj,ll))
+                                    for k in range(nao):
+                                        kk=k+b*nao
+                                        if kk>ll: break
+                                        for i in range(nao):
+                                            ii=i+a*nao
+                                            if idx2_tri((ii,kk)) > idx2_jjll: break
+                                            if ((jj==ll) and (ii>kk)): break
+                                            v=eri_4d_ao_kpt[i,k,j,l]
+                                            if (abs(v) > bielec_int_threshold):
+                                                outfile.write('%s %s %s %s %s %s\n' % (ii+1,jj+1,kk+1,ll+1,v.real,v.imag))
+            
+                    if print_mo_ints_bi:
+                        with open('bielec_mo_complex','a') as outfile:
+                            eri_4d_mo_kpt = mf.with_df.ao2mo([mo_k[a], mo_k[b], mo_k[c], mo_k[d]],
+                                                              [ka,kb,kc,kd],compact=False).reshape((nmo,)*4)
+                            eri_4d_mo_kpt *= 1./Nk
+                            for l in range(nmo):
+                                ll=l+d*nmo
+                                for j in range(nmo):
+                                    jj=j+c*nmo
+                                    if jj>ll: break
+                                    idx2_jjll = idx2_tri((jj,ll))
+                                    for k in range(nmo):
+                                        kk=k+b*nmo
+                                        if kk>ll: break
+                                        for i in range(nmo):
+                                            ii=i+a*nmo
+                                            if idx2_tri((ii,kk)) > idx2_jjll: break
+                                            if ((jj==ll) and (ii>kk)): break
+                                            v=eri_4d_mo_kpt[i,k,j,l]
+                                            if (abs(v) > bielec_int_threshold):
+                                                outfile.write('%s %s %s %s %s %s\n' % (ii+1,jj+1,kk+1,ll+1,v.real,v.imag))
         
 
     
