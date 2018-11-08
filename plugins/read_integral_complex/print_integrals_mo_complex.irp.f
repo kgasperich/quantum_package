@@ -41,6 +41,23 @@ program print_integrals
   enddo
   close(iunit)
 
+  if (use_df_mo) then
+  iunit = getunitandopen('df_mo','w')
+  do i=1,mo_num_per_kpt
+    do j=1,mo_num_per_kpt
+      do k=1,df_num
+        do l=1,num_kpt_pairs
+          integral = df_mo_integral_array(i,j,k,l)
+          if (cdabs(integral) > mo_integrals_threshold) then
+            write(iunit,*) i,j,k,l, real(integral), imag(integral)
+          endif
+        enddo
+      enddo
+    enddo
+  enddo
+  close(iunit)
+  endif
+
 
   PROVIDE mo_bielec_integrals_in_map
   iunit = getunitandopen('bielec_mo_complex','w')

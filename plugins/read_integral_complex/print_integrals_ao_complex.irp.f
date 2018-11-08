@@ -3,7 +3,7 @@ program print_integrals
   PROVIDE ezfio_filename
   call ezfio_set_integrals_monoelec_disk_access_ao_one_integrals('Read')
   call ezfio_set_utils_disk_access_ao_overlap_integrals('Read')
-  call ezfio_set_integrals_bielec_disk_access_ao_integrals('Read')
+!  call ezfio_set_integrals_bielec_disk_access_ao_integrals('Read')
   call run
 end
 
@@ -49,6 +49,22 @@ subroutine run
   enddo
   close(iunit)
 
+  if (use_df_ao) then
+  iunit = getunitandopen('df_ao','w')
+  do i=1,ao_num_per_kpt
+    do j=1,ao_num_per_kpt
+      do k=1,df_num
+        do l=1,num_kpt_pairs
+          integral = df_ao_integral_array(i,j,k,l)
+          if (cdabs(integral) > ao_integrals_threshold) then
+            write(iunit,*) i,j,k,l, real(integral), imag(integral)
+          endif
+        enddo
+      enddo
+    enddo
+  enddo
+  close(iunit)
+  endif
 
   PROVIDE ao_bielec_integrals_in_map
   iunit = getunitandopen('bielec_ao','w')
