@@ -9,8 +9,9 @@ subroutine run_save_mo_bielec_to_disk
     print*,'MO bielec integrals already stored on disk'
   else
     call ezfio_set_integrals_bielec_disk_access_mo_integrals('Write')
+    TOUCH read_mo_integrals read_ao_integrals write_mo_integrals write_ao_integrals
     PROVIDE mo_bielec_integrals_in_map
-    ! this should already be set by provider
-!    call ezfio_set_integrals_bielec_disk_access_mo_integrals('Read')
+    call ezfio_set_integrals_bielec_disk_access_mo_integrals('Read')
+    TOUCH read_mo_integrals read_ao_integrals write_mo_integrals write_ao_integrals
   endif
 end
