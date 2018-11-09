@@ -168,7 +168,7 @@ BEGIN_PROVIDER [ complex*16, mo_coef_kpts_trunc, (ao_num_per_kpt,mo_num_per_kpt,
         do j=1,ao_num_per_kpt
           jj = j + (k-1)*ao_num_per_kpt
           mo_coef_kpts_trunc(j,i,k) = mo_coef(jj,ii)
-          print*,j,i,k,jj,ii,mo_coef(jj,ii)
+!          print*,j,i,k,jj,ii,mo_coef(jj,ii)
         enddo
       enddo
     enddo
