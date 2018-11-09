@@ -19,7 +19,8 @@ BEGIN_PROVIDER [complex*16, df_mo_integral_array, (mo_num_per_kpt, mo_num_per_kp
   BEGIN_DOC
   !
   END_DOC
-  
+ 
+  TOUCH read_df_mo_integral_array write_df_mo_integral_array
   if (read_df_mo_integral_array) then
     print *, 'reading df_mo_integral_array from disk'
     call read_df_integral_array_file('df_mo_integral_array',df_mo_integral_array,mo_num_per_kpt,df_num,num_kpt_pairs)
@@ -214,7 +215,7 @@ subroutine df_mo_from_df_ao(df_mo,n_mo,n_df,n_k_pairs)
       enddo
     enddo
     call wall_time(wall_2)
-    print*,100.*float(kl*(kl+1))/(2.*n_kpt_pairs), '% in ', &
+    print*,100.*float(kl*(kl+1))/(2.*n_k_pairs), '% in ', &
                 wall_2-wall_1, 's'
   enddo
 

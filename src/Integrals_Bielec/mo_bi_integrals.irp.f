@@ -36,6 +36,7 @@ BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
   ! If True, the map of MO bielectronic integrals is provided
   END_DOC
   
+  TOUCH read_mo_integrals write_mo_integrals read_ao_integrals write_ao_integrals
   mo_bielec_integrals_in_map = .True.
   if (read_mo_integrals) then
     print*,'Reading the MO integrals'
