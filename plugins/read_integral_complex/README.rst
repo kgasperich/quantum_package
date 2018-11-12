@@ -6,18 +6,16 @@ to use code with kpoints:
 
 obtain and build as usual; install `read_integral_complex` and `Full_CI_ZMQ` plugins
 
-`git clone https://github.com/kgasperich/quantum_package.git`
+``git clone https://github.com/kgasperich/quantum_package.git``
 
-`cd quantum_package`
+``cd quantum_package``
 
-`./configure config/ifort.cfg`
+``./configure config/ifort.cfg``
 
-`source quantum_package.rc`
+``source quantum_package.rc``
+``qp_module.py install read_integral_complex Full_CI_ZMQ``
 
-`qp_module.py install read_integral_complex Full_CI_ZMQ`
-
-`ninja`
-
+``ninja``
 build qp
 
 install read_integral_complex and Full_CI_ZMQ modules
