@@ -14,7 +14,7 @@ def memoize(f):
 def idx2_tri(iijj):
     '''
     iijj should be a 2-tuple
-    return triangular compound index for 0-indexed counting
+    return triangular compound index for (0-indexed counting)
     '''
     ij1=min(iijj)
     ij2=max(iijj)
