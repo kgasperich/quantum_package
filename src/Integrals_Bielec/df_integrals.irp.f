@@ -27,10 +27,17 @@ BEGIN_PROVIDER [complex*16, df_mo_integral_array, (mo_num_per_kpt, mo_num_per_kp
   else
     call df_mo_from_df_ao(df_mo_integral_array,mo_num_per_kpt,df_num,num_kpt_pairs)
     if (write_df_mo_integral_array) then
+      print*, 'saving df mo integrals to disk'
       call write_df_integral_array_file('df_mo_integral_array',df_mo_integral_array,mo_num_per_kpt,df_num,num_kpt_pairs)
+      print*, 'setting integrals_bielec/disk_access_df_mo_integral_array = Read'
       call ezfio_set_integrals_bielec_disk_access_df_mo_integral_array("Read")
-      TOUCH read_df_mo_integral_array write_df_mo_integral_array
-      print*, 'df mo integrals saved to disk'
+      disk_access_df_mo_integral_array = 'Read'
+      SOFT_TOUCH disk_access_df_mo_integral_array
+!      print*, 'read/write = ',read_df_mo_integral_array,write_df_mo_integral_array
+!      print*, 'touching read/write_df_mo_integral_array'
+!      TOUCH read_df_mo_integral_array write_df_mo_integral_array
+!      print*, 'read/write = ',read_df_mo_integral_array,write_df_mo_integral_array
+!      print*, 'df mo integrals saved to disk'
     endif
   endif
 
