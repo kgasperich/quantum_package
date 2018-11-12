@@ -83,7 +83,7 @@ program fci_zmq
 
       N_states_p = min(N_det,N_states)
 
-      call print_debug_wf
+!      call print_debug_wf
       print *, ''
       print '(A,I12)',  'Summary at N_det = ', N_det
       print '(A)',      '-----------------------------------'
@@ -145,7 +145,7 @@ program fci_zmq
       call ezfio_set_full_ci_zmq_energy_pt2(CI_energy(1)+pt2(1))
       call dump_fci_iterations_value(N_det,CI_energy,pt2) 
 
-      call print_debug_wf
+!      call print_debug_wf
       n_det_before = N_det
       if (s2_eig) then
         to_select = N_det/2+1
