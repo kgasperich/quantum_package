@@ -7,7 +7,7 @@ BEGIN_PROVIDER [ complex*16, H_matrix_all_dets,(N_det,N_det) ]
  integer :: i,j,k
  complex*16 :: hij
  integer :: degree(N_det),idx(0:N_det)
- call  i_H_j(psi_det(1,1,1),psi_det(1,1,1),N_int,hij)
+ call  i_h_j(psi_det(1,1,1),psi_det(1,1,1),N_int,hij)
  !$OMP PARALLEL DO SCHEDULE(GUIDED) DEFAULT(NONE) PRIVATE(i,j,hij,degree,idx,k) &
  !$OMP SHARED (N_det, psi_det, N_int,H_matrix_all_dets)
  do i =1,N_det

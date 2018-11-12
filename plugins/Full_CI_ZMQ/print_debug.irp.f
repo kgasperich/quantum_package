@@ -58,7 +58,7 @@ subroutine print_debug_wf
   enddo
   write(iunit,*) 'H matrix '
   double precision :: ref_h_matrix,s2
-  ref_h_matrix = H_matrix_all_dets(1,1)
+  ref_h_matrix = h_matrix_all_dets(1,1)
   write(iunit,*)'HF like determinant energy = ',ref_bitmask_energy+nuclear_repulsion
   write(iunit,*)'Ref element of H_matrix    = ',ref_h_matrix+nuclear_repulsion
   write(iunit,*)'Printing the H matrix ...'
