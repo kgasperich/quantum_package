@@ -291,7 +291,15 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
     naotri = (nao*(nao+1))//2
     j3ckeys = list(j3c.keys())
     j3ckeys.sort(key=lambda strkey:int(strkey))
-    j3clist = [j3c.get(i) for i in j3ckeys]
+
+    # in new(?) version of PySCF, there is an extra layer of groups before the datasets
+    # datasets used to be [/j3c/0,   /j3c/1,   /j3c/2,   ...]
+    # datasets now are    [/j3c/0/0, /j3c/1/0, /j3c/2/0, ...]
+    j3clist = [j3c.get(i+'/0') for i in j3ckeys]
+    if j3clist==[None]*len(j3clist):
+    # if using older version, stop before last level
+        j3clist = [j3c.get(i) for i in j3ckeys]
+
     nkinvsq = 1./np.sqrt(Nk)
 
     # dimensions are (kikj,iaux,jao,kao), where kikj is compound index of kpts i and j
