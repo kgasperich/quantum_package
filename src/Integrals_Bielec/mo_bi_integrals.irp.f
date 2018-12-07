@@ -194,7 +194,8 @@ subroutine mo_map_fill_from_df
                   buffer_value(n_integrals) = -tmp_im
                 endif
 
-                if (n_integrals >= (size_buffer-1)) then
+                if (n_integrals >= (size_buffer-1)) 
+                  #omp critical
                   call map_append(mo_integrals_map, buffer_i, buffer_value, n_integrals)
                   n_integrals = 0
                 endif
