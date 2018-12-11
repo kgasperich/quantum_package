@@ -85,6 +85,7 @@ subroutine mo_map_fill_from_df
   integer :: ki,kk,kj,kl
   integer :: ii,ik,ij,il
   integer :: kikk2,kjkl2,jl2,ik2
+  integer :: i_mo,j_mo,i_df
 
   complex*16,allocatable :: ints_ik(:,:,:), ints_jl(:,:,:), ints_ikjl(:,:,:,:)
 
@@ -120,7 +121,7 @@ subroutine mo_map_fill_from_df
       ints_jl = df_mo_integral_array(:,:,:,kjkl2)
 
   !$OMP PARALLEL PRIVATE(i,k,j,l,ki,kk,ii,ik,ij,il,kikk2,jl2,ik2, &
-      !$OMP  ints_ik, ints_ikjl, &
+      !$OMP  ints_ik, ints_ikjl, i_mo, j_mo, i_df, &
       !$OMP  n_integrals, buffer_i, buffer_value, &
       !$OMP  tmp_idx1, tmp_idx2, tmp_re, tmp_im, integral) &
       !$OMP  DEFAULT(NONE)  &
@@ -142,7 +143,14 @@ subroutine mo_map_fill_from_df
         call idx2_tri_int(ki,kk,kikk2)
         if (kikk2 > kjkl2) cycle
         if (ki >= kk) then
-          ints_ik = conjg(reshape(df_mo_integral_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
+          do i_mo=1,mo_num_per_kpt
+            do j_mo=1,mo_num_per_kpt
+              do i_df=1,df_num
+                ints_ik(i_mo,j_mo,i_df) = conjg(df_mo_integral_array(j_mo,i_mo,i_df,kikk2))
+              enddo
+            enddo
+          enddo
+!          ints_ik = conjg(reshape(df_mo_integral_array(:,:,:,kikk2),(/mo_num_per_kpt,mo_num_per_kpt,df_num/),order=(/2,1,3/)))
         else
           ints_ik = df_mo_integral_array(:,:,:,kikk2)
         endif
@@ -194,8 +202,7 @@ subroutine mo_map_fill_from_df
                   buffer_value(n_integrals) = -tmp_im
                 endif
 
-                if (n_integrals >= (size_buffer-1)) 
-                  #omp critical
+                if (n_integrals >= (size_buffer-1)) then 
                   call map_append(mo_integrals_map, buffer_i, buffer_value, n_integrals)
                   n_integrals = 0
                 endif
