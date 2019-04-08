@@ -9,11 +9,11 @@ subroutine run_save_mo_df_to_disk
     print*,'MO df integrals already stored on disk'
   else
     disk_access_df_mo_integral_array = 'Write'
-    SOFT_TOUCH disk_access_df_mo_integral_array
+    TOUCH disk_access_df_mo_integral_array
     if (.True.) then
       PROVIDE df_mo_integral_array
       call ezfio_set_integrals_bielec_disk_access_df_mo_integral_array('Read')
-      SOFT_TOUCH disk_access_df_mo_integral_array
+      TOUCH disk_access_df_mo_integral_array
     endif
 endif
 end

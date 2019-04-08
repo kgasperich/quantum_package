@@ -29,8 +29,10 @@ qp_run read_ao_mono_complex $ezfio
 qp_run read_kconserv $ezfio
 qp_run read_ao_df_complex $ezfio
 qp_run read_mo_coef_complex $ezfio    #start from converged pyscf MOs
-#qp_run save_mo_df_to_disk $ezfio
-qp_run save_mo_bielec_to_disk $ezfio
+
+qp_run save_mo_df_to_disk $ezfio
+#qp_run save_mo_bielec_to_disk $ezfio
+
 #qp_run mo_from_ao_orth $ezfio        #use canonical orthonormalized AOs as initial MO guess
 #qp_run print_H_matrix_restart $ezfio > hmat.out
 

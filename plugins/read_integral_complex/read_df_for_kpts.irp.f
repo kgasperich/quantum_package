@@ -15,12 +15,20 @@ program read_integrals
   TOUCH disk_access_ao_one_integrals disk_access_ao_overlap_integrals
 
   call ezfio_set_utils_disk_access_kconserv("None")
+  disk_access_kconserv='None'
+  TOUCH disk_access_kconserv
   call run_read_kconserv
   call ezfio_set_utils_disk_access_kconserv("Read")
+  disk_access_kconserv='Read'
+  TOUCH disk_access_kconserv
 
   call ezfio_set_integrals_bielec_disk_access_df_ao_integral_array("None")
+  disk_access_df_ao_integral_array='None'
+  TOUCH disk_access_df_ao_integral_array
   call run_read_ao_df_complex
   call ezfio_set_integrals_bielec_disk_access_df_ao_integral_array("Read")
+  disk_access_df_ao_integral_array='Read'
+  TOUCH disk_access_df_ao_integral_array
 
 !  call ezfio_set_integrals_monoelec_disk_access_ao_one_integrals("None")
   call run_read_mo_coef_complex
