@@ -84,12 +84,12 @@ program fcidump_complex
       integral2 = mo_nucl_elec_integral(i,j)
       integral = integral1 + integral2
       if (cdabs(integral) > mo_integrals_threshold) then
-        write(iunit,*) real(integral), imag(integral), i, j, 0, 0
+        write(iunit,'(2(E25.15,X),4(I6,X))') real(integral), imag(integral), i, j, 0, 0
       endif
     enddo
   enddo
 
-  write(iunit,*) 0.d0, 0.d0, 0, 0, 0, 0
+  write(iunit,'(2(E25.15,X),4(I6,X))') 0.d0, 0.d0, 0, 0, 0, 0
   
   close(iunit)
 
