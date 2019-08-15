@@ -89,7 +89,7 @@ program fcidump_complex
     enddo
   enddo
 
-  write(iunit,'(2(E25.15,X),4(I6,X))') 0.d0, 0.d0, 0, 0, 0, 0
+  write(iunit,'(2(E25.15,X),4(I6,X))') nuclear_repulsion, 0.d0, 0, 0, 0, 0
   
   close(iunit)
 
