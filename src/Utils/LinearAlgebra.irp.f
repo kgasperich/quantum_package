@@ -1323,6 +1323,6 @@ subroutine matrix_vector_product_complex(u0,u1,matrix,sze,lda)
  integer                        :: incx,incy
  incx = 1
  incy = 1
- call dsymv('U', sze, 1.d0, matrix, lda, u0, incx, 1.d0, u1, incy)
+ !call dsymv('U', sze, 1.d0, matrix, lda, u0, incx, 1.d0, u1, incy)
  call zhemv('U', sze, (1.d0,0.d0), matrix, lda, u0, incx, (1.d0,0.d0), u1, incy)
 end
