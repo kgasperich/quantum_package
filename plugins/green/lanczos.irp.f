@@ -142,6 +142,12 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
   ! u1 should be normalized
   END_DOC
 
+  print *,'starting lanczos'
+  print *,'h_size = ',h_size
+!  print *,'initial vector:'
+!  do i=1,h_size
+!    print *,u1(i)
+!  enddo
   ! exit if u1 is not normalized
   beta_norm = dznrm2(h_size,u1,1)
   if (dabs(beta_norm-1.d0) .gt. 1.d-6) then
@@ -170,8 +176,9 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
   do i=1,h_size
     vec3(i)=vec2(i)-alpha(1)*vec1(i)
   enddo
-
   do j=2,n_lanc_iter
+  
+    print *,'starting lanczos iteration:',j
     !! vec1 is |u(j-1)>
     !! vec3 is |v(j-1)>
 
