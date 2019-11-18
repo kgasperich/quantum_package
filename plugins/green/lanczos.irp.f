@@ -30,6 +30,7 @@ BEGIN_PROVIDER [ double precision, delta_omega ]
   implicit none
   BEGIN_DOC
   ! step size between frequency points for spectral density calculation
+  ! calculated from min, max, and number of steps
   END_DOC
   delta_omega=(omega_max-omega_min)/n_omega
 END_PROVIDER
@@ -37,7 +38,8 @@ END_PROVIDER
 BEGIN_PROVIDER [ double precision, spectral_lanczos(n_omega) ]
   implicit none
   BEGIN_DOC
-  ! spectral density A(omega) calculated from lanczos
+  ! spectral density A(omega) calculated from lanczos alpha/beta
+  ! calculated for n_omega points between omega_min and omega_max
   END_DOC
 
   integer :: i
@@ -55,6 +57,19 @@ END_PROVIDER
 double precision function spec_lanc(n_lanc_iter,alpha,beta,z)
   include 'constants.include.F'
   implicit none
+  BEGIN_DOC
+  ! input:
+  !   alpha, beta: from tridiagonal form of H (obtain via lanczos)
+  !                beta and alpha same size (beta(1) is not used)
+  !   n_lanc_iter: size of alpha, beta
+  !             z: omega + i*epsilon
+  !                omega is frequency for which spectral density is to be computed
+  !                epsilon is magnitude of infinitesimal imaginary term
+  ! output:
+  !     spec_lanc: spectral density A(omega)
+  !
+  ! uses inv_pi=(1.d0/pi) from constants 
+  END_DOC
   integer, intent(in) :: n_lanc_iter
   double precision, intent(in) :: alpha(n_lanc_iter), beta(n_lanc_iter)
   complex*16, intent(in) :: z
@@ -93,8 +108,8 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
   integer, intent(in) :: n_lanc_iter
   double precision, intent(out) :: alpha(n_lanc_iter), beta(n_lanc_iter)
   complex*16, intent(in) :: u1(N_det)
-  integer :: h_size
-  double precision :: vec1norm2, beta_norm, beta_norm_inv
+  integer :: h_size = N_det
+  double precision :: beta_norm, beta_norm_inv
   complex*16, allocatable :: vec1(:), vec2(:), vec3(:)
   complex*16 :: vec_tmp
   double precision, external :: dznrm2
@@ -102,35 +117,26 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
   integer :: i,j,l
 
   BEGIN_DOC
-  ! lanczos
+  ! lanczos tridiagonalization of H
   ! n_lanc_iter is number of lanczos iterations
-  !
+  ! u1 is initial lanczos vector
+  ! u1 should be normalized
   END_DOC
-  h_size = N_det
+
+  ! exit if u1 is not normalized
+  beta_norm = dznrm2(h_size,u1,1)
+  if (dabs(beta_norm-1.d0) .gt. 1.d-6) then
+    print *, 'Error: initial Lanczos vector is not normalized'
+    stop -1
+  endif
 
   allocate(vec1(h_size),  &
            vec2(h_size),  &
            vec3(h_size))  
-  
+ 
   do i=1,h_size
     vec1(i)=u1(i)
   enddo
-!!  changed so that this is done externally
-!!  ! construct initial lanczos vector
-!!  ! TODO: why is it chosen this way?
-!!  ! TODO: for more flexibility, maybe make u1 intent(in) and define this elsewhere
-!!  vec1norm2=0.d0
-!!  do i=1,h_size
-!!    vec1(i)=1.d0/(dble(i))**0.1d0
-!!  !  vec1norm2=vec1norm2+vec1(i)**2
-!!    vec1norm2=vec1norm2+cdabs(vec1(i))**2
-!!  enddo
-!!
-!!  ! normalize |vec1>, copy to |u1> and keep copy |vec1>
-!!  do i=1,h_size
-!!    vec1(i)=vec1(i)/dsqrt(vec1norm2)
-!!    u1(i)=vec1(i)
-!!  enddo
 
   ! |w1> = H|u1>
   ! |vec2> = H|vec1>
@@ -185,94 +191,22 @@ subroutine compute_hu(vec1,vec2,h_size)
   integer, intent(in)     :: h_size
   complex*16, intent(in)  :: vec1(h_size)
   complex*16, intent(out) :: vec2(h_size)
+  complex*16 :: vec1_tmp(h_size)
+  integer :: i
   BEGIN_DOC
+  ! |vec2> = H|vec1>
+  !
   ! TODO: implement
   ! maybe reuse parts of H_S2_u_0_nstates_{openmp,zmq}?
   END_DOC
 
-end
+  vec1_tmp(1:h_size) = vec1(1:h_size)
+  call h_u_0_openmp(vec2,vec1_tmp,h_size)
 
-
-
-subroutine h_s2_u_0(e_0,u_0,n,keys_tmp,Nint,N_st,sze)
-  use bitmasks
-  implicit none
-  BEGIN_DOC
-  ! Computes e_0 = <u_0|H|u_0>/<u_0|u_0>
-  !
-  ! n : number of determinants
-  !
-  END_DOC
-  integer, intent(in)            :: n,Nint, N_st, sze
-  double precision, intent(out)  :: e_0(N_st)
-  complex*16, intent(inout) :: u_0(sze,N_st)
-  integer(bit_kind),intent(in)   :: keys_tmp(Nint,2,n)
-  
-  complex*16, allocatable  :: v_0(:,:), s_0(:,:), u_1(:,:)
-  double precision               :: u_dot_u_complex,diag_H_mat_elem
-  complex*16               :: u_dot_v_complex
-  integer                        :: i,j
-
-  if ((sze > 100000).and.distributed_davidson) then
-    allocate (v_0(sze,N_states_diag),s_0(sze,N_states_diag), u_1(sze,N_states_diag))
-    u_1(1:sze,1:N_states) = u_0(1:sze,1:N_states) 
-    u_1(1:sze,N_states+1:N_states_diag) = 0.d0
-    call H_S2_u_0_nstates_zmq(v_0,s_0,u_1,N_states_diag,sze)
-    deallocate(u_1)
-  else
-    allocate (v_0(sze,N_st),s_0(sze,N_st))
-    call H_S2_u_0_nstates_openmp(v_0,s_0,u_0,N_st,sze)
-  endif
-  double precision :: norm
-  do i=1,N_st
-    norm = u_dot_u_complex(u_0(1,i),n)
-    if (norm /= 0.d0) then
-      e_0(i) = real(u_dot_v_complex(v_0(1,i),u_0(1,i),n))
-    else
-      e_0(i) = 0.d0
+  do i=1,h_size
+    if (cdabs(vec1_tmp(i) - vec1(i)).gt.1.d-6) then
+      print*,'ERROR: vec1 was changed by h_u_0_openmp'
     endif
   enddo
-  deallocate (s_0, v_0)
-end
-
-subroutine u_0_H_u_0(e_0,u_0,n,keys_tmp,Nint,N_st,sze)
-  use bitmasks
-  implicit none
-  BEGIN_DOC
-  ! Computes e_0 = <u_0|H|u_0>/<u_0|u_0>
-  !
-  ! n : number of determinants
-  !
-  END_DOC
-  integer, intent(in)            :: n,Nint, N_st, sze
-  double precision, intent(out)  :: e_0(N_st)
-  complex*16, intent(inout) :: u_0(sze,N_st)
-  integer(bit_kind),intent(in)   :: keys_tmp(Nint,2,n)
-  
-  complex*16, allocatable  :: v_0(:,:), s_0(:,:), u_1(:,:)
-  double precision               :: u_dot_u_complex,diag_H_mat_elem
-  complex*16               :: u_dot_v_complex
-  integer                        :: i,j
-
-  if ((sze > 100000).and.distributed_davidson) then
-    allocate (v_0(sze,N_states_diag),s_0(sze,N_states_diag), u_1(sze,N_states_diag))
-    u_1(1:sze,1:N_states) = u_0(1:sze,1:N_states) 
-    u_1(1:sze,N_states+1:N_states_diag) = 0.d0
-    call H_S2_u_0_nstates_zmq(v_0,s_0,u_1,N_states_diag,sze)
-    deallocate(u_1)
-  else
-    allocate (v_0(sze,N_st),s_0(sze,N_st))
-    call H_S2_u_0_nstates_openmp(v_0,s_0,u_0,N_st,sze)
-  endif
-  double precision :: norm
-  do i=1,N_st
-    norm = u_dot_u_complex(u_0(1,i),n)
-    if (norm /= 0.d0) then
-      e_0(i) = real(u_dot_v_complex(v_0(1,i),u_0(1,i),n))
-    else
-      e_0(i) = 0.d0
-    endif
-  enddo
-  deallocate (s_0, v_0)
 end
 
