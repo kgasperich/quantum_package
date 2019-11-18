@@ -177,7 +177,7 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
     vec3(i)=vec2(i)-alpha(1)*vec1(i)
   enddo
   do j=2,n_lanc_iter
-  
+    call write_time(6)
     print *,'starting lanczos iteration:',j
     !! vec1 is |u(j-1)>
     !! vec3 is |v(j-1)>
