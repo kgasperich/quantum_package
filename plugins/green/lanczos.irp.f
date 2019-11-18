@@ -35,7 +35,24 @@ BEGIN_PROVIDER [ double precision, delta_omega ]
   delta_omega=(omega_max-omega_min)/n_omega
 END_PROVIDER
 
-BEGIN_PROVIDER [ double precision, spectral_lanczos(n_omega) ]
+BEGIN_PROVIDER [ double precision, omega_list, (n_omega) ]
+  implicit none
+  BEGIN_DOC
+  ! test
+  ! 
+  END_DOC
+
+  integer :: i
+  double precision :: omega_i
+  PROVIDE delta_omega
+  do i=1,n_omega
+    omega_list(i) = omega_min + (i-1)*delta_omega
+  enddo
+
+END_PROVIDER
+
+
+BEGIN_PROVIDER [ double precision, spectral_lanczos, (n_omega) ]
   implicit none
   BEGIN_DOC
   ! spectral density A(omega) calculated from lanczos alpha/beta
@@ -45,9 +62,10 @@ BEGIN_PROVIDER [ double precision, spectral_lanczos(n_omega) ]
   integer :: i
   double precision :: omega_i
   complex*16 :: z_i
-  
+  double precision :: spec_lanc
+  PROVIDE delta_omega alpha_lanczos beta_lanczos omega_list
   do i=1,n_omega
-    omega_i = omega_min + (i-1)*delta_omega
+    omega_i = omega_list(i)
     z_i = dcmplx(omega_i,gf_epsilon)
     spectral_lanczos(i) = spec_lanc(n_lanczos_iter,alpha_lanczos,beta_lanczos,z_i)
   enddo
@@ -76,7 +94,7 @@ double precision function spec_lanc(n_lanc_iter,alpha,beta,z)
 
   complex*16 bigAj2,bigAj1,bigAj0
   complex*16 bigBj2,bigBj1,bigBj0
-  
+  integer :: j
   ! init for j=1
   ! bigAj2 is A(j-2)
   ! bigAj1 is A(j-1)
@@ -108,14 +126,15 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
   integer, intent(in) :: n_lanc_iter
   double precision, intent(out) :: alpha(n_lanc_iter), beta(n_lanc_iter)
   complex*16, intent(in) :: u1(N_det)
-  integer :: h_size = N_det
+  integer :: h_size
   double precision :: beta_norm, beta_norm_inv
   complex*16, allocatable :: vec1(:), vec2(:), vec3(:)
   complex*16 :: vec_tmp
   double precision, external :: dznrm2
+  complex*16, external :: u_dot_v_complex
 
   integer :: i,j,l
-
+  h_size=N_det
   BEGIN_DOC
   ! lanczos tridiagonalization of H
   ! n_lanc_iter is number of lanczos iterations
@@ -177,7 +196,7 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
     do l=1,h_size
       vec_tmp=vec2(l)-alpha(j)*vec3(l)-beta(j)*vec1(l)
       vec1(l)=vec3(l)
-      vec3(l)=vec_temp
+      vec3(l)=vec_tmp
     enddo
     !! vec1 is |u(j)>
     !! vec3 is |v(j)>
