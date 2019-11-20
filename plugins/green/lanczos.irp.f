@@ -22,7 +22,9 @@ END_PROVIDER
   END_DOC
 
   PROVIDE u1_lanczos
-  call lanczos_h(n_lanczos_iter, alpha_lanczos, beta_lanczos, u1_lanczos) 
+  call lanczos_h(n_lanczos_iter, alpha_lanczos, beta_lanczos, u1_lanczos)
+  call ezfio_set_green_alpha_lanczos(alpha_lanczos)
+  call ezfio_set_green_beta_lanczos(beta_lanczos)
 
 END_PROVIDER
 
