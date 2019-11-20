@@ -128,7 +128,7 @@ emsl = Info(
     default_path=join(QP_ROOT_INSTALL, "emsl"))
 
 ezfio = Info(
-    url='{head}/LCPQ/EZFIO/{tail}'.format(**path_github),
+    url='{head}/kgasperich/EZFIO/{tail}'.format(**path_github),
     description=' EZFIO',
     default_path=join(QP_ROOT_INSTALL, "EZFIO"))
 
