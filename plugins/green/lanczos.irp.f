@@ -35,8 +35,14 @@ end
   END_DOC
   complex*16, allocatable :: work(:)
   double precision :: alpha_tmp,beta_tmp
+  double precision, allocatable :: alpha_tmp_vec(:), beta_tmp_vec(:)
+  integer :: i
+  integer :: n_lanc_new_tmp, n_lanc_old_tmp
+  call ezfio_get_green_n_lanczos_iter(n_lanc_new_tmp)
+  call ezfio_get_green_n_lanczos_complete(n_lanc_old_tmp)
  
   if ((n_lanczos_complete).gt.0) then
+    allocate(alpha_tmp_vec(n_lanczos_complete),beta_tmp_vec(n_lanczos_complete))
     logical :: has_un_lanczos, has_vn_lanczos
     call ezfio_has_green_un_lanczos(has_un_lanczos)
     call ezfio_has_green_vn_lanczos(has_vn_lanczos)
@@ -51,12 +57,19 @@ end
     call ezfio_has_green_alpha_lanczos(has_alpha_lanczos)
     call ezfio_has_green_beta_lanczos(has_beta_lanczos)
     if (has_alpha_lanczos.and.has_beta_lanczos) then
-      call ezfio_get_green_alpha_lanczos(alpha_lanczos)
-      call ezfio_get_green_beta_lanczos(beta_lanczos)
+      call ezfio_set_green_n_lanczos_iter(n_lanc_old_tmp)
+      call ezfio_get_green_alpha_lanczos(alpha_tmp_vec)
+      call ezfio_get_green_beta_lanczos(beta_tmp_vec)
+      call ezfio_set_green_n_lanczos_iter(n_lanc_new_tmp)
+      do i=1,n_lanczos_complete
+        alpha_lanczos(i)=alpha_tmp_vec(i)
+        beta_lanczos(i)=beta_tmp_vec(i)
+      enddo
     else
       print*,'problem reading lanczos alpha, beta for restart'
       stop
     endif
+    deallocate(alpha_tmp_vec,beta_tmp_vec)
   else
     call write_time(6)
     print*,'no saved lanczos vectors. starting lanczos'
@@ -69,7 +82,6 @@ end
     deallocate(work)
   endif
 
-  integer :: i
   allocate(work(N_det))
   do i=n_lanczos_complete+1,n_lanczos_iter
     call write_time(6)
