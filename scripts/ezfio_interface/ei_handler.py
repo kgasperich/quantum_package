@@ -138,6 +138,8 @@ def get_type_dict():
     fancy_type['character*(64)'] = Type(None, "string", "character*(64)")
     fancy_type['character*(256)'] = Type(None, "string", "character*(256)")
 
+    fancy_type['complex*16'] = Type(None,None,"complex*16")
+
     # ~#~#~#~#~#~#~#~ #
     # q p _ t y p e s #
     # ~#~#~#~#~#~#~#~ #
