@@ -47,7 +47,18 @@ end
       print*,'problem reading lanczos vectors for restart'
       stop
     endif
+    logical :: has_alpha_lanczos, has_beta_lanczos
+    call ezfio_has_green_alpha_lanczos(has_alpha_lanczos)
+    call ezfio_has_green_beta_lanczos(has_beta_lanczos)
+    if (has_alpha_lanczos.and.has_beta_lanczos) then
+      call ezfio_get_green_alpha_lanczos(alpha_lanczos)
+      call ezfio_get_green_beta_lanczos(beta_lanczos)
+    else
+      print*,'problem reading lanczos alpha, beta for restart'
+      stop
+    endif
   else
+    call write_time(6)
     print*,'no saved lanczos vectors. starting lanczos'
     call init_u1_lanczos(un_lanczos,N_det)
     allocate(work(N_det))
@@ -61,6 +72,8 @@ end
   integer :: i
   allocate(work(N_det))
   do i=n_lanczos_complete+1,n_lanczos_iter
+    call write_time(6)
+    print*,'starting lanczos iteration',i
     call lanczos_h_step(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
     alpha_lanczos(i)=alpha_tmp
     beta_lanczos(i)=beta_tmp
@@ -235,8 +248,6 @@ subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
   ! u1 should be normalized
   END_DOC
 
-  print *,'starting lanczos'
-  print *,'sze = ',sze
   ! exit if u1 is not normalized
 !  beta_norm = dznrm2(h_size,u1,1)
 !  if (dabs(beta_norm-1.d0) .gt. 1.d-6) then
