@@ -14,17 +14,65 @@ BEGIN_PROVIDER [ complex*16, u1_lanczos, (N_det) ]
 
 END_PROVIDER
 
+subroutine init_u1_lanczos(u_in,sze)
+  implicit none
+  integer, intent(in) :: sze
+  complex*16, intent(inout) :: u_in(sze)
+  integer :: i
+  do i=1,sze
+    u_in(i)=1.d0/(dble(i))**0.1d0
+  enddo
+  call normalize_complex(u_in,sze)
+end
+
  BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_lanczos_iter) ]
 &BEGIN_PROVIDER [ double precision, beta_lanczos, (n_lanczos_iter) ]
+&BEGIN_PROVIDER [ complex*16, un_lanczos, (N_det) ]
+&BEGIN_PROVIDER [ complex*16, vn_lanczos, (N_det) ]
   implicit none
   BEGIN_DOC
   ! provide alpha and beta for tridiagonal form of H
   END_DOC
+  complex*16, allocatable :: work(:)
+  double precision :: alpha_tmp,beta_tmp
+ 
+  if ((n_lanczos_complete).gt.0) then
+    logical :: has_un_lanczos, has_vn_lanczos
+    call ezfio_has_green_un_lanczos(has_un_lanczos)
+    call ezfio_has_green_vn_lanczos(has_vn_lanczos)
+    if (has_un_lanczos.and.has_vn_lanczos) then
+      call ezfio_get_green_un_lanczos(un_lanczos)
+      call ezfio_get_green_vn_lanczos(vn_lanczos)
+    else
+      print*,'problem reading lanczos vectors for restart'
+      stop
+    endif
+  else
+    print*,'no saved lanczos vectors. starting lanczos'
+    call init_u1_lanczos(un_lanczos,N_det)
+    allocate(work(N_det))
+    call lanczos_h_init(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
+    alpha_lanczos(1)=alpha_tmp
+    beta_lanczos(1)=beta_tmp
+    n_lanczos_complete=1
+    deallocate(work)
+  endif
 
-  PROVIDE u1_lanczos
-  call lanczos_h(n_lanczos_iter, alpha_lanczos, beta_lanczos, u1_lanczos)
+  integer :: i
+  allocate(work(N_det))
+  do i=n_lanczos_complete+1,n_lanczos_iter
+    call lanczos_h_step(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
+    alpha_lanczos(i)=alpha_tmp
+    beta_lanczos(i)=beta_tmp
+    n_lanczos_complete=n_lanczos_complete+1
+  enddo
+  deallocate(work)
+
   call ezfio_set_green_alpha_lanczos(alpha_lanczos)
   call ezfio_set_green_beta_lanczos(beta_lanczos)
+  call ezfio_set_green_un_lanczos(un_lanczos)
+  call ezfio_set_green_vn_lanczos(vn_lanczos)
+  call ezfio_set_green_n_lanczos_complete(n_lanczos_complete)
 
 END_PROVIDER
 
@@ -121,6 +169,106 @@ double precision function spec_lanc(n_lanc_iter,alpha,beta,z)
   enddo
   spec_lanc=-imag(bigAj0/bigBj0)*inv_pi
 end
+
+
+subroutine lanczos_h_init(uu,vv,work,sze,alpha_i,beta_i)
+  implicit none
+  integer, intent(in) :: sze
+  complex*16, intent(inout) :: uu(sze)
+  complex*16, intent(out)   :: vv(sze)
+  complex*16 :: work(sze)
+  double precision, intent(out) :: alpha_i, beta_i
+
+  double precision, external :: dznrm2
+  complex*16, external :: u_dot_v_complex
+  integer :: i
+
+  BEGIN_DOC
+  ! lanczos tridiagonalization of H
+  ! n_lanc_iter is number of lanczos iterations
+  ! u1 is initial lanczos vector
+  ! u1 should be normalized
+  END_DOC
+
+  print *,'starting lanczos'
+  print *,'sze = ',sze
+  ! exit if u1 is not normalized
+!  beta_norm = dznrm2(h_size,u1,1)
+!  if (dabs(beta_norm-1.d0) .gt. 1.d-6) then
+!    print *, 'Error: initial Lanczos vector is not normalized'
+!    stop -1
+!  endif
+
+  ! |uu> is |u(1)>
+
+  ! |w(1)> = H|u(1)>
+  ! |work> is now |w(1)>
+  call compute_hu(uu,work,sze)
+
+  ! alpha(n+1) = <u(n+1)|w(n+1)>
+  alpha_i=real(u_dot_v_complex(uu,work,sze))
+
+  do i=1,sze
+    vv(i)=work(i)-alpha_i*uu(i)
+  enddo
+  beta_i=0.d0
+  ! |vv> is |v(1)>
+  ! |uu> is |u(1)>
+end
+
+subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
+  implicit none
+  integer, intent(in) :: sze
+  complex*16, intent(inout) :: uu(sze),vv(sze)
+  complex*16 :: work(sze)
+  double precision, intent(out) :: alpha_i, beta_i
+
+  double precision, external :: dznrm2
+  complex*16, external :: u_dot_v_complex
+  integer :: i
+  complex*16 :: tmp_c16
+
+  BEGIN_DOC
+  ! lanczos tridiagonalization of H
+  ! n_lanc_iter is number of lanczos iterations
+  ! u1 is initial lanczos vector
+  ! u1 should be normalized
+  END_DOC
+
+  print *,'starting lanczos'
+  print *,'sze = ',sze
+  ! exit if u1 is not normalized
+!  beta_norm = dznrm2(h_size,u1,1)
+!  if (dabs(beta_norm-1.d0) .gt. 1.d-6) then
+!    print *, 'Error: initial Lanczos vector is not normalized'
+!    stop -1
+!  endif
+
+  ! |vv> is |v(n)>
+  ! |uu> is |u(n)>
+
+  ! compute beta(n+1)
+  beta_i=dznrm2(sze,vv,1)
+
+  ! |vv> is now |u(n+1)>
+  call zdscal(sze,(1.d0/beta_i),vv,1)
+
+  ! |w(n+1)> = H|u(n+1)>
+  ! |work> is now |w(n+1)>
+  call compute_hu(vv,work,sze)
+
+  ! alpha(n+1) = <u(n+1)|w(n+1)>
+  alpha_i=real(u_dot_v_complex(vv,work,sze))
+
+  do i=1,sze
+    tmp_c16=work(i)-alpha_i*vv(i)-beta_i*uu(i)
+    uu(i)=vv(i)
+    vv(i)=tmp_c16
+  enddo
+  ! |vv> is |v(n+1)>
+  ! |uu> is |u(n+1)>
+end
+
 
 
 subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
@@ -238,3 +386,54 @@ subroutine compute_hu(vec1,vec2,h_size)
   enddo
 end
 
+subroutine diag_lanczos_vals_vecs(alpha, beta, nlanc, vals, vecs, sze)
+  implicit none
+  BEGIN_DOC
+  ! diagonalization of tridiagonal form of H
+  ! this returns eigenvalues and eigenvectors in vals,vecs
+  END_DOC
+  integer, intent(in) :: nlanc,sze
+  double precision, intent(in) :: alpha(sze), beta(sze)
+  double precision, intent(out) :: vals(sze), vecs(sze,sze)
+  double precision :: work(2*nlanc-2), beta_tmp(nlanc-1)
+  integer :: i,info
+  
+  vals(1)=alpha(1)
+  do i=2,nlanc
+    vals(i)=alpha(i)
+    beta_tmp(i-1)=beta(i)
+  enddo
+
+  call dstev('V', nlanc, vals, beta_tmp, vecs, sze, work, info)
+  if (info.gt.0) then
+    print *,'WARNING: diagonalization of tridiagonal form of H did not converge'
+  else if (info.lt.0) then
+    print *,'WARNING: argument to dstev had illegal value'
+  endif
+end
+
+subroutine diag_lanczos_vals(alpha, beta, nlanc, vals, sze)
+  implicit none
+  BEGIN_DOC
+  ! diagonalization of tridiagonal form of H
+  ! this returns eigenvalues in vals
+  END_DOC
+  integer, intent(in) :: nlanc,sze
+  double precision, intent(in) :: alpha(sze), beta(sze)
+  double precision, intent(out) :: vals(sze)
+  double precision :: work(1), beta_tmp(nlanc-1), vecs(1)
+  integer :: i,info
+  
+  vals(1)=alpha(1)
+  do i=2,nlanc
+    vals(i)=alpha(i)
+    beta_tmp(i-1)=beta(i)
+  enddo
+
+  call dstev('N', nlanc, vals, beta_tmp, vecs, 1, work, info)
+  if (info.gt.0) then
+    print *,'WARNING: diagonalization of tridiagonal form of H did not converge'
+  else if (info.lt.0) then
+    print *,'WARNING: argument to dstev had illegal value'
+  endif
+end
