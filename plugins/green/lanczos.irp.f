@@ -21,6 +21,7 @@ subroutine init_u1_lanczos(u_in,sze)
   integer :: i
   do i=1,sze
     u_in(i)=1.d0/(dble(i))**0.1d0
+!    u_in(i)=1.d0
   enddo
   call normalize_complex(u_in,sze)
 end
@@ -29,10 +30,12 @@ end
 &BEGIN_PROVIDER [ double precision, beta_lanczos, (n_lanczos_iter) ]
 &BEGIN_PROVIDER [ complex*16, un_lanczos, (N_det) ]
 &BEGIN_PROVIDER [ complex*16, vn_lanczos, (N_det) ]
+&BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_lanczos_iter) ]
   implicit none
   BEGIN_DOC
   ! provide alpha and beta for tridiagonal form of H
   END_DOC
+  PROVIDE lanczos_debug_print
   complex*16, allocatable :: work(:)
   double precision :: alpha_tmp,beta_tmp
   double precision, allocatable :: alpha_tmp_vec(:), beta_tmp_vec(:)
@@ -98,6 +101,9 @@ end
   call ezfio_set_green_un_lanczos(un_lanczos)
   call ezfio_set_green_vn_lanczos(vn_lanczos)
   call ezfio_set_green_n_lanczos_complete(n_lanczos_complete)
+
+  call diag_lanczos_vals(alpha_lanczos, beta_lanczos, n_lanczos_complete, lanczos_eigvals, n_lanczos_iter)
+  call ezfio_set_green_lanczos_eigvals(lanczos_eigvals)
 
 END_PROVIDER
 
@@ -228,7 +234,7 @@ subroutine lanczos_h_init(uu,vv,work,sze,alpha_i,beta_i)
 
   ! |w(1)> = H|u(1)>
   ! |work> is now |w(1)>
-  call compute_hu(uu,work,sze)
+  call compute_hu2(uu,work,sze)
 
   ! alpha(n+1) = <u(n+1)|w(n+1)>
   alpha_i=real(u_dot_v_complex(uu,work,sze))
@@ -245,14 +251,14 @@ subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
   implicit none
   integer, intent(in) :: sze
   complex*16, intent(inout) :: uu(sze),vv(sze)
-  complex*16 :: work(sze)
+  complex*16, intent(out) :: work(sze)
   double precision, intent(out) :: alpha_i, beta_i
 
   double precision, external :: dznrm2
   complex*16, external :: u_dot_v_complex
   integer :: i
   complex*16 :: tmp_c16
-
+  integer :: ndebug
   BEGIN_DOC
   ! lanczos tridiagonalization of H
   ! n_lanc_iter is number of lanczos iterations
@@ -267,18 +273,31 @@ subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
 !    stop -1
 !  endif
 
+  ndebug=10
   ! |vv> is |v(n)>
   ! |uu> is |u(n)>
 
   ! compute beta(n+1)
   beta_i=dznrm2(sze,vv,1)
-
+  if (lanczos_debug_print) then
+    print*,'uu,vv in'
+    do i=1,ndebug
+      print*,uu(i),vv(i)
+    enddo
+  endif
   ! |vv> is now |u(n+1)>
   call zdscal(sze,(1.d0/beta_i),vv,1)
 
   ! |w(n+1)> = H|u(n+1)>
   ! |work> is now |w(n+1)>
-  call compute_hu(vv,work,sze)
+  call compute_hu2(vv,work,sze)
+
+  if (lanczos_debug_print) then
+    print*,'vv,work'
+    do i=1,ndebug
+      print*,vv(i),work(i)
+    enddo
+  endif
 
   ! alpha(n+1) = <u(n+1)|w(n+1)>
   alpha_i=real(u_dot_v_complex(vv,work,sze))
@@ -408,6 +427,36 @@ subroutine compute_hu(vec1,vec2,h_size)
     endif
   enddo
 end
+
+subroutine compute_hu2(vec1,vec2,h_size)
+  implicit none
+  integer, intent(in)     :: h_size
+  complex*16, intent(in)  :: vec1(h_size)
+  complex*16, intent(out) :: vec2(h_size)
+  complex*16, allocatable :: u_tmp(:,:), s_tmp(:,:),v_tmp(:,:)
+  integer :: i
+  BEGIN_DOC
+  ! |vec2> = H|vec1>
+  !
+  ! TODO: implement
+  ! maybe reuse parts of H_S2_u_0_nstates_{openmp,zmq}?
+  END_DOC
+
+  allocate(u_tmp(1,h_size),s_tmp(1,h_size),v_tmp(1,h_size))
+
+  u_tmp(1,1:h_size) = vec1(1:h_size)
+  call h_s2_u_0_nstates_openmp(v_tmp,s_tmp,u_tmp,1,h_size)
+
+  do i=1,h_size
+    if (cdabs(u_tmp(1,i) - vec1(i)).gt.1.d-6) then
+      print*,'ERROR: vec1 was changed by h_u_0_openmp'
+    endif
+  enddo
+  vec2(1:h_size)=v_tmp(1,1:h_size)
+  deallocate(u_tmp,v_tmp,s_tmp)
+end
+
+
 
 subroutine diag_lanczos_vals_vecs(alpha, beta, nlanc, vals, vecs, sze)
   implicit none
