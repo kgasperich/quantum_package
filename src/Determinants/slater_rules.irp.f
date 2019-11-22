@@ -562,7 +562,7 @@ subroutine i_H_j(key_i,key_j,Nint,hij)
         p = exc(1,2,2)
         spin = 2
       endif
-      call get_mono_excitation_from_fock(key_i,key_j,p,m,spin,phase,hij)
+      call get_mono_excitation_from_fock(key_i,key_j,m,p,spin,phase,hij)
       
     case (0)
       hij = dcmplx(diag_h_mat_elem(key_i,Nint),0.d0)
