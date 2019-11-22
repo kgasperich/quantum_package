@@ -35,7 +35,7 @@ end
   BEGIN_DOC
   ! provide alpha and beta for tridiagonal form of H
   END_DOC
-  PROVIDE lanczos_debug_print
+  PROVIDE lanczos_debug_print n_lanczos_debug
   complex*16, allocatable :: work(:)
   double precision :: alpha_tmp,beta_tmp
   double precision, allocatable :: alpha_tmp_vec(:), beta_tmp_vec(:)
@@ -52,6 +52,12 @@ end
     if (has_un_lanczos.and.has_vn_lanczos) then
       call ezfio_get_green_un_lanczos(un_lanczos)
       call ezfio_get_green_vn_lanczos(vn_lanczos)
+      if (lanczos_debug_print) then
+        print*,'uu,vv read from disk'
+        do i=1,n_lanczos_debug
+          write(6,'(4(E25.15))')un_lanczos(i),vn_lanczos(i)
+        enddo
+      endif
     else
       print*,'problem reading lanczos vectors for restart'
       stop
@@ -234,7 +240,7 @@ subroutine lanczos_h_init(uu,vv,work,sze,alpha_i,beta_i)
 
   ! |w(1)> = H|u(1)>
   ! |work> is now |w(1)>
-  call compute_hu2(uu,work,sze)
+  call compute_hu(uu,work,sze)
 
   ! alpha(n+1) = <u(n+1)|w(n+1)>
   alpha_i=real(u_dot_v_complex(uu,work,sze))
@@ -243,6 +249,12 @@ subroutine lanczos_h_init(uu,vv,work,sze,alpha_i,beta_i)
     vv(i)=work(i)-alpha_i*uu(i)
   enddo
   beta_i=0.d0
+  if (lanczos_debug_print) then
+    print*,'init uu,vv,work'
+    do i=1,n_lanczos_debug
+      write(6,'(6(E25.15))')uu(i),vv(i),work(i)
+    enddo
+  endif
   ! |vv> is |v(1)>
   ! |uu> is |u(1)>
 end
@@ -258,7 +270,6 @@ subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
   complex*16, external :: u_dot_v_complex
   integer :: i
   complex*16 :: tmp_c16
-  integer :: ndebug
   BEGIN_DOC
   ! lanczos tridiagonalization of H
   ! n_lanc_iter is number of lanczos iterations
@@ -273,7 +284,6 @@ subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
 !    stop -1
 !  endif
 
-  ndebug=10
   ! |vv> is |v(n)>
   ! |uu> is |u(n)>
 
@@ -281,8 +291,8 @@ subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
   beta_i=dznrm2(sze,vv,1)
   if (lanczos_debug_print) then
     print*,'uu,vv in'
-    do i=1,ndebug
-      print*,uu(i),vv(i)
+    do i=1,n_lanczos_debug
+      write(6,'(4(E25.15))')uu(i),vv(i)
     enddo
   endif
   ! |vv> is now |u(n+1)>
@@ -290,12 +300,12 @@ subroutine lanczos_h_step(uu,vv,work,sze,alpha_i,beta_i)
 
   ! |w(n+1)> = H|u(n+1)>
   ! |work> is now |w(n+1)>
-  call compute_hu2(vv,work,sze)
+  call compute_hu(vv,work,sze)
 
   if (lanczos_debug_print) then
     print*,'vv,work'
-    do i=1,ndebug
-      print*,vv(i),work(i)
+    do i=1,n_lanczos_debug
+      write(6,'(4(E25.15))')vv(i),work(i)
     enddo
   endif
 
