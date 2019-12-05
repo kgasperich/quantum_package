@@ -1,24 +1,176 @@
 ! modified from H_S2_u_0_nstates_openmp in Davidson/u0Hu0.irp.f
 
-!todo: modify this for hp
-subroutine i_h_j_mono_spin_hp(key_i,key_j,Nint,spin,hij)
+subroutine i_h_j_double_spin_hp(key_i,key_j,Nint,hij)
+!! todo: modify for hp
+  use bitmasks
+  implicit none
+  BEGIN_DOC
+  ! Returns <i|H|j> where i and j are determinants differing by a same-spin double excitation
+  END_DOC
+  integer, intent(in)            :: Nint
+  integer(bit_kind), intent(in)  :: key_i(Nint), key_j(Nint)
+  complex*16, intent(out)  :: hij
+  
+  integer                        :: exc(0:2,2)
+  double precision               :: phase
+  complex*16, external     :: get_mo_bielec_integral
+
+  PROVIDE big_array_exchange_integrals mo_bielec_integrals_in_map
+
+  call get_double_excitation_spin(key_i,key_j,exc,phase,Nint)
+  hij = phase*(get_mo_bielec_integral(                               &
+      exc(1,1),                                                      &
+      exc(2,1),                                                      &
+      exc(1,2),                                                      &
+      exc(2,2), mo_integrals_map) -                                  &
+      get_mo_bielec_integral(                                        &
+      exc(1,1),                                                      &
+      exc(2,1),                                                      &
+      exc(2,2),                                                      &
+      exc(1,2), mo_integrals_map) )
+end
+
+subroutine i_h_j_mono_spin_hp(key_i,key_j,Nint,spin,hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
   use bitmasks
   implicit none
   BEGIN_DOC
   ! Returns <i|H|j> where i and j are determinants differing by a single excitation
   END_DOC
-  integer, intent(in)            :: Nint, spin
+  integer, intent(in)            :: Nint, spin, N_hp
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
-  complex*16, intent(out)  :: hij
+  complex*16, intent(out)  :: hij_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  logical, intent(in) :: allowed_hp(N_hp)
+  !double precision :: phase_hp(N_hp)
   
   integer                        :: exc(0:2,2)
   double precision               :: phase
 
   PROVIDE big_array_exchange_integrals mo_bielec_integrals_in_map
-  
+ 
+  ! get_mono_excitation_spin okay for hp
   call get_mono_excitation_spin(key_i(1,spin),key_j(1,spin),exc,phase,Nint)
-  call get_mono_excitation_from_fock(key_i,key_j,exc(1,1),exc(1,2),spin,phase,hij)
+
+  call get_mono_excitation_from_fock_hp(key_i,key_j,exc(1,1),exc(1,2),spin,phase,N_hp,hij_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
 end
+
+subroutine get_mono_excitation_from_fock_hp(det_1,det_2,h,p,spin,phase,N_hp,hij_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
+  use bitmasks
+  implicit none
+  integer,intent(in) :: h,p,spin,N_hp
+  double precision, intent(in)  :: phase
+  integer(bit_kind), intent(in) :: det_1(N_int,2), det_2(N_int,2)
+  complex*16, intent(out) :: hij_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  logical, intent(in) :: allowed_hp(N_hp)
+  double precision :: phase_hp(N_hp)
+  complex*16 :: hij0
+  integer :: low,high
+
+  integer(bit_kind) :: differences(N_int,2)
+  integer(bit_kind) :: hole(N_int,2)
+  integer(bit_kind) :: partcl(N_int,2)
+  integer :: occ_hole(N_int*bit_kind_size,2)
+  integer :: occ_partcl(N_int*bit_kind_size,2)
+  integer :: n_occ_ab_hole(2),n_occ_ab_partcl(2)
+  integer :: i0,i,ii
+  do i = 1, N_int
+    differences(i,1) = xor(det_1(i,1),ref_closed_shell_bitmask(i,1))
+    differences(i,2) = xor(det_1(i,2),ref_closed_shell_bitmask(i,2))
+    hole(i,1) = iand(differences(i,1),ref_closed_shell_bitmask(i,1))
+    hole(i,2) = iand(differences(i,2),ref_closed_shell_bitmask(i,2))
+    partcl(i,1) = iand(differences(i,1),det_1(i,1))
+    partcl(i,2) = iand(differences(i,2),det_1(i,2))
+  enddo
+  call bitstring_to_list_ab(hole, occ_hole, n_occ_ab_hole, N_int)
+  call bitstring_to_list_ab(partcl, occ_partcl, n_occ_ab_partcl, N_int)
+  hij0 = fock_operator_closed_shell_ref_bitmask(h,p)
+  ! holes :: direct terms
+  do i0 = 1, n_occ_ab_hole(1)
+    i = occ_hole(i0,1)
+    hij0 -= big_array_coulomb_integrals(i,h,p) ! get_mo_bielec_integral_schwartz(h,i,p,i,mo_integrals_map)
+  enddo
+  do i0 = 1, n_occ_ab_hole(2)
+    i = occ_hole(i0,2)
+    hij0 -= big_array_coulomb_integrals(i,h,p) !get_mo_bielec_integral_schwartz(h,i,p,i,mo_integrals_map)
+  enddo
+ 
+  ! holes :: exchange terms
+  do i0 = 1, n_occ_ab_hole(spin)
+    i = occ_hole(i0,spin)
+    hij0 += big_array_exchange_integrals(i,h,p) ! get_mo_bielec_integral_schwartz(h,i,i,p,mo_integrals_map)
+  enddo
+ 
+  ! particles :: direct terms
+  do i0 = 1, n_occ_ab_partcl(1)
+    i = occ_partcl(i0,1)
+    hij0 += big_array_coulomb_integrals(i,h,p)!get_mo_bielec_integral_schwartz(h,i,p,i,mo_integrals_map)
+  enddo
+  do i0 = 1, n_occ_ab_partcl(2)
+    i = occ_partcl(i0,2)
+    hij0 += big_array_coulomb_integrals(i,h,p) !get_mo_bielec_integral_schwartz(h,i,p,i,mo_integrals_map)
+  enddo
+ 
+  ! particles :: exchange terms
+  do i0 = 1, n_occ_ab_partcl(spin)
+    i = occ_partcl(i0,spin)
+    hij0 -= big_array_exchange_integrals(i,h,p)!get_mo_bielec_integral_schwartz(h,i,i,p,mo_integrals_map)
+  enddo
+
+  low=min(h,p)
+  high=max(h,p)
+
+!!  do ii=1,N_hp
+!!    if (.not.allowed_hp(ii)) then
+!!      phase_hp(ii) = 0.d0
+!!      cycle
+!!    else if (spin_hp(ii).ne.spin) then
+!!      phase_hp(ii) = 1.d0
+!!    else
+!!      if ((low.lt.idx_hp(ii)).and.(high.gt.idx_hp(ii))) then
+!!        phase_hp(ii) = -1.d0
+!!      else
+!!        phase_hp(ii) = 1.d0
+!!      endif
+!!    endif
+!!  enddo
+!!
+!!  do ii=1,N_hp
+!!    if (allowed_hp(ii)) then
+!!      hij_hp(ii) = hij + sign_hp(ii) * big_array_couloumb_integrals(idx_hp(ii),h,p)
+!!      if (spin.eq.spin_hp(ii)) then
+!!        hij_hp(ii) = hij_hp(ii) - sign_hp(ii) * big_array_exchange_integrals(idx_hp(ii),h,p)
+!!      endif
+!!    else
+!!      hij_hp(ii) = 0.d0
+!!    endif
+!!  enddo
+!!
+!!  do ii=1,N_hp
+!!    hij_hp(ii) = hij_hp(ii) * phase_hp(ii) * phase
+!!  enddo
+
+  do ii=1,N_hp
+    if (.not.allowed_hp(ii)) then
+      phase_hp(ii) = 0.d0
+      hij_hp(ii) = 0.d0
+      cycle
+    else if (spin.eq.spin_hp(ii)) then
+      hij_hp(ii) = hij + sign_hp(ii) *(big_array_coulomb_integrals(idx_hp(ii),h,p) - big_array_exchange_integrals(idx_hp(ii),h,p))
+      if ((low.lt.idx_hp(ii)).and.(high.gt.idx_hp(ii))) then
+        phase_hp(ii) = -1.d0
+      else
+        phase_hp(ii) = 1.d0
+      endif
+    else
+      phase_hp(ii) = 1.d0
+      hij_hp(ii) = hij + sign_hp(ii) * big_array_couloumb_integrals(idx_hp(ii),h,p)
+    endif
+    hij_hp(ii) = hij_hp(ii) * phase * phase_hp(ii)
+  enddo
+
+end
+
 
 subroutine i_H_j_double_alpha_beta_hp(key_i,key_j,Nint,hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
   use bitmasks
@@ -32,6 +184,8 @@ subroutine i_H_j_double_alpha_beta_hp(key_i,key_j,Nint,hij_hp,N_hp,spin_hp,sign_
   complex*16 :: hij0
   integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
   logical, intent(in) :: allowed_hp(N_hp)
+  double precision :: phase_hp(N_hp)
+  integer :: i
 
   integer :: lowhigh(2,2)
   integer                        :: exc(0:2,2,2)
@@ -434,14 +588,13 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,
         all_banned_ab12 = (all_banned_ab12.and.exc_is_banned_ab12(ii))
       enddo
       if (all_banned_ab12) cycle
-      call i_h_j_mono_spin_hp(tmp_det,tmp_det2,$N_int,1, hij_hp,N_hp,spin_hp,sign_np,idx_hp,allowed_hp)
+      call i_h_j_mono_spin_hp(tmp_det,tmp_det2,$N_int,1, hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
 
       do l=1,N_hp
         v_t(l,k_a) = v_t(l,k_a) + hij_hp(l) * u_t(l,l_a)
         ! single => sij = 0 
       enddo
     enddo
-
     
     ! Compute Hij for all alpha doubles
     ! ----------------------------------
@@ -453,9 +606,19 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,
       lrow = psi_bilinear_matrix_rows(l_a)
       ASSERT (lrow <= N_det_alpha_unique)
 
-      call i_H_j_double_spin( tmp_det(1,1), psi_det_alpha_unique(1, lrow), $N_int, hij)
+      call get_list_hp_banned_single_spin(psi_det_alpha_unique(1,lrow),N_hp,exc_is_banned_a2,spin_hp,sign_hp,idx_hp,1,$N_int,all_banned_a2)
+      if (all_banned_a2) cycle
+      all_banned_ab12 = .True.
+      do ii=1,N_hp
+        exc_is_banned_ab12(ii)=(exc_is_banned_ab1(ii).or.exc_is_banned_a2(ii))
+        allowed_hp(ii)=(.not.exc_is_banned_ab12(ii))
+        all_banned_ab12 = (all_banned_ab12.and.exc_is_banned_ab12(ii))
+      enddo
+      if (all_banned_ab12) cycle
+!! todo:hp complete up to here
+      call i_h_j_double_spin_hp( tmp_det(1,1), psi_det_alpha_unique(1, lrow), $N_int, hij)
       do l=1,N_hp
-        v_t(l,k_a) = v_t(l,k_a) + hij * u_t(l,l_a)
+        v_t(l,k_a) = v_t(l,k_a) + hij_hp(l) * u_t(l,l_a)
         ! same spin => sij = 0
       enddo
     enddo
