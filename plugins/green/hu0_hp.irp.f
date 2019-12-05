@@ -1,24 +1,29 @@
 ! modified from H_S2_u_0_nstates_openmp in Davidson/u0Hu0.irp.f
 
-subroutine i_h_j_double_spin_hp(key_i,key_j,Nint,hij)
-!! todo: modify for hp
+subroutine i_h_j_double_spin_hp(key_i,key_j,Nint,ispin,hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
   use bitmasks
   implicit none
   BEGIN_DOC
+  ! todo: maybe make new get_double_excitation_spin?
+  !       the 4 index ordering is already done in there, so we could avoid duplicating that work
   ! Returns <i|H|j> where i and j are determinants differing by a same-spin double excitation
   END_DOC
-  integer, intent(in)            :: Nint
+  integer, intent(in)            :: Nint,ispin,N_hp
   integer(bit_kind), intent(in)  :: key_i(Nint), key_j(Nint)
-  complex*16, intent(out)  :: hij
-  
+  complex*16, intent(out)  :: hij_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  logical, intent(in) :: allowed_hp(N_hp)
+  complex*16 :: hij0 
+  double precision :: phase_hp(N_hp)
   integer                        :: exc(0:2,2)
   double precision               :: phase
   complex*16, external     :: get_mo_bielec_integral
+  integer :: i1,i2,i3,i4,j2,j3,ii
 
   PROVIDE big_array_exchange_integrals mo_bielec_integrals_in_map
 
   call get_double_excitation_spin(key_i,key_j,exc,phase,Nint)
-  hij = phase*(get_mo_bielec_integral(                               &
+  hij0 = phase*(get_mo_bielec_integral(                               &
       exc(1,1),                                                      &
       exc(2,1),                                                      &
       exc(1,2),                                                      &
@@ -28,12 +33,41 @@ subroutine i_h_j_double_spin_hp(key_i,key_j,Nint,hij)
       exc(2,1),                                                      &
       exc(2,2),                                                      &
       exc(1,2), mo_integrals_map) )
+
+  ASSERT (exc(1,1) < exc(2,1))
+  ASSERT (exc(1,2) < exc(2,2))
+  i1=min(exc(1,1),exc(1,2))
+  j2=max(exc(1,1),exc(1,2))
+  j3=min(exc(2,1),exc(2,2))
+  i4=max(exc(2,1),exc(2,2))
+  i2=min(j2,j3)
+  i3=max(j2,j3)
+
+  do ii=1,N_hp
+    if (allowed_hp(ii)) then
+      if (ispin.eq.spin_hp(ii)) then
+        if ((idx_hp(ii).lt.i1).or.(idx_hp(ii).gt.i4)) then
+          phase_hp(ii)=1.d0
+        else if ((idx_hp(ii).lt.i2).or.(idx_hp(ii).gt.i3)) then
+          phase_hp(ii)=-1.d0
+        else
+          phase_hp(ii)=1.d0
+        endif
+      else
+        phase_hp(ii)=1.d0
+    else
+      phase_hp(ii)=0.d0
+    endif
+    hij_hp(ii) = hij0 * phase_hp(ii)
+  enddo
 end
 
 subroutine i_h_j_mono_spin_hp(key_i,key_j,Nint,spin,hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
   use bitmasks
   implicit none
   BEGIN_DOC
+  ! todo: change this to use normal version of get_mono_excitation_from_fock
+  !       all info needed is in phase and hij, h/p part can happen after getting hij the normal way
   ! Returns <i|H|j> where i and j are determinants differing by a single excitation
   END_DOC
   integer, intent(in)            :: Nint, spin, N_hp
@@ -42,13 +76,13 @@ subroutine i_h_j_mono_spin_hp(key_i,key_j,Nint,spin,hij_hp,N_hp,spin_hp,sign_hp,
   integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
   logical, intent(in) :: allowed_hp(N_hp)
   !double precision :: phase_hp(N_hp)
+  complex*16 :: hij0
   
   integer                        :: exc(0:2,2)
   double precision               :: phase
 
   PROVIDE big_array_exchange_integrals mo_bielec_integrals_in_map
  
-  ! get_mono_excitation_spin okay for hp
   call get_mono_excitation_spin(key_i(1,spin),key_j(1,spin),exc,phase,Nint)
 
   call get_mono_excitation_from_fock_hp(key_i,key_j,exc(1,1),exc(1,2),spin,phase,N_hp,hij_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
@@ -615,8 +649,7 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,
         all_banned_ab12 = (all_banned_ab12.and.exc_is_banned_ab12(ii))
       enddo
       if (all_banned_ab12) cycle
-!! todo:hp complete up to here
-      call i_h_j_double_spin_hp( tmp_det(1,1), psi_det_alpha_unique(1, lrow), $N_int, hij)
+      call i_h_j_double_spin_hp( tmp_det(1,1), psi_det_alpha_unique(1, lrow), $N_int,1,hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
       do l=1,N_hp
         v_t(l,k_a) = v_t(l,k_a) + hij_hp(l) * u_t(l,l_a)
         ! same spin => sij = 0
@@ -636,6 +669,10 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,
     
     tmp_det(1:$N_int,1) = psi_det_alpha_unique(1:$N_int, krow)
     tmp_det(1:$N_int,2) = psi_det_beta_unique (1:$N_int, kcol)
+    
+    !! should already be done from top of loop?
+    !call get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned_ab1,spin_hp,sign_hp,idx_hp,$N_int,all_banned_ab1)
+    !if (all_banned_ab1) cycle
     
     spindet(1:$N_int) = tmp_det(1:$N_int,2)
     
@@ -680,11 +717,20 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,
       ASSERT (lcol <= N_det_beta_unique)
 
       tmp_det2(1:$N_int,2) = psi_det_beta_unique (1:$N_int, lcol)
-      call i_H_j_mono_spin( tmp_det, tmp_det2, $N_int, 2, hij)
+      call get_list_hp_banned_spin(tmp_det2,N_hp,exc_is_banned_b2,spin_hp,sign_hp,idx_hp,2,$N_int,all_banned_b2)
+      if (all_banned_b2) cycle
+      all_banned_ab12 = .True.
+      do ii=1,N_hp
+        exc_is_banned_ab12(ii)=(exc_is_banned_ab1(ii).or.exc_is_banned_b2(ii))
+        allowed_hp(ii)=(.not.exc_is_banned_ab12(ii))
+        all_banned_ab12 = (all_banned_ab12.and.exc_is_banned_ab12(ii))
+      enddo
+      if (all_banned_ab12) cycle
+      call i_h_j_mono_spin_hp(tmp_det,tmp_det2,$N_int,2, hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
       l_a = psi_bilinear_matrix_transp_order(l_b)
       ASSERT (l_a <= N_det)
       do l=1,N_hp
-        v_t(l,k_a) = v_t(l,k_a) + hij * u_t(l,l_a)
+        v_t(l,k_a) = v_t(l,k_a) + hij_hp(l) * u_t(l,l_a)
         ! single => sij = 0 
       enddo
     enddo
@@ -699,16 +745,26 @@ subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,
       lcol = psi_bilinear_matrix_transp_columns(l_b)
       ASSERT (lcol <= N_det_beta_unique)
 
-      call i_H_j_double_spin( tmp_det(1,2), psi_det_beta_unique(1, lcol), $N_int, hij)
+      call get_list_hp_banned_single_spin(psi_det_beta_unique(1,lcol),N_hp,exc_is_banned_b2,spin_hp,sign_hp,idx_hp,2,$N_int,all_banned_b2)
+      if (all_banned_b2) cycle
+      all_banned_ab12 = .True.
+      do ii=1,N_hp
+        exc_is_banned_ab12(ii)=(exc_is_banned_ab1(ii).or.exc_is_banned_b2(ii))
+        allowed_hp(ii)=(.not.exc_is_banned_ab12(ii))
+        all_banned_ab12 = (all_banned_ab12.and.exc_is_banned_ab12(ii))
+      enddo
+      if (all_banned_ab12) cycle
+      call i_h_j_double_spin_hp( tmp_det(1,2), psi_det_beta_unique(1, lcol), $N_int,2,hij_hp,N_hp,spin_hp,sign_hp,idx_hp,allowed_hp)
       l_a = psi_bilinear_matrix_transp_order(l_b)
       ASSERT (l_a <= N_det)
 
       do l=1,N_hp
-        v_t(l,k_a) = v_t(l,k_a) + hij * u_t(l,l_a)
+        v_t(l,k_a) = v_t(l,k_a) + hij_hp(l) * u_t(l,l_a)
         ! same spin => sij = 0 
       enddo
     enddo
 
+!! todo:hp complete up to here
 
     ! Diagonal contribution
     ! =====================
