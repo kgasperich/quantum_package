@@ -124,7 +124,94 @@ subroutine get_phase_lumo(det_in,lumo_idx,phase)
 end
 
 
+subroutine get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_hp,nint,all_banned)
+  implicit none
+  integer, intent(in) :: N_hp
+  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer(bit_kind), intent(in) :: tmp_det(nint,2)
+  logical, intent(out) :: exc_is_banned(N_hp)
+  logical, intent(out) :: all_banned
+  
+  integer :: i
+  logical :: is_filled
 
+  all_banned = .True.
+  do i=1,N_hp
+    call orb_is_filled(tmp_det,idx_hp(i),spin_hp(i),nint,is_filled)
+    if (sign_hp(i).gt.0) then ! particle creation, banned if already filled
+      exc_is_banned(i) = is_filled
+    else ! hole creation, banned if already empty
+      exc_is_banned(i) = (.not.is_filled)
+    endif
+    all_banned = (all_banned.and.exc_is_banned(i))
+  enddo
+end
+
+subroutine get_list_hp_banned_spin(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_hp,ispin,nint,all_banned)
+  implicit none
+  integer, intent(in) :: N_hp, ispin
+  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer(bit_kind), intent(in) :: tmp_det(nint,2)
+  logical, intent(out) :: exc_is_banned(N_hp)
+  logical, intent(out) :: all_banned
+  
+  integer :: i
+  logical :: is_filled
+  spindet(1:nint) = tmp_det(1:nint,ispin)
+
+  all_banned = .True.
+  do i=1,N_hp
+    if (spin_hp(i).eq.ispin) then
+      call orb_is_filled(tmp_det,idx_hp(i),ispin,nint,is_filled)
+      if (sign_hp(i).gt.0) then ! particle creation, banned if already filled
+        exc_is_banned(i) = is_filled
+      else ! hole creation, banned if already empty
+        exc_is_banned(i) = (.not.is_filled)
+      endif
+    else
+      exc_is_banned(i) = .False.
+    endif
+    all_banned = (all_banned.and.exc_is_banned(i))
+  enddo
+end
+
+  
+subroutine orb_is_filled_bit_int(key_ref,iorb_int,iorb_bit,ispin,Nint,is_filled)
+  use bitmasks
+  implicit none
+  BEGIN_DOC
+  ! apply creation operator to key_ref
+  ! add electron with spin ispin to orbital with index iorb
+  ! output resulting det and phase in key_new and phase
+  END_DOC
+  integer, intent(in)            :: iorb_int, iorb_bit, ispin, Nint
+  integer(bit_kind), intent(in) :: key_ref(Nint,2)
+  logical, intent(out) :: is_filled
+  
+  integer                        :: k,l
+  
+  ASSERT (iorb > 0)
+  ASSERT (ispin > 0)
+  ASSERT (ispin < 3)
+  ASSERT (Nint > 0)
+  
+  ! alpha det is list of Nint 64-bit ints
+  ! k is index of the int where iorb is found
+  ! l is index of the bit where iorb is found
+  k = ishft(iorb-1,-bit_kind_shift)+1
+  ASSERT (k >0)
+  l = iorb - ishft(k-1,bit_kind_shift)-1
+  ASSERT (l >= 0)
+  is_filled = btest(key_ref(iorb_int,ispin),iorb_bit)  
+end
+
+subroutine get_orb_bit_int(iorb,Nint)
+  use bitmasks
+  implicit none
+  iorb_int = ishft(iorb-1,-bit_kind_shift)+1
+  iorb_bit = iorb - ishft(iorb_int-1,bit_kind_shift)-1
+
+end
 subroutine orb_is_filled(key_ref,iorb,ispin,Nint,is_filled)
   use bitmasks
   implicit none

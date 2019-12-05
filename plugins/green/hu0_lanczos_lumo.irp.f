@@ -1,6 +1,6 @@
 ! modified from H_S2_u_0_nstates_openmp in Davidson/u0Hu0.irp.f
 
-subroutine H_u_0_openmp(v_0,u_0,sze)
+subroutine H_u_0_lumo_openmp(v_0,u_0,sze)
   use bitmasks
   implicit none
   BEGIN_DOC
@@ -17,7 +17,7 @@ subroutine H_u_0_openmp(v_0,u_0,sze)
   call cdset_order(u_0(1),psi_bilinear_matrix_order,N_det)
   v_0 = (0.d0,0.d0)
   
-  call h_u_0_openmp_work(v_0,u_0,sze,1,N_det,0,1)
+  call h_u_0_lumo_openmp_work(v_0,u_0,sze,1,N_det,0,1)
 
   call cdset_order(v_0(1),psi_bilinear_matrix_order_reverse,N_det)
   call cdset_order(u_0(1),psi_bilinear_matrix_order_reverse,N_det)
@@ -25,7 +25,7 @@ subroutine H_u_0_openmp(v_0,u_0,sze)
 end
 
 
-subroutine H_u_0_openmp_work(v_t,u_t,sze,istart,iend,ishift,istep)
+subroutine H_u_0_lumo_openmp_work(v_t,u_t,sze,istart,iend,ishift,istep)
   use bitmasks
   implicit none
   BEGIN_DOC
@@ -43,20 +43,20 @@ subroutine H_u_0_openmp_work(v_t,u_t,sze,istart,iend,ishift,istep)
 
   select case (N_int)
     case (1)
-      call H_u_0_openmp_work_1(v_t,u_t,sze,istart,iend,ishift,istep)
+      call H_u_0_lumo_openmp_work_1(v_t,u_t,sze,istart,iend,ishift,istep)
     case (2)
-      call H_u_0_openmp_work_2(v_t,u_t,sze,istart,iend,ishift,istep)
+      call H_u_0_lumo_openmp_work_2(v_t,u_t,sze,istart,iend,ishift,istep)
     case (3)
-      call H_u_0_openmp_work_3(v_t,u_t,sze,istart,iend,ishift,istep)
+      call H_u_0_lumo_openmp_work_3(v_t,u_t,sze,istart,iend,ishift,istep)
     case (4)
-      call H_u_0_openmp_work_4(v_t,u_t,sze,istart,iend,ishift,istep)
+      call H_u_0_lumo_openmp_work_4(v_t,u_t,sze,istart,iend,ishift,istep)
     case default
-      call H_u_0_openmp_work_N_int(v_t,u_t,sze,istart,iend,ishift,istep)
+      call H_u_0_lumo_openmp_work_N_int(v_t,u_t,sze,istart,iend,ishift,istep)
   end select
 end
 BEGIN_TEMPLATE
 
-subroutine H_u_0_openmp_work_$N_int(v_t,u_t,sze,istart,iend,ishift,istep)
+subroutine H_u_0_lumo_openmp_work_$N_int(v_t,u_t,sze,istart,iend,ishift,istep)
   use bitmasks
   implicit none
   BEGIN_DOC
@@ -149,6 +149,7 @@ subroutine H_u_0_openmp_work_$N_int(v_t,u_t,sze,istart,iend,ishift,istep)
     tmp_det(1:$N_int,2) = psi_det_beta_unique (1:$N_int, kcol)
 
     if (kcol /= kcol_prev) then
+      if (.not.apply_hole_is_possible(hole, tmp_det) cycle
       call get_all_spin_singles_$N_int(                              &
           psi_det_beta_unique, idx0,                                 &
           tmp_det(1,2), N_det_beta_unique,                           &
