@@ -1,3 +1,14 @@
+subroutine get_homo_lumo(idx_homo,spin_homo,idx_lumo,spin_lumo)
+  implicit none
+  integer, intent(out) :: idx_homo, spin_homo, idx_lumo, spin_lumo
+
+  ! dummy vals for testing
+  idx_homo=1
+  spin_homo=1
+  idx_lumo=1
+  spin_lumo=1
+  
+end
 
 subroutine get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_hp,nint,all_banned)
   implicit none
@@ -98,7 +109,24 @@ subroutine get_list_hp_banned_spin(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,id
 end
 
   
-subroutine orb_is_filled_bit_int(key_ref,iorb_int,iorb_bit,ispin,Nint,is_filled)
+subroutine spinorb_is_filled_int_bit(key_ref,iorb_int,iorb_bit,Nint,is_filled)
+  use bitmasks
+  implicit none
+  BEGIN_DOC
+  ! determine whether iorb is filled in key_ref
+  ! iorb is specified by int and bit locations within the determinant
+  END_DOC
+  integer, intent(in)            :: iorb_int, iorb_bit, Nint
+  integer(bit_kind), intent(in) :: key_ref(Nint)
+  logical, intent(out) :: is_filled
+  
+  ASSERT (iorb_int > 0)
+  ASSERT (iorb_bit >= 0)
+  ASSERT (Nint > 0)
+  is_filled = btest(key_ref(iorb_int),iorb_bit)
+end
+
+subroutine orb_is_filled_int_bit(key_ref,iorb_int,iorb_bit,ispin,Nint,is_filled)
   use bitmasks
   implicit none
   BEGIN_DOC
@@ -110,31 +138,28 @@ subroutine orb_is_filled_bit_int(key_ref,iorb_int,iorb_bit,ispin,Nint,is_filled)
   integer(bit_kind), intent(in) :: key_ref(Nint,2)
   logical, intent(out) :: is_filled
   
-  integer                        :: k,l
-  
-  ASSERT (iorb > 0)
+  ASSERT (iorb_int > 0)
+  ASSERT (iorb_bit >= 0)
   ASSERT (ispin > 0)
   ASSERT (ispin < 3)
   ASSERT (Nint > 0)
-  
-  ! k is index of the int where iorb is found
-  ! l is index of the bit where iorb is found
-  k = ishft(iorb-1,-bit_kind_shift)+1
-  ASSERT (k >0)
-  l = iorb - ishft(k-1,bit_kind_shift)-1
-  ASSERT (l >= 0)
-  is_filled = btest(key_ref(iorb_int,ispin),iorb_bit)  
+  is_filled = btest(key_ref(iorb_int,ispin),iorb_bit)
+!  call spinorb_is_filled_int_bit(key_ref(1,ispin),iorb_int,iorb_bit,Nint,is_filled)
 end
 
-subroutine get_orb_bit_int(iorb,Nint,iorb_bit,iorb_int)
+subroutine get_orb_int_bit(iorb,iorb_int,iorb_bit)
   BEGIN_DOC
-  !  todo: not finished
   ! get int and bit corresponding to orbital index iorb 
   END_DOC
   use bitmasks
   implicit none
+  integer, intent(in)            :: iorb
+  integer, intent(out)            :: iorb_int, iorb_bit
+  ASSERT (iorb > 0)
   iorb_int = ishft(iorb-1,-bit_kind_shift)+1
+  ASSERT (iorb_int > 0)
   iorb_bit = iorb - ishft(iorb_int-1,bit_kind_shift)-1
+  ASSERT (iorb_bit >= 0)
 end
 
 subroutine orb_is_filled_single_spin(key_ref,iorb,Nint,is_filled)

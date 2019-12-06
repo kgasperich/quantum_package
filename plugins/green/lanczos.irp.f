@@ -26,11 +26,92 @@ subroutine init_u1_lanczos(u_in,sze)
   call normalize_complex(u_in,sze)
 end
 
- BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_lanczos_iter) ]
-&BEGIN_PROVIDER [ double precision, beta_lanczos, (n_lanczos_iter) ]
-&BEGIN_PROVIDER [ complex*16, un_lanczos, (N_det) ]
-&BEGIN_PROVIDER [ complex*16, vn_lanczos, (N_det) ]
-&BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_lanczos_iter) ]
+BEGIN_PROVIDER [ integer, n_green_vec ]
+  implicit none
+  n_green_vec = 2
+END_PROVIDER
+
+ BEGIN_PROVIDER [ integer, green_idx, (n_green_vec) ]
+&BEGIN_PROVIDER [ integer, green_idx_int, (n_green_vec) ]
+&BEGIN_PROVIDER [ integer, green_idx_bit, (n_green_vec) ]
+&BEGIN_PROVIDER [ integer, green_spin, (n_green_vec) ]
+&BEGIN_PROVIDER [ double precision, green_sign, (n_green_vec) ]
+  implicit none
+  integer :: s1,s2,i1,i2
+  integer :: i
+  call get_homo_lumo(i1,s1,i2,s2)
+
+  ! homo
+  green_idx(1)=i1
+  green_spin(1)=s1
+  green_sign(1)=-1.d0
+
+  ! lumo
+  green_idx(2)=i2
+  green_spin(2)=s2
+  green_sign(2)=1.d0
+
+  do i=1,n_green_vec
+    call get_orb_int_bit(green_idx(i),green_idx_int(i),green_idx_bit(i))
+  enddo
+
+END_PROVIDER
+
+
+BEGIN_PROVIDER [ double precision, green_det_phase, (n_green_vec,N_det) ]
+  implicit none
+  integer :: i
+  PROVIDE psi_det green_idx
+  
+  do i=1,N_det
+    call get_phase_hp(green_idx_int,green_idx_bit,green_spin,green_sign,psi_det(1,1,i),green_det_phase(1,i),N_int,n_green_vec)
+  enddo
+
+END_PROVIDER
+ 
+subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,tmpdet,g_det_phase,nint,n_g)
+  implicit none
+  integer, intent(in) :: nint,n_g
+  integer, intent(in) :: g_idx_int(n_g), g_idx_bit(n_g),g_spin(n_g)
+  double precision, intent(in) :: g_sign(n_g)
+  integer(bit_kind), intent(in) :: tmpdet(nint,2)
+  double precision, intent(out) :: g_det_phase(n_g)
+
+  integer(bit_kind) :: tmp_spindet(nint)
+
+  integer :: i
+  logical :: is_allowed(n_g), all_banned, is_filled
+
+  all_banned=.True.
+  do i=1,n_g
+    tmp_spindet(1:nint) = tmpdet(1:nint,g_spin(i))
+    call spinorb_is_filled_int_bit(tmp_spindet,g_idx_int(i),g_idx_bit(i),nint,is_filled)
+    is_allowed(i) = (.not.(((g_sign(i)<0).and.(.not.is_filled)).or.((g_sign(i)>0).and.(is_filled))))
+    all_banned=(all_banned.and.(.not.is_allowed(i)))
+  enddo
+
+  if (all_banned)
+    g_det_phase(:)=0.d0
+  else
+    !compute phasemask
+    do i=1,n_g
+      if (is_allowed(i)) then
+        !get phase
+      else
+        g_det_phase(i)=0.d0
+      endif
+    enddo
+  endif
+
+
+
+end
+
+ BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_lanczos_iter,n_green_vec) ]
+&BEGIN_PROVIDER [ double precision, beta_lanczos, (n_lanczos_iter,n_green_vec) ]
+&BEGIN_PROVIDER [ complex*16, un_lanczos, (N_det,n_green_vec) ]
+&BEGIN_PROVIDER [ complex*16, vn_lanczos, (N_det,n_green_vec) ]
+&BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_lanczos_iter,n_green_vec) ]
   implicit none
   BEGIN_DOC
   ! provide alpha and beta for tridiagonal form of H
