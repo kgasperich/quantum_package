@@ -68,7 +68,38 @@ BEGIN_PROVIDER [ double precision, green_det_phase, (n_green_vec,N_det) ]
   enddo
 
 END_PROVIDER
- 
+
+
+subroutine get_mask_phase_new(det1, pm, Nint)
+  use bitmasks
+  implicit none
+  integer, intent(in) :: Nint
+  integer(bit_kind), intent(in) :: det1(Nint,2)
+  integer(bit_kind), intent(out) :: pm(Nint,2)
+  integer(bit_kind) :: tmp1, tmp2
+  integer :: i
+  pm(1:Nint,1:2) = det1(1:Nint,1:2)
+  tmp1 = 0_8
+  tmp2 = 0_8
+  do i=1,Nint
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 1))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 1))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 2))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 2))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 4))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 4))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 8))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 8))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 16))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 16))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 32))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 32))
+    pm(i,1) = ieor(pm(i,1), tmp1)
+    pm(i,2) = ieor(pm(i,2), tmp2)
+    if(iand(popcnt(det1(i,1)), 1) == 1) tmp1 = not(tmp1)
+    if(iand(popcnt(det1(i,2)), 1) == 1) tmp2 = not(tmp2)
+  end do
+end subroutine
 subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,tmpdet,g_det_phase,nint,n_g)
   implicit none
   integer, intent(in) :: nint,n_g
