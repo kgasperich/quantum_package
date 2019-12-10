@@ -264,7 +264,7 @@ subroutine i_H_j_double_alpha_beta_hp(key_i,key_j,Nint,hij_hp,N_hp,spin_hp,sign_
   enddo
 end
 
-subroutine H_u_0_hp_openmp(v_0,u_0,N_hp,sze,spin_hp,sign_hp,idx_hp)
+subroutine h_u_0_hp_openmp(v_0,u_0,N_hp,sze,spin_hp,sign_hp,idx_hp)
   use bitmasks
   implicit none
   BEGIN_DOC
@@ -316,7 +316,7 @@ subroutine H_u_0_hp_openmp(v_0,u_0,N_hp,sze,spin_hp,sign_hp,idx_hp)
 end
 
 
-subroutine H_S2_u_0_hp_openmp_work(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
+subroutine h_u_0_hp_openmp_work(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
   use bitmasks
   implicit none
   BEGIN_DOC
@@ -334,20 +334,20 @@ subroutine H_S2_u_0_hp_openmp_work(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istar
 
   select case (N_int)
     case (1)
-      call H_S2_u_0_nstates_openmp_work_1(v_t,s_t,u_t,N_hp,sze,istart,iend,ishift,istep)
+      call H_u_0_hp_openmp_work_1(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
     case (2)
-      call H_S2_u_0_nstates_openmp_work_2(v_t,s_t,u_t,N_hp,sze,istart,iend,ishift,istep)
+      call H_u_0_hp_openmp_work_2(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
     case (3)
-      call H_S2_u_0_nstates_openmp_work_3(v_t,s_t,u_t,N_hp,sze,istart,iend,ishift,istep)
+      call H_u_0_hp_openmp_work_3(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
     case (4)
-      call H_S2_u_0_nstates_openmp_work_4(v_t,s_t,u_t,N_hp,sze,istart,iend,ishift,istep)
+      call H_u_0_hp_openmp_work_4(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
     case default
-      call H_S2_u_0_nstates_openmp_work_N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,ishift,istep)
+      call H_u_0_hp_openmp_work_N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
   end select
 end
 BEGIN_TEMPLATE
 
-subroutine H_S2_u_0_nstates_openmp_work_$N_int(v_t,s_t,u_t,N_hp,sze,istart,iend,ishift,istep)
+subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,iend,ishift,istep)
   use bitmasks
   implicit none
   BEGIN_DOC
