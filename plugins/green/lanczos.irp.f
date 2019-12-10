@@ -1,18 +1,3 @@
-BEGIN_PROVIDER [ complex*16, u1_lanczos, (N_det) ]
-  implicit none
-  BEGIN_DOC
-  ! initial lanczos vector
-  ! must be normalized
-  END_DOC
-
-  integer :: i
-  
-  do i=1,N_det
-    u1_lanczos(i)=1.d0/(dble(i))**0.1d0
-  enddo
-  call normalize_complex(u1_lanczos,N_det)
-
-END_PROVIDER
 
 subroutine init_u1_lanczos(u_in,sze)
   implicit none
@@ -58,91 +43,46 @@ END_PROVIDER
 END_PROVIDER
 
 
-BEGIN_PROVIDER [ double precision, green_det_phase, (n_green_vec,N_det) ]
+BEGIN_PROVIDER [ double precision, green_det_phase, (N_det,n_green_vec) ]
   implicit none
+  BEGIN_DOC
+  ! for each det in psi, compute phase for particle/hole excitation
+  ! each element should be +/-1 or 0
+  END_DOC
   integer :: i
+  double precision :: phase_tmp(n_green_vec)
   PROVIDE psi_det green_idx
   
   do i=1,N_det
-    call get_phase_hp(green_idx_int,green_idx_bit,green_spin,green_sign,psi_det(1,1,i),green_det_phase(1,i),N_int,n_green_vec)
+    call get_phase_hp(green_idx_int,green_idx_bit,green_spin,green_sign,psi_det(1,1,i),phase_tmp,N_int,n_green_vec)
+    green_det_phase(i,1:n_green_vec) = phase_tmp(1:n_green_vec)
   enddo
 
 END_PROVIDER
 
-
-subroutine get_mask_phase_new(det1, pm, Nint)
-  use bitmasks
+BEGIN_PROVIDER [ complex*16, u1_lanczos, (N_det,n_green_vec) ]
   implicit none
-  integer, intent(in) :: Nint
-  integer(bit_kind), intent(in) :: det1(Nint,2)
-  integer(bit_kind), intent(out) :: pm(Nint,2)
-  integer(bit_kind) :: tmp1, tmp2
-  integer :: i
-  pm(1:Nint,1:2) = det1(1:Nint,1:2)
-  tmp1 = 0_8
-  tmp2 = 0_8
-  do i=1,Nint
-    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 1))
-    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 1))
-    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 2))
-    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 2))
-    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 4))
-    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 4))
-    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 8))
-    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 8))
-    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 16))
-    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 16))
-    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 32))
-    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 32))
-    pm(i,1) = ieor(pm(i,1), tmp1)
-    pm(i,2) = ieor(pm(i,2), tmp2)
-    if(iand(popcnt(det1(i,1)), 1) == 1) tmp1 = not(tmp1)
-    if(iand(popcnt(det1(i,2)), 1) == 1) tmp2 = not(tmp2)
-  end do
-end subroutine
-subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,tmpdet,g_det_phase,nint,n_g)
-  implicit none
-  integer, intent(in) :: nint,n_g
-  integer, intent(in) :: g_idx_int(n_g), g_idx_bit(n_g),g_spin(n_g)
-  double precision, intent(in) :: g_sign(n_g)
-  integer(bit_kind), intent(in) :: tmpdet(nint,2)
-  double precision, intent(out) :: g_det_phase(n_g)
+  BEGIN_DOC
+  ! initial lanczos vectors
+  ! must be normalized
+  END_DOC
 
-  integer(bit_kind) :: tmp_spindet(nint)
-
-  integer :: i
-  logical :: is_allowed(n_g), all_banned, is_filled
-
-  all_banned=.True.
-  do i=1,n_g
-    tmp_spindet(1:nint) = tmpdet(1:nint,g_spin(i))
-    call spinorb_is_filled_int_bit(tmp_spindet,g_idx_int(i),g_idx_bit(i),nint,is_filled)
-    is_allowed(i) = (.not.(((g_sign(i)<0).and.(.not.is_filled)).or.((g_sign(i)>0).and.(is_filled))))
-    all_banned=(all_banned.and.(.not.is_allowed(i)))
+  integer :: i,j
+  
+  do j=1,n_green_vec
+    do i=1,N_det
+      u1_lanczos(i,j)=green_det_phase(i,j)*psi_coef(i,j)
+    enddo
+    call normalize_complex(u1_lanczos(1,j),N_det)
   enddo
 
-  if (all_banned)
-    g_det_phase(:)=0.d0
-  else
-    !compute phasemask
-    do i=1,n_g
-      if (is_allowed(i)) then
-        !get phase
-      else
-        g_det_phase(i)=0.d0
-      endif
-    enddo
-  endif
+END_PROVIDER
 
-
-
-end
-
- BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_lanczos_iter,n_green_vec) ]
-&BEGIN_PROVIDER [ double precision, beta_lanczos, (n_lanczos_iter,n_green_vec) ]
+ BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_green_vec,n_lanczos_iter) ]
+&BEGIN_PROVIDER [ double precision, beta_lanczos, (n_green_vec,n_lanczos_iter) ]
 &BEGIN_PROVIDER [ complex*16, un_lanczos, (N_det,n_green_vec) ]
 &BEGIN_PROVIDER [ complex*16, vn_lanczos, (N_det,n_green_vec) ]
-&BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_lanczos_iter,n_green_vec) ]
+&BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_green_vec,n_lanczos_iter) ]
   implicit none
   BEGIN_DOC
   ! provide alpha and beta for tridiagonal form of H
@@ -150,26 +90,26 @@ end
   PROVIDE lanczos_debug_print n_lanczos_debug
   complex*16, allocatable :: work(:)
   double precision :: alpha_tmp,beta_tmp
-  double precision, allocatable :: alpha_tmp_vec(:), beta_tmp_vec(:)
-  integer :: i
+  double precision, allocatable :: alpha_tmp_vec(:,:), beta_tmp_vec(:,:)
+  integer :: i,j
   integer :: n_lanc_new_tmp, n_lanc_old_tmp
   call ezfio_get_green_n_lanczos_iter(n_lanc_new_tmp)
   call ezfio_get_green_n_lanczos_complete(n_lanc_old_tmp)
  
   if ((n_lanczos_complete).gt.0) then
-    allocate(alpha_tmp_vec(n_lanczos_complete),beta_tmp_vec(n_lanczos_complete))
+    allocate(alpha_tmp_vec(n_green_vec,n_lanczos_complete),beta_tmp_vec(n_green_vec,n_lanczos_complete))
     logical :: has_un_lanczos, has_vn_lanczos
     call ezfio_has_green_un_lanczos(has_un_lanczos)
     call ezfio_has_green_vn_lanczos(has_vn_lanczos)
     if (has_un_lanczos.and.has_vn_lanczos) then
       call ezfio_get_green_un_lanczos(un_lanczos)
       call ezfio_get_green_vn_lanczos(vn_lanczos)
-      if (lanczos_debug_print) then
-        print*,'uu,vv read from disk'
-        do i=1,n_lanczos_debug
-          write(6,'(4(E25.15))')un_lanczos(i),vn_lanczos(i)
-        enddo
-      endif
+!      if (lanczos_debug_print) then
+!        print*,'uu,vv read from disk'
+!        do i=1,n_lanczos_debug
+!          write(6,'(4(E25.15))')un_lanczos(i),vn_lanczos(i)
+!        enddo
+!      endif
     else
       print*,'problem reading lanczos vectors for restart'
       stop
@@ -182,9 +122,11 @@ end
       call ezfio_get_green_alpha_lanczos(alpha_tmp_vec)
       call ezfio_get_green_beta_lanczos(beta_tmp_vec)
       call ezfio_set_green_n_lanczos_iter(n_lanc_new_tmp)
-      do i=1,n_lanczos_complete
-        alpha_lanczos(i)=alpha_tmp_vec(i)
-        beta_lanczos(i)=beta_tmp_vec(i)
+      do j=1,n_lanczos_complete
+        do i=1,n_green_vec
+          alpha_lanczos(i,j)=alpha_tmp_vec(i,j)
+          beta_lanczos(i,j)=beta_tmp_vec(i,j)
+        enddo
       enddo
     else
       print*,'problem reading lanczos alpha, beta for restart'

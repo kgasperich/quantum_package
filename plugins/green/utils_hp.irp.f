@@ -1,3 +1,75 @@
+
+subroutine get_mask_phase_new(det1, pm, Nint)
+  use bitmasks
+  BEGIN_DOC
+  ! phasemask copied from qp2
+  ! return phasemask of det1 in pm
+  END_DOC
+  implicit none
+  integer, intent(in) :: Nint
+  integer(bit_kind), intent(in) :: det1(Nint,2)
+  integer(bit_kind), intent(out) :: pm(Nint,2)
+  integer(bit_kind) :: tmp1, tmp2
+  integer :: i
+  pm(1:Nint,1:2) = det1(1:Nint,1:2)
+  tmp1 = 0_8
+  tmp2 = 0_8
+  do i=1,Nint
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 1))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 1))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 2))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 2))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 4))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 4))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 8))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 8))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 16))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 16))
+    pm(i,1) = ieor(pm(i,1), shiftl(pm(i,1), 32))
+    pm(i,2) = ieor(pm(i,2), shiftl(pm(i,2), 32))
+    pm(i,1) = ieor(pm(i,1), tmp1)
+    pm(i,2) = ieor(pm(i,2), tmp2)
+    if(iand(popcnt(det1(i,1)), 1) == 1) tmp1 = not(tmp1)
+    if(iand(popcnt(det1(i,2)), 1) == 1) tmp2 = not(tmp2)
+  end do
+end subroutine
+
+subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,det_in,g_det_phase,nint,n_g)
+  implicit none
+  integer, intent(in) :: nint,n_g
+  integer, intent(in) :: g_idx_int(n_g), g_idx_bit(n_g),g_spin(n_g)
+  double precision, intent(in) :: g_sign(n_g)
+  integer(bit_kind), intent(in) :: det_in(nint,2)
+  double precision, intent(out) :: g_det_phase(n_g)
+
+  integer(bit_kind) :: tmp_spindet(nint), pm(nint,2)
+  double precision, parameter :: phase_dble(0:1) = (/1.d0,-1.d0/)
+
+  integer :: i
+  logical :: is_allowed(n_g), all_banned, is_filled
+
+  all_banned=.True.
+  do i=1,n_g
+    tmp_spindet(1:nint) = det_in(1:nint,g_spin(i))
+    call spinorb_is_filled_int_bit(tmp_spindet,g_idx_int(i),g_idx_bit(i),nint,is_filled)
+    is_allowed(i) = (.not.(((g_sign(i)<0).and.(.not.is_filled)).or.((g_sign(i)>0).and.(is_filled))))
+    all_banned=(all_banned.and.(.not.is_allowed(i)))
+  enddo
+
+  if (all_banned)
+    g_det_phase(:)=0.d0
+  else
+    call get_phase_mask_new(det_in,pm,nint)
+    do i=1,n_g
+      if (is_allowed(i)) then
+        g_det_phase(i) = phase_dble(popcnt(iand(ibset(0_bit_kind,g_idx_bit(i)),pm(g_idx_int(i),g_spin(i)))))
+      else
+        g_det_phase(i)=0.d0
+      endif
+    enddo
+  endif
+end
+
 subroutine get_homo_lumo(idx_homo,spin_homo,idx_lumo,spin_lumo)
   implicit none
   integer, intent(out) :: idx_homo, spin_homo, idx_lumo, spin_lumo
