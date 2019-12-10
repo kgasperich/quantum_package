@@ -136,9 +136,11 @@ END_PROVIDER
   else
     call write_time(6)
     print*,'no saved lanczos vectors. starting lanczos'
-    call init_u1_lanczos(un_lanczos,N_det)
+    PROVIDE u1_lanczos
+    un_lanczos=u1_lanczos
+!    call init_u1_lanczos(un_lanczos,N_det)
     allocate(work(N_det))
-    call lanczos_h_init(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
+    call lanczos_h_init_hp(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
     alpha_lanczos(1)=alpha_tmp
     beta_lanczos(1)=beta_tmp
     n_lanczos_complete=1
@@ -261,6 +263,57 @@ double precision function spec_lanc(n_lanc_iter,alpha,beta,z)
   spec_lanc=-imag(bigAj0/bigBj0)*inv_pi
 end
 
+
+subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng)
+  implicit none
+  integer, intent(in) :: sze,ng
+  complex*16, intent(inout) :: uu(sze,ng)
+  complex*16, intent(out)   :: vv(sze,ng)
+  complex*16 :: work(sze)
+  double precision, intent(out) :: alpha_i(ng), beta_i(ng)
+
+  double precision, external :: dznrm2
+  complex*16, external :: u_dot_v_complex
+  integer :: i
+
+  BEGIN_DOC
+  ! lanczos tridiagonalization of H
+  ! n_lanc_iter is number of lanczos iterations
+  ! u1 is initial lanczos vector
+  ! u1 should be normalized
+  END_DOC
+
+  print *,'starting lanczos'
+  print *,'sze = ',sze
+  ! exit if u1 is not normalized
+!  beta_norm = dznrm2(h_size,u1,1)
+!  if (dabs(beta_norm-1.d0) .gt. 1.d-6) then
+!    print *, 'Error: initial Lanczos vector is not normalized'
+!    stop -1
+!  endif
+
+  ! |uu> is |u(1)>
+
+  ! |w(1)> = H|u(1)>
+  ! |work> is now |w(1)>
+  call compute_hu_hp(uu,work,sze)
+
+  ! alpha(n+1) = <u(n+1)|w(n+1)>
+  alpha_i=real(u_dot_v_complex(uu,work,sze))
+
+  do i=1,sze
+    vv(i)=work(i)-alpha_i*uu(i)
+  enddo
+  beta_i=0.d0
+  if (lanczos_debug_print) then
+    print*,'init uu,vv,work'
+    do i=1,n_lanczos_debug
+      write(6,'(6(E25.15))')uu(i),vv(i),work(i)
+    enddo
+  endif
+  ! |vv> is |v(1)>
+  ! |uu> is |u(1)>
+end
 
 subroutine lanczos_h_init(uu,vv,work,sze,alpha_i,beta_i)
   implicit none
@@ -467,6 +520,30 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
 
 end
 
+
+subroutine compute_hu_hp(vec1,vec2,h_size)
+  implicit none
+  integer, intent(in)     :: h_size
+  complex*16, intent(in)  :: vec1(h_size)
+  complex*16, intent(out) :: vec2(h_size)
+  complex*16 :: vec1_tmp(h_size)
+  integer :: i
+  BEGIN_DOC
+  ! |vec2> = H|vec1>
+  !
+  ! TODO: implement
+  ! maybe reuse parts of H_S2_u_0_nstates_{openmp,zmq}?
+  END_DOC
+
+  vec1_tmp(1:h_size) = vec1(1:h_size)
+  call h_u_0_hp_openmp(vec2,vec1_tmp,h_size)
+
+  do i=1,h_size
+    if (cdabs(vec1_tmp(i) - vec1(i)).gt.1.d-6) then
+      print*,'ERROR: vec1 was changed by h_u_0_openmp'
+    endif
+  enddo
+end
 
 subroutine compute_hu(vec1,vec2,h_size)
   implicit none
