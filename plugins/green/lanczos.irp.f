@@ -286,12 +286,6 @@ subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
 
   print *,'starting lanczos'
   print *,'sze = ',sze
-  ! exit if u1 is not normalized
-!  beta_norm = dznrm2(h_size,u1,1)
-!  if (dabs(beta_norm-1.d0) .gt. 1.d-6) then
-!    print *, 'Error: initial Lanczos vector is not normalized'
-!    stop -1
-!  endif
 
   ! |uu> is |u(1)>
 
@@ -313,6 +307,60 @@ subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
   ! |vv> is |v(1)>
   ! |uu> is |u(1)>
 end
+
+subroutine lanczos_h_step_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,idx_hp)
+  implicit none
+  integer, intent(in) :: sze,ng
+  complex*16, intent(inout) :: uu(sze,ng),vv(sze,ng)
+  complex*16, intent(out) :: work(sze,ng)
+  double precision, intent(out) :: alpha_i(ng), beta_i(ng)
+  integer, intent(in) :: spin_hp(ng), sign_hp(ng), idx_hp(ng)
+
+  double precision, external :: dznrm2
+  complex*16, external :: u_dot_v_complex
+  integer :: i
+  complex*16 :: tmp_c16
+  BEGIN_DOC
+  ! lanczos tridiagonalization of H
+  ! n_lanc_iter is number of lanczos iterations
+  ! u1 is initial lanczos vector
+  ! u1 should be normalized
+  END_DOC
+
+  ! |vv> is |v(n)>
+  ! |uu> is |u(n)>
+
+  ! compute beta(n+1)
+  beta_i=dznrm2(sze,vv,1)
+  if (lanczos_debug_print) then
+    print*,'uu,vv in'
+    do i=1,n_lanczos_debug
+      write(6,'(4(E25.15))')uu(i),vv(i)
+    enddo
+  endif
+  ! |vv> is now |u(n+1)>
+  call zdscal(sze,(1.d0/beta_i),vv,1)
+
+  ! |w(n+1)> = H|u(n+1)>
+  ! |work> is now |w(n+1)>
+  call compute_hu_hp(vv,work,ng,sze,spin_hp,sign_hp,idx_hp)
+
+  ! alpha(n+1) = <u(n+1)|w(n+1)>
+  do i=1,ng
+    alpha_i(i)=real(u_dot_v_complex(vv(1:sze,i),work(1:sze,i),sze))
+  enddo
+
+  do j=1,ng
+    do i=1,sze
+      tmp_c16=work(i,j)-alpha_i(j)*vv(i,j)-beta_i(j)*uu(i,j)
+      uu(i,j)=vv(i,j)
+      vv(i,j)=tmp_c16
+    enddo
+  enddo
+  ! |vv> is |v(n+1)>
+  ! |uu> is |u(n+1)>
+end
+
 
 subroutine lanczos_h_init(uu,vv,work,sze,alpha_i,beta_i)
   implicit none
