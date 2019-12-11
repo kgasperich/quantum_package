@@ -20,7 +20,7 @@
    if (elec_alpha_num == elec_beta_num) then
      Fock_matrix_mo = Fock_matrix_mo_alpha
    else
-     
+     stop 'open shell SCF not implemented for kpts'
      do j=1,elec_beta_num
        ! F-K
        do i=1,elec_beta_num
