@@ -1,18 +1,11 @@
 
-subroutine init_u1_lanczos(u_in,sze)
-  implicit none
-  integer, intent(in) :: sze
-  complex*16, intent(inout) :: u_in(sze)
-  integer :: i
-  do i=1,sze
-    u_in(i)=1.d0/(dble(i))**0.1d0
-!    u_in(i)=1.d0
-  enddo
-  call normalize_complex(u_in,sze)
-end
 
 BEGIN_PROVIDER [ integer, n_green_vec ]
   implicit none
+  BEGIN_DOC
+  ! number of particles/holes to use for spectral density calc.
+  ! just set to 2 for now (homo and lumo)
+  END_DOC
   n_green_vec = 2
 END_PROVIDER
 
@@ -22,6 +15,13 @@ END_PROVIDER
 &BEGIN_PROVIDER [ integer, green_spin, (n_green_vec) ]
 &BEGIN_PROVIDER [ double precision, green_sign, (n_green_vec) ]
   implicit none
+  BEGIN_DOC
+  ! description of particles/holes to be used in spectral density calculation
+  ! green_idx: orbital index of particle/hole
+  ! green_idx_{int,bit}: location of idx within determinant bitstring
+  ! green_spin: 1(alpha) or 2(beta)
+  ! green_sign: 1(particle) or -1(hole)
+  END_DOC
   integer :: s1,s2,i1,i2
   integer :: i
   call get_homo_lumo(i1,s1,i2,s2)
@@ -46,7 +46,7 @@ END_PROVIDER
 BEGIN_PROVIDER [ double precision, green_det_phase, (N_det,n_green_vec) ]
   implicit none
   BEGIN_DOC
-  ! for each det in psi, compute phase for particle/hole excitation
+  ! for each det in psi, compute phase for each particle/hole excitation
   ! each element should be +/-1 or 0
   END_DOC
   integer :: i
@@ -85,7 +85,10 @@ END_PROVIDER
 &BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_green_vec,n_lanczos_iter) ]
   implicit none
   BEGIN_DOC
+  ! for each particle/hole:
   ! provide alpha and beta for tridiagonal form of H
+  ! un, vn lanczos vectors from latest iteration
+  ! lanczos_eigvals: eigenvalues of tridiagonal form of H
   END_DOC
   PROVIDE lanczos_debug_print n_lanczos_debug
   complex*16, allocatable :: work(:)
@@ -138,7 +141,6 @@ END_PROVIDER
     print*,'no saved lanczos vectors. starting lanczos'
     PROVIDE u1_lanczos
     un_lanczos=u1_lanczos
-!    call init_u1_lanczos(un_lanczos,N_det)
     allocate(work(N_det))
     call lanczos_h_init_hp(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
     alpha_lanczos(1)=alpha_tmp
@@ -181,8 +183,7 @@ END_PROVIDER
 BEGIN_PROVIDER [ double precision, omega_list, (n_omega) ]
   implicit none
   BEGIN_DOC
-  ! test
-  ! 
+  ! list of frequencies at which to compute spectral density
   END_DOC
 
   integer :: i
@@ -264,23 +265,23 @@ double precision function spec_lanc(n_lanc_iter,alpha,beta,z)
 end
 
 
-subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng)
+subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,idx_hp)
   implicit none
   integer, intent(in) :: sze,ng
-  complex*16, intent(inout) :: uu(sze,ng)
+  complex*16, intent(in)    :: uu(sze,ng)
   complex*16, intent(out)   :: vv(sze,ng)
-  complex*16 :: work(sze)
+  complex*16 :: work(sze,ng)
   double precision, intent(out) :: alpha_i(ng), beta_i(ng)
+  integer, intent(in) :: spin_hp(ng), sign_hp(ng), idx_hp(ng)
 
   double precision, external :: dznrm2
   complex*16, external :: u_dot_v_complex
   integer :: i
 
   BEGIN_DOC
-  ! lanczos tridiagonalization of H
-  ! n_lanc_iter is number of lanczos iterations
-  ! u1 is initial lanczos vector
-  ! u1 should be normalized
+  ! initial step for lanczos tridiagonalization of H for multiple holes/particles
+  ! uu is array of initial vectors u1 (creation/annihilation operator applied to psi)
+  ! output vv is array of lanczos v1 (one for each hole/particle)
   END_DOC
 
   print *,'starting lanczos'
@@ -296,21 +297,19 @@ subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng)
 
   ! |w(1)> = H|u(1)>
   ! |work> is now |w(1)>
-  call compute_hu_hp(uu,work,sze)
+  call compute_hu_hp(uu,work,ng,sze,spin_hp,sign_hp,idx_hp)
 
   ! alpha(n+1) = <u(n+1)|w(n+1)>
-  alpha_i=real(u_dot_v_complex(uu,work,sze))
+  do i=1,ng
+    alpha_i(i)=real(u_dot_v_complex(uu(1:sze,i),work(1:sze,i),sze))
+  enddo
 
-  do i=1,sze
-    vv(i)=work(i)-alpha_i*uu(i)
+  do j=1,ng
+    do i=1,sze
+      vv(i,j)=work(i,j)-alpha_i(j)*uu(i,j)
+    enddo
   enddo
   beta_i=0.d0
-  if (lanczos_debug_print) then
-    print*,'init uu,vv,work'
-    do i=1,n_lanczos_debug
-      write(6,'(6(E25.15))')uu(i),vv(i),work(i)
-    enddo
-  endif
   ! |vv> is |v(1)>
   ! |uu> is |u(1)>
 end
@@ -521,13 +520,14 @@ subroutine lanczos_h(n_lanc_iter,alpha,beta,u1)
 end
 
 
-subroutine compute_hu_hp(vec1,vec2,h_size)
+subroutine compute_hu_hp(vec1,vec2,n_hp,h_size,spin_hp,sign_hp,idx_hp)
   implicit none
-  integer, intent(in)     :: h_size
-  complex*16, intent(in)  :: vec1(h_size)
-  complex*16, intent(out) :: vec2(h_size)
-  complex*16 :: vec1_tmp(h_size)
-  integer :: i
+  integer, intent(in)     :: h_size,n_hp
+  complex*16, intent(in)  :: vec1(h_size,n_hp)
+  complex*16, intent(out) :: vec2(h_size,n_hp)
+  integer, intent(in) :: spin_hp(n_hp), sign_hp(n_hp), idx_hp(n_hp)
+  complex*16 :: vec1_tmp(h_size,n_hp)
+  integer :: i,j
   BEGIN_DOC
   ! |vec2> = H|vec1>
   !
@@ -535,13 +535,15 @@ subroutine compute_hu_hp(vec1,vec2,h_size)
   ! maybe reuse parts of H_S2_u_0_nstates_{openmp,zmq}?
   END_DOC
 
-  vec1_tmp(1:h_size) = vec1(1:h_size)
-  call h_u_0_hp_openmp(vec2,vec1_tmp,h_size)
+  vec1_tmp(1:h_size,1:n_hp) = vec1(1:h_size,1:n_hp)
+  call h_u_0_hp_openmp(vec2,vec1_tmp,n_hp,h_size,spin_hp,sign_hp,idx_hp)
 
-  do i=1,h_size
-    if (cdabs(vec1_tmp(i) - vec1(i)).gt.1.d-6) then
-      print*,'ERROR: vec1 was changed by h_u_0_openmp'
-    endif
+  do j=1,n_hp
+    do i=1,h_size
+      if (cdabs(vec1_tmp(i,j) - vec1(i,j)).gt.1.d-6) then
+        print*,'ERROR: vec1 was changed by h_u_0_openmp'
+      endif
+    enddo
   enddo
 end
 
