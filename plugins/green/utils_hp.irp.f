@@ -531,3 +531,16 @@ subroutine a_operator_phase(key_new,key_ref,iorb,ispin,Nint,phase)
   phase = p(iand(1_bit_kind,parity_filled))
 
 end
+BEGIN_PROVIDER [ double precision, mo_mono_elec_integral_diag,(mo_tot_num)]
+  implicit none
+  integer                        :: i
+  BEGIN_DOC
+  ! diagonal elements of mo_mono_elec_integral array
+  END_DOC
+  print*,'Providing the mono electronic integrals (diagonal)'
+
+  do i = 1, mo_tot_num
+    mo_mono_elec_integral_diag(i) = real(mo_mono_elec_integral(i,i))
+  enddo
+
+END_PROVIDER
