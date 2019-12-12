@@ -624,6 +624,7 @@ subroutine i_h_j_double_spin_hp(key_i,key_j,Nint,ispin,hij_hp,N_hp,spin_hp,sign_
         endif
       else
         phase_hp(ii)=1.d0
+      endif
     else
       phase_hp(ii)=0.d0
     endif
