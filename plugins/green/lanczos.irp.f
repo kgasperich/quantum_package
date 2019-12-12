@@ -41,6 +41,7 @@ END_PROVIDER
 
   do i=1,n_green_vec
     call get_orb_int_bit(green_idx(i),green_idx_int(i),green_idx_bit(i))
+    print*,i,green_idx(i),green_idx_int(i),green_idx_bit(i)
   enddo
 
 END_PROVIDER
@@ -74,9 +75,9 @@ BEGIN_PROVIDER [ complex*16, u1_lanczos, (N_det,n_green_vec) ]
   
   do j=1,n_green_vec
     do i=1,N_det
-      u1_lanczos(i,j)=green_det_phase(i,j)*psi_coef(i,j)
+      u1_lanczos(i,j)=green_det_phase(i,j)*psi_coef(i,1)
     enddo
-    call normalize_complex(u1_lanczos(1,j),N_det)
+    call normalize_complex(u1_lanczos(:,j),N_det)
   enddo
 
 END_PROVIDER

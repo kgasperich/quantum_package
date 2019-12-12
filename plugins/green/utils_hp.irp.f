@@ -148,7 +148,7 @@ subroutine get_homo_lumo(key_ref,nint,nmo,idx_homo_lumo,spin_homo_lumo)
 
   call get_mo_energies(key_ref,nint,nmo,e_mo)
   
-  allocate(occ(nint*bit_kind_size,2),virt(nint*bit_kind_size,2))
+  !allocate(occ(nint*bit_kind_size,2),virt(nint*bit_kind_size,2))
 
   call bitstring_to_list_ab(key_ref,occ,n_occ,nint)
   do i=1,nint
@@ -173,7 +173,7 @@ subroutine get_homo_lumo(key_ref,nint,nmo,idx_homo_lumo,spin_homo_lumo)
     enddo
     do i0=1,n_virt(ispin)
       i=virt(i0,ispin)
-      if (e_mo(i,ispin).gt.minvirt(ispin)) then
+      if (e_mo(i,ispin).lt.minvirt(ispin)) then
         minvirt(ispin)=e_mo(i,ispin)
         iminvirt(ispin)=i
       endif
