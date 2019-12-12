@@ -24,16 +24,18 @@ END_PROVIDER
   END_DOC
   integer :: s1,s2,i1,i2
   integer :: i
-  call get_homo_lumo(i1,s1,i2,s2)
+
+  ! needs psi_det, mo_tot_num, N_int, mo_bielec_integral_jj, mo_mono_elec_integral_diag
+  call get_homo_lumo(psi_det(1:N_int,1:2,1),N_int,mo_tot_num,idx_homo_lumo,spin_homo_lumo)
 
   ! homo
-  green_idx(1)=i1
-  green_spin(1)=s1
+  green_idx(1)=idx_homo_lumo(1)
+  green_spin(1)=spin_homo_lumo(1)
   green_sign(1)=-1.d0
 
   ! lumo
-  green_idx(2)=i2
-  green_spin(2)=s2
+  green_idx(2)=idx_homo_lumo(2)
+  green_spin(2)=spin_homo_lumo(2)
   green_sign(2)=1.d0
 
   do i=1,n_green_vec

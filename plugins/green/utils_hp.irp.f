@@ -126,16 +126,69 @@ subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,det_in,g_det_phase,nin
   endif
 end
 
-subroutine get_homo_lumo(idx_homo,spin_homo,idx_lumo,spin_lumo)
+subroutine get_homo_lumo(key_ref,nint,nmo,idx_homo_lumo,spin_homo_lumo)
   implicit none
-  integer, intent(out) :: idx_homo, spin_homo, idx_lumo, spin_lumo
+  integer, intent(in) :: nint,nmo
+  integer(bit_kind), intent(in) :: key_ref(nint,2)
+  integer, intent(out) :: idx_homo_lumo(2), spin_homo_lumo(2)
 
-  ! dummy vals for testing
-  idx_homo=1
-  spin_homo=1
-  idx_lumo=1
-  spin_lumo=1
+  double precision, allocatable :: e_mo(:,:)
+  integer, allocatable :: occ(:,:),virt(:,:) !(nint*bit_kind_size,2)
+  integer :: n_occ(2), n_virt(2)
+
+  allocate(e_mo(nmo,2))
+
+  call get_mo_energies(key_ref,nint,nmo,e_mo)
   
+  allocate(occ(nint*bit_kind_size,2),virt(nint*bit_kind_size,2))
+
+  call bitstring_to_list_ab(key_ref,occ,n_occ,nint)
+  do i=1,nint
+    do ispin=1,2
+      key_virt(i,ispin)=xor(full_ijkl_bitmask(i),key_ref(i,ispin))
+    enddo
+  enddo
+  call bitstring_to_list_ab(key_virt,virt,n_virt,nint)
+  
+  maxocc=-1.d20 !maybe use -1.d0*huge(0.d0)?
+  minvirt=1.d20
+  imaxocc=-1
+  iminvirt=-1
+
+  do ispin=1,2
+    do i0=1,n_occ(ispin)
+      i=occ(i0,ispin)
+      if (e_mo(i,ispin).gt.maxocc(ispin)) then
+        maxocc(ispin)=e_mo(i,ispin)
+        imaxocc(ispin)=i
+      endif
+    enddo
+    do i0=1,n_virt(ispin)
+      i=virt(i0,ispin)
+      if (e_mo(i,ispin).gt.minvirt(ispin)) then
+        minvirt(ispin)=e_mo(i,ispin)
+        iminvirt(ispin)=i
+      endif
+    enddo
+  enddo
+  double precision :: e_mo_thresh
+  e_mo_thresh = 1.d-8
+  !these should both just be 2x2 arrays, but performance here doesn't really matter and this is more readable
+  !if (maxocc(1).ge.maxocc(2)) then
+  if ((maxocc(2)-maxocc(1)).le.e_mo_thresh) then
+    spin_homo_lumo(1)=1
+  else
+    spin_homo_lumo(1)=2
+  endif
+  if ((minvirt(1)-minvirt(2)).le.e_mo_thresh) then
+    spin_homo_lumo(2)=1
+  else
+    spin_homo_lumo(2)=2
+  endif
+
+  idx_homo_lumo(1)=imaxocc(spin_homo_lumo(1))
+  idx_homo_lumo(2)=iminvirt(spin_homo_lumo(2))
+
 end
 
 subroutine get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_hp,nint,all_banned)
