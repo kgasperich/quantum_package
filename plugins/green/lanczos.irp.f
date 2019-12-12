@@ -25,6 +25,7 @@ END_PROVIDER
   integer :: s1,s2,i1,i2
   integer :: i
 
+  integer :: idx_homo_lumo(2), spin_homo_lumo(2)
   ! needs psi_det, mo_tot_num, N_int, mo_bielec_integral_jj, mo_mono_elec_integral_diag
   call get_homo_lumo(psi_det(1:N_int,1:2,1),N_int,mo_tot_num,idx_homo_lumo,spin_homo_lumo)
 
@@ -80,11 +81,13 @@ BEGIN_PROVIDER [ complex*16, u1_lanczos, (N_det,n_green_vec) ]
 
 END_PROVIDER
 
- BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_green_vec,n_lanczos_iter) ]
-&BEGIN_PROVIDER [ double precision, beta_lanczos, (n_green_vec,n_lanczos_iter) ]
+! BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_green_vec,n_lanczos_iter) ]
+!&BEGIN_PROVIDER [ double precision, beta_lanczos, (n_green_vec,n_lanczos_iter) ]
+ BEGIN_PROVIDER [ double precision, alpha_lanczos, (n_lanczos_iter,n_green_vec) ]
+&BEGIN_PROVIDER [ double precision, beta_lanczos, (n_lanczos_iter,n_green_vec) ]
 &BEGIN_PROVIDER [ complex*16, un_lanczos, (N_det,n_green_vec) ]
 &BEGIN_PROVIDER [ complex*16, vn_lanczos, (N_det,n_green_vec) ]
-&BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_green_vec,n_lanczos_iter) ]
+&BEGIN_PROVIDER [ double precision, lanczos_eigvals, (n_lanczos_iter,n_green_vec) ]
   implicit none
   BEGIN_DOC
   ! for each particle/hole:
@@ -93,8 +96,9 @@ END_PROVIDER
   ! lanczos_eigvals: eigenvalues of tridiagonal form of H
   END_DOC
   PROVIDE lanczos_debug_print n_lanczos_debug
-  complex*16, allocatable :: work(:)
-  double precision :: alpha_tmp,beta_tmp
+  complex*16, allocatable :: work(:,:)
+!  double precision :: alpha_tmp,beta_tmp
+  double precision, allocatable :: alpha_tmp(:),beta_tmp(:)
   double precision, allocatable :: alpha_tmp_vec(:,:), beta_tmp_vec(:,:)
   integer :: i,j
   integer :: n_lanc_new_tmp, n_lanc_old_tmp
@@ -102,7 +106,8 @@ END_PROVIDER
   call ezfio_get_green_n_lanczos_complete(n_lanc_old_tmp)
  
   if ((n_lanczos_complete).gt.0) then
-    allocate(alpha_tmp_vec(n_green_vec,n_lanczos_complete),beta_tmp_vec(n_green_vec,n_lanczos_complete))
+!    allocate(alpha_tmp_vec(n_green_vec,n_lanczos_complete),beta_tmp_vec(n_green_vec,n_lanczos_complete))
+    allocate(alpha_tmp_vec(n_lanczos_complete,n_green_vec),beta_tmp_vec(n_lanczos_complete,n_green_vec))
     logical :: has_un_lanczos, has_vn_lanczos
     call ezfio_has_green_un_lanczos(has_un_lanczos)
     call ezfio_has_green_vn_lanczos(has_vn_lanczos)
@@ -127,8 +132,8 @@ END_PROVIDER
       call ezfio_get_green_alpha_lanczos(alpha_tmp_vec)
       call ezfio_get_green_beta_lanczos(beta_tmp_vec)
       call ezfio_set_green_n_lanczos_iter(n_lanc_new_tmp)
-      do j=1,n_lanczos_complete
-        do i=1,n_green_vec
+      do j=1,n_green_vec
+        do i=1,n_lanczos_complete
           alpha_lanczos(i,j)=alpha_tmp_vec(i,j)
           beta_lanczos(i,j)=beta_tmp_vec(i,j)
         enddo
@@ -143,24 +148,30 @@ END_PROVIDER
     print*,'no saved lanczos vectors. starting lanczos'
     PROVIDE u1_lanczos
     un_lanczos=u1_lanczos
-    allocate(work(N_det))
-    call lanczos_h_init_hp(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
-    alpha_lanczos(1)=alpha_tmp
-    beta_lanczos(1)=beta_tmp
+    allocate(work(N_det,n_green_vec),alpha_tmp(n_green_vec),beta_tmp(n_green_vec))
+    call lanczos_h_init_hp(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp,&
+                           n_green_vec,green_spin,green_sign,green_idx)
+    do i=1,n_green_vec
+      alpha_lanczos(1,i)=alpha_tmp(i)
+      beta_lanczos(1,i)=beta_tmp(i)
+    enddo
     n_lanczos_complete=1
-    deallocate(work)
+    deallocate(work,alpha_tmp,beta_tmp)
   endif
 
-  allocate(work(N_det))
+  allocate(work(N_det,n_green_vec),alpha_tmp(n_green_vec),beta_tmp(n_green_vec))
   do i=n_lanczos_complete+1,n_lanczos_iter
     call write_time(6)
     print*,'starting lanczos iteration',i
-    call lanczos_h_step(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp)
-    alpha_lanczos(i)=alpha_tmp
-    beta_lanczos(i)=beta_tmp
+    call lanczos_h_step_hp(un_lanczos,vn_lanczos,work,N_det,alpha_tmp,beta_tmp,&
+                           n_green_vec,green_spin,green_sign,green_idx)
+    do j=1,n_green_vec
+      alpha_lanczos(i,j)=alpha_tmp(j)
+      beta_lanczos(i,j)=beta_tmp(j)
+    enddo
     n_lanczos_complete=n_lanczos_complete+1
   enddo
-  deallocate(work)
+  deallocate(work,alpha_tmp,beta_tmp)
 
   call ezfio_set_green_alpha_lanczos(alpha_lanczos)
   call ezfio_set_green_beta_lanczos(beta_lanczos)
@@ -168,7 +179,8 @@ END_PROVIDER
   call ezfio_set_green_vn_lanczos(vn_lanczos)
   call ezfio_set_green_n_lanczos_complete(n_lanczos_complete)
 
-  call diag_lanczos_vals(alpha_lanczos, beta_lanczos, n_lanczos_complete, lanczos_eigvals, n_lanczos_iter)
+  call diag_lanczos_vals_hp(alpha_lanczos, beta_lanczos, n_lanczos_complete, lanczos_eigvals,&
+                            n_lanczos_iter,n_green_vec)
   call ezfio_set_green_lanczos_eigvals(lanczos_eigvals)
 
 END_PROVIDER
@@ -198,14 +210,14 @@ BEGIN_PROVIDER [ double precision, omega_list, (n_omega) ]
 END_PROVIDER
 
 
-BEGIN_PROVIDER [ double precision, spectral_lanczos, (n_omega) ]
+BEGIN_PROVIDER [ double precision, spectral_lanczos, (n_omega,n_green_vec) ]
   implicit none
   BEGIN_DOC
   ! spectral density A(omega) calculated from lanczos alpha/beta
   ! calculated for n_omega points between omega_min and omega_max
   END_DOC
 
-  integer :: i
+  integer :: i,j
   double precision :: omega_i
   complex*16 :: z_i
   double precision :: spec_lanc
@@ -213,7 +225,9 @@ BEGIN_PROVIDER [ double precision, spectral_lanczos, (n_omega) ]
   do i=1,n_omega
     omega_i = omega_list(i)
     z_i = dcmplx(omega_i,gf_epsilon)
-    spectral_lanczos(i) = spec_lanc(n_lanczos_iter,alpha_lanczos,beta_lanczos,z_i)
+    do j=1,n_green_vec
+      spectral_lanczos(i,j) = spec_lanc(n_lanczos_iter,alpha_lanczos(:,j),beta_lanczos(:,j),z_i)
+    enddo
   enddo
 
 END_PROVIDER
@@ -278,7 +292,7 @@ subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
 
   double precision, external :: dznrm2
   complex*16, external :: u_dot_v_complex
-  integer :: i
+  integer :: i,j
 
   BEGIN_DOC
   ! initial step for lanczos tridiagonalization of H for multiple holes/particles
@@ -320,7 +334,7 @@ subroutine lanczos_h_step_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
 
   double precision, external :: dznrm2
   complex*16, external :: u_dot_v_complex
-  integer :: i
+  integer :: i,j
   complex*16 :: tmp_c16
   BEGIN_DOC
   ! lanczos tridiagonalization of H
@@ -333,15 +347,11 @@ subroutine lanczos_h_step_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
   ! |uu> is |u(n)>
 
   ! compute beta(n+1)
-  beta_i=dznrm2(sze,vv,1)
-  if (lanczos_debug_print) then
-    print*,'uu,vv in'
-    do i=1,n_lanczos_debug
-      write(6,'(4(E25.15))')uu(i),vv(i)
-    enddo
-  endif
+  do j=1,ng
+    beta_i(j)=dznrm2(sze,vv(:,j),1)
   ! |vv> is now |u(n+1)>
-  call zdscal(sze,(1.d0/beta_i),vv,1)
+    call zdscal(sze,(1.d0/beta_i(j)),vv(:,j),1)
+  enddo
 
   ! |w(n+1)> = H|u(n+1)>
   ! |work> is now |w(n+1)>
@@ -677,6 +687,34 @@ subroutine diag_lanczos_vals_vecs(alpha, beta, nlanc, vals, vecs, sze)
   endif
 end
 
+subroutine diag_lanczos_vals_hp(alpha, beta, nlanc, vals, sze,ng)
+  implicit none
+  BEGIN_DOC
+  ! diagonalization of tridiagonal form of H
+  ! this returns eigenvalues in vals
+  END_DOC
+  integer, intent(in) :: nlanc,sze,ng
+  !double precision, intent(in) :: alpha(ng,sze), beta(sze)
+  double precision, intent(in) :: alpha(sze,ng), beta(sze,ng)
+  double precision, intent(out) :: vals(sze,ng)
+  double precision :: work(1), beta_tmp(nlanc-1), vecs(1)
+  integer :: i,info,ig
+  
+  do ig=1,ng
+    vals(1,ig)=alpha(1,ig)
+    do i=2,nlanc
+      vals(i,ig)=alpha(i,ig)
+      beta_tmp(i-1)=beta(i,ig)
+    enddo
+  
+    call dstev('N', nlanc, vals(:,ig), beta_tmp, vecs, 1, work, info)
+    if (info.gt.0) then
+      print *,'WARNING: diagonalization of tridiagonal form of H did not converge'
+    else if (info.lt.0) then
+      print *,'WARNING: argument to dstev had illegal value'
+    endif
+  enddo
+end
 subroutine diag_lanczos_vals(alpha, beta, nlanc, vals, sze)
   implicit none
   BEGIN_DOC

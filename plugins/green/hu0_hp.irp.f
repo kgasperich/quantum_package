@@ -118,7 +118,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
   integer*8                      :: k8
 
   logical, allocatable :: exc_is_banned_a1(:),exc_is_banned_b1(:),exc_is_banned_a2(:),exc_is_banned_b2(:)
-  logical, allocatable :: exc_is_banned_ab1(:),exc_is_banned_ab12(:)
+  logical, allocatable :: exc_is_banned_ab1(:),exc_is_banned_ab12(:),allowed_hp(:)
   logical :: all_banned_a1,all_banned_b1,all_banned_a2,all_banned_b2
   logical :: all_banned_ab12,all_banned_ab1
   integer                        :: ii,na,nb
@@ -135,7 +135,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
   ! Prepare the array of all alpha single excitations
   ! -------------------------------------------------
 
-  PROVIDE N_int nthreads_davidson
+  PROVIDE N_int nthreads_davidson elec_num
   !$OMP PARALLEL DEFAULT(NONE) NUM_THREADS(nthreads_davidson)        &
       !$OMP   SHARED(psi_bilinear_matrix_rows, N_det,                &
       !$OMP          psi_bilinear_matrix_columns,                    &
@@ -149,6 +149,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
       !$OMP          psi_bilinear_matrix_transp_rows_loc,            &
       !$OMP          istart, iend, istep, irp_here, v_t,        &
       !$OMP          spin_hp,sign_hp,idx_hp,        &
+      !$OMP          elec_num_tab,        &
       !$OMP          ishift, idx0, u_t, maxab)                       &
       !$OMP   PRIVATE(krow, kcol, tmp_det, spindet, k_a, k_b, i,     &
       !$OMP          lcol, lrow, l_a, l_b,                           &
@@ -159,6 +160,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
       !$OMP          exc_is_banned_a2,exc_is_banned_b2,exc_is_banned_ab12, &
       !$OMP          all_banned_a1,all_banned_b1,all_banned_ab1, &
       !$OMP          all_banned_a2,all_banned_b2,all_banned_ab12, &
+      !$OMP          allowed_hp, &
       !$OMP          ii, hij_hp, j, hii_hp,na,nb, &
       !$OMP          n_singles_b, k8)
   
@@ -176,11 +178,12 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
       exc_is_banned_b2(N_hp), &
       exc_is_banned_ab1(N_hp), &
       exc_is_banned_ab12(N_hp), &
+      allowed_hp(N_hp), &
       hij_hp(N_hp), &
       hii_hp(N_hp))
 
   kcol_prev=-1
-  all_banned_beta=.False.
+  all_banned_b1=.False.
   ASSERT (iend <= N_det)
   ASSERT (istart > 0)
   ASSERT (istep  > 0)
@@ -531,12 +534,12 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
       else
         tmp_det2=tmp_det
         na=elec_num_tab(spin_hp(ii))
-        nb=elec_num_tab(iand(ispin,1)+1)
+        nb=elec_num_tab(iand(spin_hp(ii),1)+1)
         hii_hp(ii)=hii
         if (sign_hp(ii)>0) then
-          call ac_operator(idx_hp(ii),spin_hp(ii),tmp_det2,hii_hp(ii),$Nint,na,nb)
+          call ac_operator(idx_hp(ii),spin_hp(ii),tmp_det2,hii_hp(ii),$N_int,na,nb)
         else
-          call a_operator(idx_hp(ii),spin_hp(ii),tmp_det2,hii_hp(ii),$Nint,na,nb)
+          call a_operator(idx_hp(ii),spin_hp(ii),tmp_det2,hii_hp(ii),$N_int,na,nb)
         endif
       endif
       v_t(ii,k_a) = v_t(ii,k_a) + hii_hp(ii) * u_t(ii,k_a)
@@ -552,6 +555,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
               exc_is_banned_b2, &
               exc_is_banned_ab1, &
               exc_is_banned_ab12, &
+              allowed_hp, &
               hij_hp, hii_hp )
   !$OMP END PARALLEL
   deallocate(idx0)
@@ -741,7 +745,7 @@ subroutine get_mono_excitation_from_fock_hp(det_1,det_2,h,p,spin,phase,N_hp,hij_
 !!
 !!  do ii=1,N_hp
 !!    if (allowed_hp(ii)) then
-!!      hij_hp(ii) = hij + sign_hp(ii) * big_array_couloumb_integrals(idx_hp(ii),h,p)
+!!      hij_hp(ii) = hij + sign_hp(ii) * big_array_coulomb_integrals(idx_hp(ii),h,p)
 !!      if (spin.eq.spin_hp(ii)) then
 !!        hij_hp(ii) = hij_hp(ii) - sign_hp(ii) * big_array_exchange_integrals(idx_hp(ii),h,p)
 !!      endif
@@ -760,7 +764,7 @@ subroutine get_mono_excitation_from_fock_hp(det_1,det_2,h,p,spin,phase,N_hp,hij_
       hij_hp(ii) = 0.d0
       cycle
     else if (spin.eq.spin_hp(ii)) then
-      hij_hp(ii) = hij + sign_hp(ii) *(big_array_coulomb_integrals(idx_hp(ii),h,p) - big_array_exchange_integrals(idx_hp(ii),h,p))
+      hij_hp(ii) = hij0 + sign_hp(ii) *(big_array_coulomb_integrals(idx_hp(ii),h,p) - big_array_exchange_integrals(idx_hp(ii),h,p))
       if ((low.lt.idx_hp(ii)).and.(high.gt.idx_hp(ii))) then
         phase_hp(ii) = -1.d0
       else
@@ -768,7 +772,7 @@ subroutine get_mono_excitation_from_fock_hp(det_1,det_2,h,p,spin,phase,N_hp,hij_
       endif
     else
       phase_hp(ii) = 1.d0
-      hij_hp(ii) = hij + sign_hp(ii) * big_array_couloumb_integrals(idx_hp(ii),h,p)
+      hij_hp(ii) = hij0 + sign_hp(ii) * big_array_coulomb_integrals(idx_hp(ii),h,p)
     endif
     hij_hp(ii) = hij_hp(ii) * phase * phase_hp(ii)
   enddo

@@ -10,9 +10,11 @@ subroutine get_mo_energies(key_ref,nint,nmo,e_mo)
   integer, allocatable :: occ(:,:),virt(:,:) !(nint*bit_kind_size,2)
   integer :: n_occ(2), n_virt(2)
   integer, parameter :: int_spin2(1:2) = (/2,1/)
-  integer :: i,j,ispin,jspin
+  integer :: i,j,ispin,jspin,i0,j0,k
+  integer(bit_kind), allocatable :: key_virt(:,:)
 
-  allocate(occ(nint*bit_kind_size,2),virt(nint*bit_kind_size,2))
+
+  allocate(occ(nint*bit_kind_size,2),virt(nint*bit_kind_size,2),key_virt(nint,2))
 
   call bitstring_to_list_ab(key_ref,occ,n_occ,nint)
   do i=1,nint
@@ -52,7 +54,7 @@ subroutine get_mo_energies(key_ref,nint,nmo,e_mo)
     enddo
   enddo
 
-  deallocate(occ,virt)
+  deallocate(occ,virt,key_virt)
 end
 
 subroutine get_mask_phase_new(det1, pm, Nint)
@@ -91,6 +93,7 @@ subroutine get_mask_phase_new(det1, pm, Nint)
 end subroutine
 
 subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,det_in,g_det_phase,nint,n_g)
+  use bitmasks
   implicit none
   integer, intent(in) :: nint,n_g
   integer, intent(in) :: g_idx_int(n_g), g_idx_bit(n_g),g_spin(n_g)
@@ -112,10 +115,10 @@ subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,det_in,g_det_phase,nin
     all_banned=(all_banned.and.(.not.is_allowed(i)))
   enddo
 
-  if (all_banned)
+  if (all_banned) then
     g_det_phase(:)=0.d0
   else
-    call get_phase_mask_new(det_in,pm,nint)
+    call get_mask_phase_new(det_in,pm,nint)
     do i=1,n_g
       if (is_allowed(i)) then
         g_det_phase(i) = phase_dble(popcnt(iand(ibset(0_bit_kind,g_idx_bit(i)),pm(g_idx_int(i),g_spin(i)))))
@@ -127,6 +130,7 @@ subroutine get_phase_hp(g_idx_int,g_idx_bit,g_spin,g_sign,det_in,g_det_phase,nin
 end
 
 subroutine get_homo_lumo(key_ref,nint,nmo,idx_homo_lumo,spin_homo_lumo)
+  use bitmasks
   implicit none
   integer, intent(in) :: nint,nmo
   integer(bit_kind), intent(in) :: key_ref(nint,2)
@@ -135,8 +139,12 @@ subroutine get_homo_lumo(key_ref,nint,nmo,idx_homo_lumo,spin_homo_lumo)
   double precision, allocatable :: e_mo(:,:)
   integer, allocatable :: occ(:,:),virt(:,:) !(nint*bit_kind_size,2)
   integer :: n_occ(2), n_virt(2)
+  integer :: i,i0,ispin
+  integer(bit_kind), allocatable :: key_virt(:,:)
+  double precision :: maxocc(2), minvirt(2)
+  integer :: imaxocc(2), iminvirt(2)
 
-  allocate(e_mo(nmo,2))
+  allocate(e_mo(nmo,2),key_virt(nint,2),occ(nint*bit_kind_size,2),virt(nint*bit_kind_size,2))
 
   call get_mo_energies(key_ref,nint,nmo,e_mo)
   
@@ -189,9 +197,12 @@ subroutine get_homo_lumo(key_ref,nint,nmo,idx_homo_lumo,spin_homo_lumo)
   idx_homo_lumo(1)=imaxocc(spin_homo_lumo(1))
   idx_homo_lumo(2)=iminvirt(spin_homo_lumo(2))
 
+  deallocate(e_mo,occ,virt,key_virt)
+
 end
 
 subroutine get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_hp,nint,all_banned)
+  use bitmasks
   implicit none
   BEGIN_DOC
   ! input determinant tmp_det and list of single holes/particles
@@ -199,7 +210,7 @@ subroutine get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_
   ! return which are disallowed in exc_is_banned
   ! if all are banned, set all_banned to true
   END_DOC
-  integer, intent(in) :: N_hp
+  integer, intent(in) :: N_hp,nint
   integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
   integer(bit_kind), intent(in) :: tmp_det(nint,2)
   logical, intent(out) :: exc_is_banned(N_hp)
@@ -221,6 +232,7 @@ subroutine get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_
 end
 
 subroutine get_list_hp_banned_single_spin(tmp_spindet,N_hp,exc_is_banned,spin_hp,sign_hp,idx_hp,ispin,nint,all_banned)
+  use bitmasks
   implicit none
   BEGIN_DOC
   ! input spindeterminant tmp_spindet and list of single holes/particles
@@ -229,7 +241,7 @@ subroutine get_list_hp_banned_single_spin(tmp_spindet,N_hp,exc_is_banned,spin_hp
   ! return which are disallowed in exc_is_banned
   ! if all are banned, set all_banned to true
   END_DOC
-  integer, intent(in) :: N_hp, ispin
+  integer, intent(in) :: N_hp, ispin, nint
   integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
   integer(bit_kind), intent(in) :: tmp_spindet(nint)
   logical, intent(out) :: exc_is_banned(N_hp)
@@ -255,6 +267,7 @@ subroutine get_list_hp_banned_single_spin(tmp_spindet,N_hp,exc_is_banned,spin_hp
 end
 
 subroutine get_list_hp_banned_spin(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_hp,ispin,nint,all_banned)
+  use bitmasks
   implicit none
   BEGIN_DOC
   ! input determinant tmp_det and list of single holes/particles
@@ -263,11 +276,13 @@ subroutine get_list_hp_banned_spin(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,id
   ! if all are banned, set all_banned to true
   ! only consider tmp_det(1:N_int, ispin)
   END_DOC
-  integer, intent(in) :: N_hp, ispin
+  integer, intent(in) :: N_hp, ispin, nint
   integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
   integer(bit_kind), intent(in) :: tmp_det(nint,2)
   logical, intent(out) :: exc_is_banned(N_hp)
   logical, intent(out) :: all_banned
+
+  integer(bit_kind) :: spindet(nint)
   
   integer :: i
   logical :: is_filled
