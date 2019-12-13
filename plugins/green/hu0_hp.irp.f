@@ -19,7 +19,8 @@ subroutine h_u_0_hp_openmp(v_0,u_0,N_hp,sze,spin_hp,sign_hp,idx_hp)
   complex*16, intent(inout)  :: v_0(sze,N_hp), u_0(sze,N_hp)
   integer :: k
   complex*16, allocatable  :: u_t(:,:), v_t(:,:)
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   !DIR$ ATTRIBUTES ALIGN : $IRP_ALIGN :: u_t
   allocate(u_t(N_hp,N_det),v_t(N_hp,N_det))
   do k=1,N_hp
@@ -63,7 +64,8 @@ subroutine h_u_0_hp_openmp_work(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,istart,i
   integer, intent(in)            :: N_hp,sze,istart,iend,ishift,istep
   complex*16, intent(in)   :: u_t(N_hp,N_det)
   complex*16, intent(out)  :: v_t(N_hp,sze)
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
 
   
   PROVIDE ref_bitmask_energy N_int
@@ -94,7 +96,8 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
   integer, intent(in)            :: N_hp,sze,istart,iend,ishift,istep
   complex*16, intent(in)   :: u_t(N_hp,N_det)
   complex*16, intent(out)  :: v_t(N_hp,sze)
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
 
   complex*16               :: hij
   double precision :: hii 
@@ -585,7 +588,8 @@ subroutine i_h_j_double_spin_hp(key_i,key_j,Nint,ispin,hij_hp,N_hp,spin_hp,sign_
   integer, intent(in)            :: Nint,ispin,N_hp
   integer(bit_kind), intent(in)  :: key_i(Nint), key_j(Nint)
   complex*16, intent(out)  :: hij_hp(N_hp)
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   logical, intent(in) :: allowed_hp(N_hp)
   complex*16 :: hij0 
   double precision :: phase_hp(N_hp)
@@ -648,7 +652,8 @@ subroutine i_h_j_mono_spin_hp(key_i,key_j,Nint,spin,hij_hp,N_hp,spin_hp,sign_hp,
   integer, intent(in)            :: Nint, spin, N_hp
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
   complex*16, intent(out)  :: hij_hp(N_hp)
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   logical, intent(in) :: allowed_hp(N_hp)
   !double precision :: phase_hp(N_hp)
   complex*16 :: hij0
@@ -670,7 +675,8 @@ subroutine get_mono_excitation_from_fock_hp(det_1,det_2,h,p,spin,phase,N_hp,hij_
   double precision, intent(in)  :: phase
   integer(bit_kind), intent(in) :: det_1(N_int,2), det_2(N_int,2)
   complex*16, intent(out) :: hij_hp(N_hp)
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   logical, intent(in) :: allowed_hp(N_hp)
   double precision :: phase_hp(N_hp)
   complex*16 :: hij0
@@ -791,7 +797,8 @@ subroutine i_H_j_double_alpha_beta_hp(key_i,key_j,Nint,hij_hp,N_hp,spin_hp,sign_
   integer(bit_kind), intent(in)  :: key_i(Nint,2), key_j(Nint,2)
   complex*16, intent(out)  :: hij_hp(N_hp)
   complex*16 :: hij0
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   logical, intent(in) :: allowed_hp(N_hp)
   double precision :: phase_hp(N_hp)
   integer :: i

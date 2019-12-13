@@ -289,7 +289,8 @@ subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
   complex*16, intent(out)   :: vv(sze,ng)
   complex*16 :: work(sze,ng)
   double precision, intent(out) :: alpha_i(ng), beta_i(ng)
-  integer, intent(in) :: spin_hp(ng), sign_hp(ng), idx_hp(ng)
+  integer, intent(in) :: spin_hp(ng), idx_hp(ng)
+  double precision, intent(in) ::  sign_hp(ng)
 
   double precision, external :: dznrm2
   complex*16, external :: u_dot_v_complex
@@ -588,7 +589,8 @@ subroutine compute_hu_hp(vec1,vec2,n_hp,h_size,spin_hp,sign_hp,idx_hp)
   integer, intent(in)     :: h_size,n_hp
   complex*16, intent(in)  :: vec1(h_size,n_hp)
   complex*16, intent(out) :: vec2(h_size,n_hp)
-  integer, intent(in) :: spin_hp(n_hp), sign_hp(n_hp), idx_hp(n_hp)
+  integer, intent(in) :: spin_hp(n_hp), idx_hp(n_hp)
+  double precision, intent (in) :: sign_hp(n_hp)
   complex*16 :: vec1_tmp(h_size,n_hp)
   integer :: i,j
   BEGIN_DOC

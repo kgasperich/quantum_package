@@ -276,7 +276,8 @@ subroutine get_list_hp_banned_ab(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,idx_
   ! if all are banned, set all_banned to true
   END_DOC
   integer, intent(in) :: N_hp,nint
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   integer(bit_kind), intent(in) :: tmp_det(nint,2)
   logical, intent(out) :: exc_is_banned(N_hp)
   logical, intent(out) :: all_banned
@@ -307,7 +308,8 @@ subroutine get_list_hp_banned_single_spin(tmp_spindet,N_hp,exc_is_banned,spin_hp
   ! if all are banned, set all_banned to true
   END_DOC
   integer, intent(in) :: N_hp, ispin, nint
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   integer(bit_kind), intent(in) :: tmp_spindet(nint)
   logical, intent(out) :: exc_is_banned(N_hp)
   logical, intent(out) :: all_banned
@@ -342,7 +344,8 @@ subroutine get_list_hp_banned_spin(tmp_det,N_hp,exc_is_banned,spin_hp,sign_hp,id
   ! only consider tmp_det(1:N_int, ispin)
   END_DOC
   integer, intent(in) :: N_hp, ispin, nint
-  integer, intent(in) :: spin_hp(N_hp), sign_hp(N_hp), idx_hp(N_hp)
+  integer, intent(in) :: spin_hp(N_hp), idx_hp(N_hp)
+  double precision, intent(in) :: sign_hp(N_hp)
   integer(bit_kind), intent(in) :: tmp_det(nint,2)
   logical, intent(out) :: exc_is_banned(N_hp)
   logical, intent(out) :: all_banned
