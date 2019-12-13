@@ -6,7 +6,7 @@ BEGIN_PROVIDER [ integer, n_green_vec ]
   ! number of particles/holes to use for spectral density calc.
   ! just set to 2 for now (homo and lumo)
   END_DOC
-  n_green_vec = 2
+  n_green_vec = 1
 END_PROVIDER
 
  BEGIN_PROVIDER [ integer, green_idx, (n_green_vec) ]
@@ -34,10 +34,10 @@ END_PROVIDER
   green_spin(1)=spin_homo_lumo(1)
   green_sign(1)=-1.d0
 
-  ! lumo
-  green_idx(2)=idx_homo_lumo(2)
-  green_spin(2)=spin_homo_lumo(2)
-  green_sign(2)=1.d0
+!  ! lumo
+!  green_idx(2)=idx_homo_lumo(2)
+!  green_spin(2)=spin_homo_lumo(2)
+!  green_sign(2)=1.d0
 
   do i=1,n_green_vec
     call get_orb_int_bit(green_idx(i),green_idx_int(i),green_idx_bit(i))
@@ -318,8 +318,10 @@ subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
   do j=1,ng
     do i=1,sze
       vv(i,j)=work(i,j)-alpha_i(j)*uu(i,j)
+      write(6,'(7(E25.15))')uu(i,j),vv(i,j),work(i,j),alpha_i(j)
     enddo
   enddo
+  
   beta_i=0.d0
   ! |vv> is |v(1)>
   ! |uu> is |u(1)>

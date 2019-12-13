@@ -1,3 +1,68 @@
+subroutine print_mo_energies(key_ref,nint,nmo)
+  use bitmasks
+  BEGIN_DOC
+  ! get mo energies for one det
+  END_DOC
+  implicit none
+  integer, intent(in) :: nint, nmo
+  integer(bit_kind), intent(in) :: key_ref(nint,2)
+  double precision, allocatable :: e_mo(:,:)
+  integer, allocatable :: occ(:,:),virt(:,:) !(nint*bit_kind_size,2)
+  integer :: n_occ(2), n_virt(2)
+  integer, parameter :: int_spin2(1:2) = (/2,1/)
+  integer :: i,j,ispin,jspin,i0,j0,k
+  integer(bit_kind), allocatable :: key_virt(:,:)
+  integer, allocatable :: is_occ(:,:)
+
+
+  allocate(occ(nint*bit_kind_size,2),virt(nint*bit_kind_size,2),key_virt(nint,2),e_mo(nmo,2),is_occ(nmo,2))
+  is_occ=0
+
+  call bitstring_to_list_ab(key_ref,occ,n_occ,nint)
+  do i=1,nint
+    do ispin=1,2
+      key_virt(i,ispin)=xor(full_ijkl_bitmask(i),key_ref(i,ispin))
+    enddo
+  enddo
+  call bitstring_to_list_ab(key_virt,virt,n_virt,nint)
+
+  e_mo(1:nmo,1)=mo_mono_elec_integral_diag(1:nmo)
+  e_mo(1:nmo,2)=mo_mono_elec_integral_diag(1:nmo)
+
+  do ispin=1,2
+    jspin=int_spin2(ispin)
+    do i0=1,n_occ(ispin)
+      i=occ(i0,ispin)
+      is_occ(i,ispin)=1
+      do j0=i0+1,n_occ(ispin)
+        j=occ(j0,ispin)
+        e_mo(i,ispin) = e_mo(i,ispin) + mo_bielec_integral_jj_anti(i,j)
+        e_mo(j,ispin) = e_mo(j,ispin) + mo_bielec_integral_jj_anti(i,j)
+      enddo
+      do k=2,ispin
+        do j0=1,n_occ(jspin)
+          j=occ(j0,jspin)
+          e_mo(i,ispin) = e_mo(i,ispin) + mo_bielec_integral_jj(i,j)
+          e_mo(j,jspin) = e_mo(j,jspin) + mo_bielec_integral_jj(i,j) !can delete this and remove k level of loop
+        enddo
+      enddo
+      do j0=1,n_virt(ispin)
+        j=virt(j0,ispin)
+        e_mo(j,ispin) = e_mo(j,ispin) + mo_bielec_integral_jj_anti(i,j)
+      enddo
+      do j0=1,n_virt(jspin)
+        j=virt(j0,jspin)
+        e_mo(j,jspin) = e_mo(j,jspin) + mo_bielec_integral_jj(i,j)
+      enddo
+    enddo
+  enddo
+
+  do i=1,nmo
+    write(6,'(2(I5),2(E25.15))')is_occ(i,1),is_occ(i,2),e_mo(i,1),e_mo(i,2)
+  enddo
+  deallocate(occ,virt,key_virt,e_mo,is_occ)
+end
+
 subroutine get_mo_energies(key_ref,nint,nmo,e_mo)
   use bitmasks
   BEGIN_DOC

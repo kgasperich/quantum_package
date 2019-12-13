@@ -5,6 +5,7 @@ program green
   END_DOC
   read_wf = .True.
   touch read_wf
+  provide n_green_vec
   print*,'ref_bitmask_energy = ',ref_bitmask_energy
 !  call psicoefprinttest
   call print_lanczos_eigvals

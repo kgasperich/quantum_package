@@ -33,7 +33,7 @@ subroutine h_u_0_hp_openmp(v_0,u_0,N_hp,sze,spin_hp,sign_hp,idx_hp)
       size(u_t, 1),                                                  &
       N_det, N_hp)
 
-  call H_u_0_hp_openmp_work(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,1,N_det,0,1)
+  call h_u_0_hp_openmp_work(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,1,N_det,0,1)
   deallocate(u_t)
 
   call cdtranspose(                                                   &
@@ -190,6 +190,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
 
   !$OMP DO SCHEDULE(dynamic,64)
   do k_a=istart+ishift,iend,istep
+  ! iterate over dets in psi
 
     krow = psi_bilinear_matrix_rows(k_a)
     ASSERT (krow <= N_det_alpha_unique)
