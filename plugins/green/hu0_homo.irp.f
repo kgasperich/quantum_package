@@ -151,7 +151,7 @@ subroutine h_u_0_homo_openmp_work_$N_int(v_t,u_t,sze,spin_hp,sign_hp,idx_hp,ista
       idx(maxab))
 
   kcol_prev=-1
-  all_banned_b1=.False.
+  banned_b1=.False.
   ASSERT (iend <= N_det)
   ASSERT (istart > 0)
   ASSERT (istep  > 0)

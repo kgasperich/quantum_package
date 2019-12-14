@@ -43,7 +43,7 @@ END_PROVIDER
   
   do i=1,N_det
     call get_phase_homo(homo_idx_int,homo_idx_bit,homo_spin,homo_sign,psi_det(1,1,i),phase_tmp,N_int,allowed_tmp)
-    homo_det_phase(i) = phase_tmp
+    homo_phase(i) = phase_tmp
     homo_allowed(i) = allowed_tmp
   enddo
 END_PROVIDER
@@ -88,7 +88,7 @@ BEGIN_PROVIDER [ complex*16, u1_lanczos_homo, (N_det) ]
   integer :: i
   
     do i=1,N_det
-      u1_lanczos(i)=h_det_phase(i)*psi_coef(i,1)
+      u1_lanczos_homo(i)=homo_phase(i)*psi_coef(i,1)
     enddo
     call normalize_complex(u1_lanczos_homo,N_det)
 
@@ -289,7 +289,7 @@ END_PROVIDER
 !end
 
 
-subroutine lanczos_h_init_homo(uu,vv,work,sze,alpha_i,beta_i,spin_ho,sign_ho,idx_ho)
+subroutine lanczos_h_init_homo(uu,vv,work,sze,alpha_i,beta_i,spin_hp,sign_hp,idx_hp)
   implicit none
   integer, intent(in) :: sze
   complex*16, intent(in)    :: uu(sze)
