@@ -6,7 +6,7 @@ BEGIN_PROVIDER [ integer, n_green_vec ]
   ! number of particles/holes to use for spectral density calc.
   ! just set to 2 for now (homo and lumo)
   END_DOC
-  n_green_vec = 1
+  n_green_vec = 2
 END_PROVIDER
 
  BEGIN_PROVIDER [ integer, green_idx, (n_green_vec) ]
@@ -35,13 +35,13 @@ END_PROVIDER
   green_sign(1)=-1.d0
 
 !  ! lumo
-!  green_idx(2)=idx_homo_lumo(2)
-!  green_spin(2)=spin_homo_lumo(2)
-!  green_sign(2)=1.d0
+  green_idx(2)=idx_homo_lumo(2)
+  green_spin(2)=spin_homo_lumo(2)
+  green_sign(2)=1.d0
 
   do i=1,n_green_vec
     call get_orb_int_bit(green_idx(i),green_idx_int(i),green_idx_bit(i))
-    print*,i,green_idx(i),green_idx_int(i),green_idx_bit(i)
+    print*,i,green_idx(i),green_idx_int(i),green_idx_bit(i),green_spin(i),green_sign(i)
   enddo
 
 END_PROVIDER
