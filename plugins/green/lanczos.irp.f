@@ -310,7 +310,7 @@ double precision function spec_lanc_rev(n_lanc_iter,alpha,beta,z)
     tmp=-beta(j)**2/(z-alpha(j)+tmp)
   enddo
   tmp=1.d0/(z-alpha(1)+tmp)
-  spec_lanc=-imag(tmp)*inv_pi
+  spec_lanc_rev=-imag(tmp)*inv_pi
 end
 
 
