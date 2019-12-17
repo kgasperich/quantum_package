@@ -221,7 +221,7 @@ BEGIN_PROVIDER [ double precision, spectral_lanczos, (n_omega,n_green_vec) ]
   integer :: i,j
   double precision :: omega_i
   complex*16 :: z_i
-  double precision :: spec_lanc
+  double precision :: spec_lanc_rev
   PROVIDE delta_omega alpha_lanczos beta_lanczos omega_list
   do i=1,n_omega
     omega_i = omega_list(i)
