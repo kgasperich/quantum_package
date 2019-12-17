@@ -227,7 +227,7 @@ BEGIN_PROVIDER [ double precision, spectral_lanczos, (n_omega,n_green_vec) ]
     omega_i = omega_list(i)
     z_i = dcmplx(omega_i,gf_epsilon)
     do j=1,n_green_vec
-      spectral_lanczos(i,j) = spec_lanc(n_lanczos_iter,alpha_lanczos(:,j),beta_lanczos(:,j),z_i)
+      spectral_lanczos(i,j) = spec_lanc_rev(n_lanczos_iter,alpha_lanczos(:,j),beta_lanczos(:,j),z_i)
     enddo
   enddo
 
@@ -279,6 +279,38 @@ double precision function spec_lanc(n_lanc_iter,alpha,beta,z)
     bigBj0=(z-alpha(j))*bigBj1 - beta(j)**2*bigBj2
   enddo
   spec_lanc=-imag(bigAj0/bigBj0)*inv_pi
+end
+
+double precision function spec_lanc_rev(n_lanc_iter,alpha,beta,z)
+  include 'constants.include.F'
+  implicit none
+  BEGIN_DOC
+  ! reverse iteration is more numerically stable
+  ! input:
+  !   alpha, beta: from tridiagonal form of H (obtain via lanczos)
+  !                beta and alpha same size (beta(1) is not used)
+  !   n_lanc_iter: size of alpha, beta
+  !             z: omega + i*epsilon
+  !                omega is frequency for which spectral density is to be computed
+  !                epsilon is magnitude of infinitesimal imaginary term
+  ! output:
+  !     spec_lanc: spectral density A(omega)
+  !
+  ! uses inv_pi=(1.d0/pi) from constants 
+  END_DOC
+  integer, intent(in) :: n_lanc_iter
+  double precision, intent(in) :: alpha(n_lanc_iter), beta(n_lanc_iter)
+  complex*16, intent(in) :: z
+
+  complex*16 :: tmp
+  integer :: j
+
+  tmp=(0.d0,0.d0)
+  do j=n_lanc_iter,2,-1
+    tmp=-beta(j)**2/(z-alpha(j)+tmp)
+  enddo
+  tmp=1.d0/(z-alpha(1)+tmp)
+  spec_lanc=-imag(tmp)*inv_pi
 end
 
 
