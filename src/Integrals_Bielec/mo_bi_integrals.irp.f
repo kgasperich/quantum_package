@@ -106,8 +106,8 @@ subroutine mo_map_fill_from_df
   size_buffer = min(mo_num_per_kpt*mo_num_per_kpt*mo_num_per_kpt,16000000)
   print*, 'Providing the mo_bielec integrals from 3-index df integrals'
   call write_time(6)
-  call ezfio_set_integrals_bielec_disk_access_mo_integrals('Write')
-  TOUCH read_mo_integrals read_ao_integrals write_mo_integrals write_ao_integrals 
+!  call ezfio_set_integrals_bielec_disk_access_mo_integrals('Write')
+!  TOUCH read_mo_integrals read_ao_integrals write_mo_integrals write_ao_integrals 
 
   call wall_time(wall_1)
   call cpu_time(cpu_1)
