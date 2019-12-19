@@ -34,5 +34,6 @@ subroutine run
   deallocate(A)
 
   call ezfio_set_integrals_bielec_disk_access_df_ao_integral_array("Read")
+!  call ezfio_set_integrals_bielec_use_df_ao(.True.)
 
 end

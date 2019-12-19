@@ -10,6 +10,7 @@ BEGIN_PROVIDER [complex*16, df_ao_integral_array, (ao_num_per_kpt, ao_num_per_kp
     print *, 'read df_ao_integral_array from disk'
   else
     print *, 'df_ao_integral_array must be provided'
+    stop
   endif
 
 END_PROVIDER
