@@ -26,18 +26,71 @@ END_PROVIDER
   integer :: i
 
   integer :: idx_homo_lumo(2), spin_homo_lumo(2)
+  logical :: has_idx,has_spin,has_sign,has_lanc
+  integer :: nlanc
   ! needs psi_det, mo_tot_num, N_int, mo_bielec_integral_jj, mo_mono_elec_integral_diag
-  call get_homo_lumo(psi_det(1:N_int,1:2,1),N_int,mo_tot_num,idx_homo_lumo,spin_homo_lumo)
+  call ezfio_has_green_green_idx(has_idx)
+  call ezfio_has_green_green_spin(has_spin)
+  call ezfio_has_green_green_sign(has_sign)
+!  call ezfio_has_green_n_lanczos_complete(has_lanc)
+  call ezfio_get_green_n_lanczos_complete(nlanc)
+  if (has_idx.and.has_spin.and.has_sign) then
+    print*,'reading idx,spin,sign'
+    call ezfio_get_green_green_idx(green_idx)
+    call ezfio_get_green_green_spin(green_spin)
+    call ezfio_get_green_green_sign(green_sign)
+  else if (nlanc.gt.0) then
+    stop 'problem with lanczos restart; need idx, spin, sign'
+  else
+    print*,'new lanczos calculation, finding homo/lumo'
+    call get_homo_lumo(psi_det(1:N_int,1:2,1),N_int,mo_tot_num,idx_homo_lumo,spin_homo_lumo)
 
-  ! homo
-  green_idx(1)=idx_homo_lumo(1)
-  green_spin(1)=spin_homo_lumo(1)
-  green_sign(1)=-1.d0
+    ! homo
+    green_idx(1)=idx_homo_lumo(1)
+    green_spin(1)=spin_homo_lumo(1)
+    green_sign(1)=-1.d0
+  
+    ! lumo
+    green_idx(2)=idx_homo_lumo(2)
+    green_spin(2)=spin_homo_lumo(2)
+    green_sign(2)=1.d0
 
-!  ! lumo
-  green_idx(2)=idx_homo_lumo(2)
-  green_spin(2)=spin_homo_lumo(2)
-  green_sign(2)=1.d0
+    call ezfio_set_green_green_idx(green_idx)
+    call ezfio_set_green_green_spin(green_spin)
+    call ezfio_set_green_green_sign(green_sign)
+  endif
+
+
+
+!  if (nlanc.gt.0) then
+! !   call ezfio_get_green_n_lanczos_complete(nlanc)
+!    print*,'restarting from previous lanczos',nlanc
+!    if (has_idx.and.has_spin.and.has_sign) then
+!      print*,'reading idx,spin,sign'
+!      call ezfio_get_green_green_idx(green_idx)
+!      call ezfio_get_green_green_spin(green_spin)
+!      call ezfio_get_green_green_sign(green_sign)
+!    else
+!      stop 'problem with lanczos restart; need idx, spin, sign'
+!    endif
+!  else
+!    print*,'new lanczos calculation, finding homo/lumo'
+!    call get_homo_lumo(psi_det(1:N_int,1:2,1),N_int,mo_tot_num,idx_homo_lumo,spin_homo_lumo)
+!
+!    ! homo
+!    green_idx(1)=idx_homo_lumo(1)
+!    green_spin(1)=spin_homo_lumo(1)
+!    green_sign(1)=-1.d0
+!  
+!    ! lumo
+!    green_idx(2)=idx_homo_lumo(2)
+!    green_spin(2)=spin_homo_lumo(2)
+!    green_sign(2)=1.d0
+!
+!    call ezfio_set_green_green_idx(green_idx)
+!    call ezfio_set_green_green_spin(green_spin)
+!    call ezfio_set_green_green_sign(green_sign)
+!  endif
 
   do i=1,n_green_vec
     call get_orb_int_bit(green_idx(i),green_idx_int(i),green_idx_bit(i))
@@ -351,7 +404,7 @@ subroutine lanczos_h_init_hp(uu,vv,work,sze,alpha_i,beta_i,ng,spin_hp,sign_hp,id
   do j=1,ng
     do i=1,sze
       vv(i,j)=work(i,j)-alpha_i(j)*uu(i,j)
-      write(6,'(7(E25.15))')uu(i,j),vv(i,j),work(i,j),alpha_i(j)
+!      write(6,'(7(E25.15))')uu(i,j),vv(i,j),work(i,j),alpha_i(j)
     enddo
   enddo
   
