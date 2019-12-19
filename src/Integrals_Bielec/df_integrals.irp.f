@@ -171,7 +171,7 @@ subroutine read_df_integral_array_file(filename, A, n_ao, n_df, n_kpt_pairs)
     do j=1,n_df
       do k=1,n_ao
         do l=1,n_ao
-          A(l,k,j,i) = cmplx(A_re(l,k,j,i),A_im(l,k,j,i))
+          A(l,k,j,i) = dcmplx(A_re(l,k,j,i),A_im(l,k,j,i))
         enddo
       enddo
     enddo

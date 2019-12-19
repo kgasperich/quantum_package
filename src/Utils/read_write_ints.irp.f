@@ -123,7 +123,7 @@ subroutine read_one_e_integrals_complex(filename, A, m, n)
 
   do i=1,m
     do j=1,n
-      A(i,j) = cmplx(A_re(i,j),A_im(i,j))
+      A(i,j) = dcmplx(A_re(i,j),A_im(i,j))
     enddo
   enddo
   deallocate( A_re, A_im )
@@ -194,7 +194,7 @@ subroutine read_one_e_integrals_complex_kpts(filename, A, m, n, p)
   do k=1,p
     do j=1,n
       do i=1,m
-        A(i,j,k) = cmplx(A_re(i,j,k),A_im(i,j,k))
+        A(i,j,k) = dcmplx(A_re(i,j,k),A_im(i,j,k))
       enddo
     enddo
   enddo

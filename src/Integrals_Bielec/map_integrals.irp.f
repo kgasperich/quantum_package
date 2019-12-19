@@ -334,13 +334,13 @@ BEGIN_PROVIDER [ complex*16, ao_integrals_cache, (0:64*64*64*64) ]
          if (idx_re /= idx_im) then
            call map_get(ao_integrals_map,idx_im,tmp_im)
            if (idx1 < idx2) then
-             integral = cmplx(tmp_re,tmp_im)
+             integral = dcmplx(tmp_re,tmp_im)
            else
-             integral = cmplx(tmp_re,-tmp_im)
+             integral = dcmplx(tmp_re,-tmp_im)
            endif
          else
            tmp_im = 0.d0
-           integral = cmplx(tmp_re,tmp_im)
+           integral = dcmplx(tmp_re,tmp_im)
          endif
 
          ii = l-ao_integrals_cache_min
@@ -392,13 +392,13 @@ complex*16 function get_ao_bielec_integral(i,j,k,l,map) result(result)
       if (idx_re /= idx_im) then
         call map_get(map,idx_im,tmp_im)
         if (idx1 < idx2) then
-          tmp_int = cmplx(tmp_re,tmp_im)
+          tmp_int = dcmplx(tmp_re,tmp_im)
         else
-          tmp_int = cmplx(tmp_re,-tmp_im)
+          tmp_int = dcmplx(tmp_re,-tmp_im)
         endif
       else
         tmp_im = 0.d0
-        tmp_int = cmplx(tmp_re,tmp_im)
+        tmp_int = dcmplx(tmp_re,tmp_im)
       endif
     else
       ii = l-ao_integrals_cache_min
@@ -590,13 +590,13 @@ BEGIN_PROVIDER [ complex*16, mo_integrals_cache, (0_8:128_8*128_8*128_8*128_8) ]
          !DIR$ FORCEINLINE
          call map_get(mo_integrals_map,idx1,tmp1)
          if (idx1==idx2) then
-           integral=cmplx(tmp1,0.d0)
+           integral=dcmplx(tmp1,0.d0)
          else if (idx1.lt.idx2) then
            call map_get(mo_integrals_map,idx2,tmp2)
-           integral=cmplx(tmp1,tmp2)
+           integral=dcmplx(tmp1,tmp2)
          else 
            call map_get(mo_integrals_map,idx2,tmp2)
-           integral=cmplx(tmp2,-tmp1)
+           integral=dcmplx(tmp2,-tmp1)
          endif
 
          ii = l-mo_integrals_cache_min_8
@@ -637,11 +637,11 @@ complex*16 function get_mo_bielec_integral(i,j,k,l,map)
     call map_get(map,idx1,tmp1)
     call map_get(map,idx2,tmp2) !todo:move this inside conditional below
     if (idx1.eq.idx2) then
-      get_mo_bielec_integral = cmplx(tmp1,0.d0)
+      get_mo_bielec_integral = dcmplx(tmp1,0.d0)
     else if (idx1.lt.idx2) then
-      get_mo_bielec_integral = cmplx(tmp1,tmp2)
+      get_mo_bielec_integral = dcmplx(tmp1,tmp2)
     else
-      get_mo_bielec_integral = cmplx(tmp2,-tmp1)
+      get_mo_bielec_integral = dcmplx(tmp2,-tmp1)
     endif
   else
     ii_8 = int(l,8)-mo_integrals_cache_min_8
@@ -696,11 +696,11 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
     call map_get_many(map, hash(2,:), out_val2, sze)
     do i=1,sze
       if (hash(1,i)==hash(2,i)) then
-        out_val(i) = cmplx(out_val1(i),0.d0)
+        out_val(i) = dcmplx(out_val1(i),0.d0)
       else if (hash(1,i).lt.hash(2,i)) then
-        out_val(i) = cmplx(out_val1(i),out_val2(i))
+        out_val(i) = dcmplx(out_val1(i),out_val2(i))
       else
-        out_val(i) = cmplx(out_val2(i),-out_val1(i))
+        out_val(i) = dcmplx(out_val2(i),-out_val1(i))
       endif
     enddo
   else
@@ -709,11 +709,11 @@ subroutine get_mo_bielec_integrals(j,k,l,sze,out_val,map)
     ! Conversion to double precision 
     do i=1,sze
       if (hash(1,i)==hash(2,i)) then
-        out_val(i) = cmplx(tmp_val1(i))
+        out_val(i) = dcmplx(tmp_val1(i))
       else if (hash(1,i).lt.hash(2,i)) then
-        out_val(i) = cmplx(tmp_val1(i),tmp_val2(i))
+        out_val(i) = dcmplx(tmp_val1(i),tmp_val2(i))
       else
-        out_val(i) = cmplx(tmp_val2(i),-tmp_val1(i))
+        out_val(i) = dcmplx(tmp_val2(i),-tmp_val1(i))
       endif
     enddo
   endif
@@ -788,11 +788,11 @@ subroutine get_mo_bielec_integrals_ij(k,l,sze,out_array,map)
     p=tmp_val1(m1)
     q=tmp_val2(m2)
     if (idx1==idx2) then
-      out_array(i,j) = cmplx(p,0.d0)
+      out_array(i,j) = dcmplx(p,0.d0)
     else if (idx1.lt.idx2) then
-      out_array(i,j) = cmplx(p,q)
+      out_array(i,j) = dcmplx(p,q)
     else
-      out_array(i,j) = cmplx(q,-p)
+      out_array(i,j) = dcmplx(q,-p)
     endif
   enddo  
 

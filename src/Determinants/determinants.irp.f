@@ -313,7 +313,7 @@ BEGIN_PROVIDER [ complex*16, psi_coef, (psi_det_size,N_states) ]
   psi_coef = (0.d0,0.d0)
   do j=1,N_states
     do i=1,psi_det_size
-      psi_coef(i,j) = cmplx(psi_coef_real(i,j),psi_coef_imag(i,j))
+      psi_coef(i,j) = dcmplx(psi_coef_real(i,j),psi_coef_imag(i,j))
     enddo
   enddo
   

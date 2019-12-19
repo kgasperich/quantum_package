@@ -144,7 +144,7 @@ BEGIN_PROVIDER [ complex*16, mo_coef, (ao_num,mo_tot_num) ]
     ! Orthonormalized AO basis
     do i=1,mo_tot_num
       do j=1,ao_num
-        mo_coef(j,i) = cmplx(mo_coef_real(j,i),mo_coef_imag(j,i))
+        mo_coef(j,i) = dcmplx(mo_coef_real(j,i),mo_coef_imag(j,i))
       enddo
     enddo
 
