@@ -30,14 +30,18 @@ END_PROVIDER
   call get_homo_lumo(psi_det(1:N_int,1:2,1),N_int,mo_tot_num,idx_homo_lumo,spin_homo_lumo)
 
   ! homo
-  green_idx(1)=idx_homo_lumo(1)
-  green_spin(1)=spin_homo_lumo(1)
-  green_sign(1)=-1.d0
+!  green_idx(1)=idx_homo_lumo(1)
+!  green_spin(1)=spin_homo_lumo(1)
+!  green_sign(1)=-1.d0
 
 !  ! lumo
 !  green_idx(2)=idx_homo_lumo(2)
 !  green_spin(2)=spin_homo_lumo(2)
 !  green_sign(2)=1.d0
+
+  green_idx(1)=idx_homo_lumo(2)
+  green_spin(1)=spin_homo_lumo(2)
+  green_sign(1)=1.d0
 
   do i=1,n_green_vec
     call get_orb_int_bit(green_idx(i),green_idx_int(i),green_idx_bit(i))

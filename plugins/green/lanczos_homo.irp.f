@@ -20,9 +20,16 @@
   ! needs psi_det, mo_tot_num, N_int, mo_bielec_integral_jj, mo_mono_elec_integral_diag
   call get_homo_lumo(psi_det(1:N_int,1:2,1),N_int,mo_tot_num,idx_homo_lumo,spin_homo_lumo)
 
-  homo_idx=idx_homo_lumo(1)
-  homo_spin=spin_homo_lumo(1)
-  homo_sign=-1.d0
+!! HOMO
+!  homo_idx=idx_homo_lumo(1)
+!  homo_spin=spin_homo_lumo(1)
+!  homo_sign=-1.d0
+
+!! LUMO
+  homo_idx=idx_homo_lumo(2)
+  homo_spin=spin_homo_lumo(2)
+  homo_sign=1.d0
+
   call get_orb_int_bit(homo_idx,homo_idx_int,homo_idx_bit)
   print*,homo_idx,homo_idx_int,homo_idx_bit
 
