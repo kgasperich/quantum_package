@@ -55,9 +55,12 @@ BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
     print *,  ''
     print *,  'AO -> MO integrals transformation'
     print *,  '---------------------------------'
+    print *,  '--WARNING: NOT WORKING PROPERLY--'
+    print *,  '---------------------------------'
     print *,  ''
   
     call add_integrals_to_map(full_ijkl_bitmask_4)
+
   endif
 
   integer*8                      :: get_mo_map_size, mo_map_size
