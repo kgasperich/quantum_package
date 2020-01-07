@@ -58,6 +58,7 @@ BEGIN_PROVIDER [ logical, mo_bielec_integrals_in_map ]
     print *,  '--WARNING: NOT WORKING PROPERLY--'
     print *,  '---------------------------------'
     print *,  ''
+    stop
   
     call add_integrals_to_map(full_ijkl_bitmask_4)
 
