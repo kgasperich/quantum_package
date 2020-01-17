@@ -152,7 +152,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
       !$OMP          psi_bilinear_matrix_transp_rows_loc,            &
       !$OMP          istart, iend, istep, irp_here, v_t,        &
       !$OMP          spin_hp,sign_hp,idx_hp,        &
-      !$OMP          elec_num_tab,        &
+      !$OMP          elec_num_tab,nuclear_repulsion, &
       !$OMP          ishift, idx0, u_t, maxab)                       &
       !$OMP   PRIVATE(krow, kcol, tmp_det, spindet, k_a, k_b, i,     &
       !$OMP          lcol, lrow, l_a, l_b,                           &
@@ -546,7 +546,7 @@ subroutine h_u_0_hp_openmp_work_$N_int(v_t,u_t,N_hp,sze,spin_hp,sign_hp,idx_hp,i
           call a_operator(idx_hp(ii),spin_hp(ii),tmp_det2,hii_hp(ii),$N_int,na,nb)
         endif
       endif
-      v_t(ii,k_a) = v_t(ii,k_a) + hii_hp(ii) * u_t(ii,k_a)
+      v_t(ii,k_a) = v_t(ii,k_a) + (nuclear_repulsion + hii_hp(ii)) * u_t(ii,k_a)
     enddo
     
 
