@@ -58,6 +58,38 @@ def makesq(vlist,n1,n2):
         out2[i][lmask] = vlist[i]
     return out2
 
+
+def makesq3(vlist,n2):
+    '''
+    make hermitian matrices of size (n2 x n2) from from lower triangles
+    vlist is n1 lower triangles in flattened form
+    given: ([a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t],2,4)
+           output a 2x4x4 array, where each 4x4 is the square constructed from the lower triangle
+    [
+     [
+      [a  b* d* g*]
+      [b  c  e* h*]
+      [d  e  f  i*]
+      [g  h  i  j ]
+     ],
+     [
+      [k  l* n* q*]
+      [l  m  o* r*]
+      [n  o  p  s*]
+      [q  r  s  t ]
+     ]
+    ]
+    '''
+    n0 = vlist.shape[0]
+    out=np.zeros([n0,n2,n2],dtype=np.complex128)
+    lmask=np.tri(n2,dtype=bool)
+    for i in range(n0):
+        out[i][lmask] = vlist[i].conj()
+    out2=out.transpose([0,2,1])
+    for i in range(n0):
+        out2[i][lmask] = vlist[i]
+    return out2
+
 def makesq2(vlist,n1,n2):
     out=np.zeros([n1,n2,n2],dtype=np.complex128)
     lmask=np.tri(n2,dtype=bool)
@@ -184,6 +216,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
     from pyscf.pbc import ao2mo
     from pyscf.pbc import tools
     from pyscf.pbc.gto import ecp
+    import h5py
     
     mo_coef_threshold = int_threshold
     ovlp_threshold = int_threshold
@@ -303,7 +336,6 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
                     d = kconserv[a,b,c]
                     outfile.write('%s %s %s %s\n' % (a+1,c+1,b+1,d+1))
     
-    import h5py
 
     intfile=h5py.File(mf.with_df._cderi,'r')
 
@@ -325,7 +357,7 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
 
     # dimensions are (kikj,iaux,jao,kao), where kikj is compound index of kpts i and j
     # output dimensions should be reversed (nao, nao, naux, nkptpairs)
-    j3arr=np.array([(pad(i.value.reshape([-1,nao,nao]),[naux,nao,nao]) if (i.shape[1] == naosq) else makesq(i.value,naux,nao)) * nkinvsq for i in j3clist])
+    j3arr=np.array([(i.value.reshape([-1,nao,nao]) if (i.shape[1] == naosq) else makesq3(i.value,nao)) * nkinvsq for i in j3clist])
 
     nkpt_pairs = j3arr.shape[0]
 
@@ -333,11 +365,10 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
         with open('df_ao_integral_array','w') as outfile:
             pass
         with open('df_ao_integral_array','a') as outfile:
-            for k in range(nkpt_pairs):
-                for iaux in range(naux):
-                    for i in range(nao):
-                        for j in range(nao):
-                            v = j3arr[k,iaux,i,j]
+            for k,kpt_pair in enumerate(j3arr):
+                for iaux,dfbasfunc in enumerate(kpt_pair):
+                    for i,i0 in enumerate(dfbasfunc):
+                        for j,v in enumerate(i0):
                             if (abs(v) > bielec_int_threshold):
                                 outfile.write('%s %s %s %s %s %s\n' % (i+1,j+1,iaux+1,k+1,v.real,v.imag))
 
@@ -347,15 +378,14 @@ def pyscf2QP(cell,mf, kpts, kmesh=None, cas_idx=None, int_threshold = 1E-8,
             for j in range(Nk):
                 if(i>=j):
                     kpair_list.append((i,j,idx2_tri((i,j))))
-        j3mo = np.array([np.einsum('mij,ik,jl->mkl',j3arr[kij,:,:,:],mo_k[ki,:,:].conj(),mo_k[kj,:,:]) for ki,kj,kij in kpair_list])
+        j3mo = np.array([np.einsum('mij,ik,jl->mkl',j3arr[kij],mo_k[ki].conj(),mo_k[kj]) for ki,kj,kij in kpair_list])
         with open('df_mo_integral_array','w') as outfile:
             pass
         with open('df_mo_integral_array','a') as outfile:
-            for k in range(nkpt_pairs):
-                for iaux in range(naux):
-                    for i in range(nmo):
-                        for j in range(nmo):
-                            v = j3mo[k,iaux,i,j]
+            for k,kpt_pair in enumerate(j3mo):
+                for iaux,dfbasfunc in enumerate(kpt_pair):
+                    for i,i0 in enumerate(dfbasfunc):
+                        for j,v in enumerate(i0):
                             if (abs(v) > bielec_int_threshold):
                                 outfile.write('%s %s %s %s %s %s\n' % (i+1,j+1,iaux+1,k+1,v.real,v.imag))
 
